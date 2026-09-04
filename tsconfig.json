@@ -44,6 +44,9 @@
   "exclude": [
     "node_modules",
     "target/**/*",
+    "e2e/**/*",
+    "playwright.config.ts",
+    "playwright.tauri.config.ts",
     "src/test/**/*",
     "src/app/_api_excluded/**/*",
     "src/app/_well-known_excluded/**/*",

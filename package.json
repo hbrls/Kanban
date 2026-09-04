@@ -28,7 +28,6 @@
     "acp"
   ],
   "scripts": {
-    "postinstall": "node scripts/install/run-patch-package.mjs",
     "dev": "cross-env NODE_OPTIONS='--max-old-space-size=4096' next dev",
     "acp:runner": "node --import tsx scripts/fitness/start-acp-runner.ts",
     "build": "cross-env NODE_OPTIONS='--max-old-space-size=8192' next build",
@@ -262,7 +261,6 @@
     "@easyops-cn/docusaurus-search-local": "^0.55.1",
     "@eslint/eslintrc": "^3.3.4",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.58.2",
     "@storybook/addon-a11y": "^10.3.4",
     "@storybook/addon-docs": "^10.3.3",
     "@storybook/addon-vitest": "^10.3.4",
