@@ -18,7 +18,6 @@ import { fetchRegistry, detectPlatformTarget } from "@/core/acp/acp-registry";
 import { isServerlessEnvironment } from "@/core/acp/api-based-providers";
 import { isOpencodeServerConfigured } from "@/core/acp/opencode-sdk-adapter";
 import { isClaudeCodeSdkConfigured } from "@/core/acp/claude-code-sdk-adapter";
-import { getDockerDetector } from "@/core/acp/docker";
 
 type ProviderStatus = "available" | "unavailable" | "checking";
 
@@ -47,34 +46,6 @@ const cache = {
   CHECKED_LOCAL_TTL: 15000, // 15 seconds for command availability checks
   CHECKED_REGISTRY_TTL: 30000, // 30 seconds for checked registry status
 };
-
-async function getDockerProviderInfo(shouldCheck: boolean): Promise<ProviderInfo> {
-  if (!shouldCheck) {
-    return {
-      id: "docker-opencode",
-      name: "Docker OpenCode",
-      description: "OpenCode in isolated Docker container",
-      command: "docker run",
-      status: "checking",
-      source: "static",
-    };
-  }
-
-  const dockerStatus = await getDockerDetector().checkAvailability();
-  return {
-    id: "docker-opencode",
-    name: "Docker OpenCode",
-    description: dockerStatus.available
-      ? "OpenCode in isolated Docker container"
-      : "Requires Docker/Colima daemon",
-    command: "docker run",
-    status: dockerStatus.available ? "available" : "unavailable",
-    source: "static",
-    unavailableReason: dockerStatus.available
-      ? undefined
-      : (dockerStatus.error ?? "Docker daemon unavailable. Start Docker Desktop or Colima."),
-  };
-}
 
 /**
  * Fetch only local (static) providers - fast and reliable
@@ -150,8 +121,6 @@ async function getLocalProviders(shouldCheck = false): Promise<ProviderInfo[]> {
       source: "static",
     });
   }
-
-  providers.push(await getDockerProviderInfo(shouldCheck));
 
   // Non-serverless: show all CLI-based providers
   const allPresets = [...getStandardPresets()];
