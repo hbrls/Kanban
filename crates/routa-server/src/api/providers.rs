@@ -4,7 +4,7 @@
 //! GET /api/providers?check=true - Check provider status (slower, but accurate)
 
 use axum::{
-    extract::{Query, State},
+    extract::Query,
     routing::get,
     Json, Router,
 };
@@ -56,7 +56,6 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn list_providers(
-    State(state): State<AppState>,
     Query(query): Query<ProvidersQuery>,
 ) -> Result<Json<serde_json::Value>, ServerError> {
     // Fast path: return cached or unchecked providers
@@ -74,51 +73,13 @@ async fn list_providers(
         };
 
         // Return unchecked providers immediately
-        let mut providers = get_providers_without_checking().await;
-
-        // Add Docker OpenCode provider with cached status
-        let docker_status = state.docker_state.detector.check_availability(false).await;
-        providers.push(ProviderInfo {
-            id: "docker-opencode".to_string(),
-            name: "Docker OpenCode".to_string(),
-            description: if docker_status.available {
-                "OpenCode in isolated Docker container".to_string()
-            } else {
-                "Requires Docker/Colima daemon".to_string()
-            },
-            command: "docker run".to_string(),
-            status: if docker_status.available {
-                "available".to_string()
-            } else {
-                "unavailable".to_string()
-            },
-            source: "static".to_string(),
-        });
+        let providers = get_providers_without_checking().await;
 
         return Ok(Json(serde_json::json!({ "providers": providers })));
     }
 
     // Slow path: check all provider statuses
-    let mut providers = get_providers_with_checking().await;
-
-    // Add Docker OpenCode provider
-    let docker_status = state.docker_state.detector.check_availability(false).await;
-    providers.push(ProviderInfo {
-        id: "docker-opencode".to_string(),
-        name: "Docker OpenCode".to_string(),
-        description: if docker_status.available {
-            "OpenCode in isolated Docker container".to_string()
-        } else {
-            "Requires Docker/Colima daemon".to_string()
-        },
-        command: "docker run".to_string(),
-        status: if docker_status.available {
-            "available".to_string()
-        } else {
-            "unavailable".to_string()
-        },
-        source: "static".to_string(),
-    });
+    let providers = get_providers_with_checking().await;
 
     // Update cache
     {
