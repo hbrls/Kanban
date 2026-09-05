@@ -7,7 +7,6 @@ import {
   type KanbanDeliveryRules,
 } from "../models/kanban";
 import { AgentEventType, type EventBus } from "../events/event-bus";
-import { isClaudeCodeSdkConfigured } from "../acp/claude-code-sdk-adapter";
 import { dispatchSessionPrompt } from "@/core/acp/session-prompt";
 import { getA2AOutboundClient } from "../a2a";
 import { resolveA2AAuthConfig } from "../a2a/a2a-auth-config";
@@ -583,11 +582,7 @@ export function buildTaskPrompt(
 }
 
 export function resolveKanbanAutomationProvider(provider?: string): string {
-  if (provider === "claude" && isClaudeCodeSdkConfigured()) {
-    return "claude-code-sdk";
-  }
-
-  return provider ?? "opencode";
+  return provider?.trim() || "claude";
 }
 
 export interface AutomationRunHandle {

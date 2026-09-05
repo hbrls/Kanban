@@ -290,13 +290,9 @@ export async function handleSessionNew({
     ? p.boardId.trim()
     : undefined;
 
-  const defaultProvider = isServerlessEnvironment() ? "claude-code-sdk" : "opencode";
+  const defaultProvider = isServerlessEnvironment() ? "claude-code-sdk" : "claude";
   const requestedProvider = (p.provider as string | undefined);
-  const provider = specialistId === "team-agent-lead" &&
-    (requestedProvider ?? specialist?.defaultProvider ?? defaultProvider) === "opencode" &&
-    isClaudeCodeSdkConfigured()
-    ? "claude-code-sdk"
-    : requestedProvider ?? specialist?.defaultProvider ?? defaultProvider;
+  const provider = requestedProvider ?? specialist?.defaultProvider ?? defaultProvider;
 
   const modeId = (p.modeId as string | undefined) ?? (p.mode as string | undefined);
   const role = (p.role as string | undefined)?.toUpperCase() ?? specialist?.role;
