@@ -60,7 +60,6 @@ describe("KanbanStatusBar runtime fitness", () => {
             updatedAt: "2025-01-01T00:00:00.000Z",
           },
         ]}
-        fileChangesSummary={{ changedFiles: 0, totalAdditions: 0, totalDeletions: 0 }}
         board={board}
         boardQueue={board.queue}
         onRepoClick={onRepoClick}
@@ -75,7 +74,6 @@ describe("KanbanStatusBar runtime fitness", () => {
       <KanbanStatusBar
         defaultCodebase={null}
         codebases={[]}
-        fileChangesSummary={{ changedFiles: 0, totalAdditions: 0, totalDeletions: 0 }}
         board={board}
         boardQueue={board.queue}
         onRepoClick={onRepoClick}
@@ -103,7 +101,6 @@ describe("KanbanStatusBar runtime fitness", () => {
           updatedAt: "2025-01-01T00:00:00.000Z",
         }}
         codebases={[]}
-        fileChangesSummary={{ changedFiles: 0, totalAdditions: 0, totalDeletions: 0 }}
         board={board}
         boardQueue={board.queue}
         onFitnessClick={onFitnessClick}
@@ -193,7 +190,6 @@ describe("KanbanStatusBar runtime fitness", () => {
       <KanbanStatusBar
         defaultCodebase={null}
         codebases={[]}
-        fileChangesSummary={{ changedFiles: 0, totalAdditions: 0, totalDeletions: 0 }}
         board={board}
         boardQueue={board.queue}
         onFitnessClick={onFitnessClick}
@@ -290,7 +286,6 @@ describe("KanbanStatusBar runtime fitness", () => {
       <KanbanStatusBar
         defaultCodebase={null}
         codebases={[]}
-        fileChangesSummary={{ changedFiles: 0, totalAdditions: 0, totalDeletions: 0 }}
         board={board}
         boardQueue={board.queue}
         runtimeFitness={{
