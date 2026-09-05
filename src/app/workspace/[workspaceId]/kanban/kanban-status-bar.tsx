@@ -1,6 +1,6 @@
 "use client";
 
-import { GitBranch, FileCode, Activity, Zap } from "lucide-react";
+import { GitBranch, Zap } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import type { AcpProviderInfo } from "@/client/acp-client";
@@ -13,12 +13,6 @@ interface KanbanStatusBarProps {
   defaultCodebase: CodebaseData | null;
   /** 所有仓库列表 */
   codebases: CodebaseData[];
-  /** 文件变更统计 */
-  fileChangesSummary: {
-    changedFiles: number;
-    totalAdditions: number;
-    totalDeletions: number;
-  };
   /** 当前看板 */
   board: KanbanBoardInfo | null;
   /** 看板队列状态 */
@@ -29,18 +23,10 @@ interface KanbanStatusBarProps {
   selectedProvider?: AcpProviderInfo | null;
   /** 点击仓库时的回调 */
   onRepoClick?: () => void;
-  /** 点击文件变更时的回调 */
-  onFileChangesClick?: () => void;
-  /** 点击 Git Log 时的回调 */
-  onGitLogClick?: () => void;
   /** 点击 Provider 时的回调 */
   onProviderClick?: () => void;
   /** 点击 Runtime Fitness 时的回调 */
   onFitnessClick?: () => void;
-  /** 文件变更面板是否打开 */
-  fileChangesOpen?: boolean;
-  /** Git Log 面板是否打开 */
-  gitLogOpen?: boolean;
   /** 仓库同步状态 */
   repoSync?: RepoSyncState;
   /** Runtime Fitness 状态 */
@@ -117,18 +103,13 @@ function fitnessDotClass(
 export function KanbanStatusBar({
   defaultCodebase,
   codebases,
-  fileChangesSummary,
   board,
   boardQueue,
   repoHealth,
   selectedProvider,
   onRepoClick,
-  onFileChangesClick,
-  onGitLogClick,
   onProviderClick,
   onFitnessClick,
-  fileChangesOpen = false,
-  gitLogOpen = false,
   repoSync,
   runtimeFitness,
   runtimeFitnessLoading = false,
@@ -221,45 +202,6 @@ export function KanbanStatusBar({
             </span>
             <span>{repoDisplayName ?? t.kanbanBoard.noReposLinked}</span>
           </div>
-        )}
-
-        {/* 文件变更 */}
-        {defaultCodebase && (
-          <button
-            onClick={onFileChangesClick}
-            data-testid="kanban-file-changes-open"
-            className={`flex items-center gap-1.5 px-2.5 h-6 transition-colors ${
-              fileChangesOpen
-                ? "bg-desktop-bg-active text-desktop-accent"
-                : "text-desktop-text-primary hover:bg-desktop-bg-active"
-            }`}
-            title={`${fileChangesSummary.changedFiles} file${fileChangesSummary.changedFiles === 1 ? "" : "s"} changed`}
-          >
-            <FileCode className="w-3 h-3" />
-            <span>{fileChangesSummary.changedFiles > 0 ? fileChangesSummary.changedFiles : "0"}</span>
-            {fileChangesSummary.changedFiles > 0 && (
-              <>
-                <span className="text-emerald-500">+{fileChangesSummary.totalAdditions}</span>
-                <span className="text-rose-500">-{fileChangesSummary.totalDeletions}</span>
-              </>
-            )}
-          </button>
-        )}
-
-        {/* Git Log */}
-        {defaultCodebase && (
-          <button
-            onClick={onGitLogClick}
-            className={`flex items-center gap-1.5 px-2.5 h-6 transition-colors ${
-              gitLogOpen
-                ? "bg-desktop-bg-active text-desktop-accent"
-                : "text-desktop-text-primary hover:bg-desktop-bg-active"
-            }`}
-            title={t.gitLog.title}
-          >
-            <Activity className="w-3 h-3" />
-            <span>{t.gitLog.title}</span>
-          </button>
         )}
       </div>
 

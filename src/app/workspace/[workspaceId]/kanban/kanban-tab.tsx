@@ -38,7 +38,6 @@ import {
 } from "./kanban-tab-helpers";
 import { buildKanbanTaskAdaptiveHarnessOptions } from "./kanban-task-adaptive";
 import { importGitHubItems } from "./kanban-github-import";
-import { getKanbanFileChangesSummary } from "./kanban-file-changes-panel";
 import { KanbanTabContent } from "./kanban-tab-content";
 import { useRuntimeFitnessStatus } from "./use-runtime-fitness-status";
 
@@ -161,8 +160,6 @@ export function KanbanTab({
   codebases,
   onRefresh,
   repoSync,
-  repoChanges = [],
-  repoChangesLoading = false,
   acp,
   onAgentPrompt,
 }: KanbanTabProps) {
@@ -270,8 +267,6 @@ export function KanbanTab({
   const [moveBlockedDelegatingTaskId, setMoveBlockedDelegatingTaskId] = useState<string | null>(null);
   const detailSplitContainerRef = useRef<HTMLDivElement | null>(null);
   const [isTaskDetailFullscreen, setIsTaskDetailFullscreen] = useState(false);
-  const [fileChangesOpen, setFileChangesOpen] = useState(false);
-  const [gitLogOpen, setGitLogOpen] = useState(false);
   const sessionBackfillInFlightRef = useRef(new Set<string>());
   const emptySessionRecoveryRef = useRef<string | null>(null);
   const previousPreferredTaskSessionIdRef = useRef<string | null>(null);
@@ -617,10 +612,6 @@ export function KanbanTab({
 
     return { missingRepoTasks, cwdMismatchTasks };
   }, [codebases, defaultCodebase, localTasks, sessionMap]);
-
-  const fileChangesSummary = useMemo(() => {
-    return getKanbanFileChangesSummary(repoChanges);
-  }, [repoChanges]);
 
   const selectedProviderInfo = useMemo(() => {
     return acp?.providers?.find((p) => p.id === acp.selectedProvider) ?? null;
@@ -1998,13 +1989,10 @@ export function KanbanTab({
     onDismissMoveError: () => setMoveError(null),
     codebases,
     workspaceId,
-    defaultCodebase,
     repoSync,
     setSelectedCodebase,
     fetchCodebaseWorktrees,
     onRefresh,
-    repoChanges,
-    repoChangesLoading,
     availableProviders,
     acp,
     boardAutoProviderId,
@@ -2034,10 +2022,6 @@ export function KanbanTab({
     onCloseAgentPanel: () => setAgentPanelOpen(false),
     ensureKanbanAgentSession,
     kanbanRepoSelection,
-    fileChangesOpen,
-    setFileChangesOpen,
-    gitLogOpen,
-    setGitLogOpen,
   } : undefined;
 
   const taskDetailOverlayProps = board ? {
@@ -2187,22 +2171,17 @@ export function KanbanTab({
   const statusBarProps = {
     defaultCodebase,
     codebases,
-    fileChangesSummary,
     board,
     boardQueue,
     repoHealth,
     selectedProvider: selectedProviderInfo,
     onRepoClick: openCodebaseModal,
-    onFileChangesClick: () => setFileChangesOpen((prev) => !prev),
-    onGitLogClick: () => setGitLogOpen((prev) => !prev),
     onProviderClick: () => {
       // Could open provider settings or do nothing
     },
     onFitnessClick: () => {
       setShowFitnessWorkbench(true);
     },
-    fileChangesOpen,
-    gitLogOpen,
     repoSync,
     runtimeFitness: runtimeFitness.data,
     runtimeFitnessLoading: runtimeFitness.loading,
