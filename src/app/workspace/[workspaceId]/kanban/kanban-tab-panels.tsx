@@ -21,8 +21,6 @@ import type { RepoSelection } from "@/client/components/repo-picker";
 import { resolveEffectiveTaskAutomation } from "@/core/kanban/effective-task-automation";
 import { KanbanCard, KanbanCardOverlay } from "./kanban-card";
 import { KanbanCardActivityBar, KanbanCardDetail } from "./kanban-card-detail";
-import { getKanbanFileChangesSummary as _getKanbanFileChangesSummary } from "./kanban-file-changes-panel";
-import { KanbanEnhancedFileChangesPanel } from "./components/kanban-enhanced-file-changes-panel";
 import type { KanbanTaskAgentCopy } from "./i18n/kanban-task-agent";
 import { KanbanCreateModal, type TaskDraft } from "../kanban-create-modal";
 import { KanbanCardActivityPanel, KanbanEmptySessionPane } from "./kanban-card-activity";
@@ -40,10 +38,8 @@ import {
 } from "./kanban-tab-helpers";
 import type { ColumnAutomationConfig } from "./kanban-settings-modal";
 import type { KanbanBoardInfo, SessionInfo, TaskInfo, WorktreeInfo } from "../types";
-import type { KanbanRepoChanges } from "./kanban-file-changes-types";
 import { buildKanbanTaskAdaptiveHarnessOptions } from "./kanban-task-adaptive";
 import { ChevronRight as _ChevronRight, GitBranch as _GitBranch } from "lucide-react";
-import { GitLogPanel, RealGitAdapter, MockGitAdapter } from "./git-log";
 
 interface SessionRestoreTranscriptMessage {
   role?: string;
@@ -307,13 +303,10 @@ export function KanbanBoardSurface({
   onDismissMoveError,
   codebases,
   workspaceId,
-  defaultCodebase,
   repoSync: _repoSync,
   setSelectedCodebase: _setSelectedCodebase,
   fetchCodebaseWorktrees: _fetchCodebaseWorktrees,
   onRefresh,
-  repoChanges,
-  repoChangesLoading,
   availableProviders,
   acp,
   boardAutoProviderId,
@@ -343,22 +336,15 @@ export function KanbanBoardSurface({
   onCloseAgentPanel,
   ensureKanbanAgentSession,
   kanbanRepoSelection,
-  fileChangesOpen,
-  setFileChangesOpen,
-  gitLogOpen,
-  setGitLogOpen,
 }: {
   moveError: string | null;
   onDismissMoveError: () => void;
   codebases: CodebaseData[];
   workspaceId: string;
-  defaultCodebase: CodebaseData | null;
   repoSync?: RepoSyncState;
   setSelectedCodebase: Dispatch<SetStateAction<CodebaseData | null>>;
   fetchCodebaseWorktrees: (codebase: CodebaseData) => Promise<void>;
   onRefresh: () => void;
-  repoChanges: KanbanRepoChanges[];
-  repoChangesLoading: boolean;
   availableProviders: AcpProviderInfo[];
   acp?: UseAcpState & UseAcpActions;
   boardAutoProviderId?: string;
@@ -393,15 +379,8 @@ export function KanbanBoardSurface({
     model?: string,
   ) => Promise<string | null>;
   kanbanRepoSelection: RepoSelection | null;
-  fileChangesOpen?: boolean;
-  setFileChangesOpen?: Dispatch<SetStateAction<boolean>>;
-  gitLogOpen?: boolean;
-  setGitLogOpen?: Dispatch<SetStateAction<boolean>>;
 }) {
   const { t } = useTranslation();
-  const [localFileChangesOpen, setLocalFileChangesOpen] = useState(false);
-  const [localGitLogOpen, setLocalGitLogOpen] = useState(false);
-  const [gitLogRepoPath, setGitLogRepoPath] = useState<string | null>(null);
   const [activeDragTaskId, setActiveDragTaskId] = useState<string | null>(null);
   const [activeDragCardWidth, setActiveDragCardWidth] = useState<number | null>(null);
   const sensors = useSensors(
@@ -413,24 +392,6 @@ export function KanbanBoardSurface({
     }),
   );
 
-  // Use external state if provided, otherwise use local state
-  const fileChangesOpenValue = fileChangesOpen ?? localFileChangesOpen;
-  const setFileChangesOpenValue = setFileChangesOpen ?? setLocalFileChangesOpen;
-  const gitLogOpenValue = gitLogOpen ?? localGitLogOpen;
-  const _setGitLogOpenValue = setGitLogOpen ?? setLocalGitLogOpen;
-
-  // Use RealGitAdapter when a real repo is available; fall back to MockGitAdapter for demo
-  const gitAdapter = useMemo(() => {
-    const hasRealRepo = codebases.length > 0;
-    return hasRealRepo ? new RealGitAdapter() : new MockGitAdapter();
-  }, [codebases.length]);
-
-  const activeGitLogRepoPath = useMemo(() => {
-    if (gitLogRepoPath && codebases.some((codebase) => codebase.repoPath === gitLogRepoPath)) {
-      return gitLogRepoPath;
-    }
-    return defaultCodebase?.repoPath ?? codebases[0]?.repoPath ?? null;
-  }, [codebases, defaultCodebase?.repoPath, gitLogRepoPath]);
   const activeDragTask = useMemo(
     () => activeDragTaskId ? boardTasks.find((task) => task.id === activeDragTaskId) ?? null : null,
     [activeDragTaskId, boardTasks],
@@ -480,25 +441,6 @@ export function KanbanBoardSurface({
       )}
       <div className="flex min-h-0 flex-1 gap-4">
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <KanbanEnhancedFileChangesPanel
-            workspaceId={workspaceId}
-            repos={repoChanges}
-            loading={repoChangesLoading}
-            open={fileChangesOpenValue}
-            onClose={() => setFileChangesOpenValue(false)}
-            onRefresh={onRefresh}
-          />
-          {gitLogOpenValue && (
-            <div className="absolute bottom-0 left-0 right-0 z-10 border-t border-slate-200 dark:border-[#1c1f2e] shadow-xl" style={{ height: "340px" }}>
-              <GitLogPanel
-                adapter={gitAdapter}
-                repoPath={activeGitLogRepoPath ?? "/mock/repo"}
-                codebases={codebases}
-                onSelectRepoPath={setGitLogRepoPath}
-                title={t.gitLog.title}
-              />
-            </div>
-          )}
           <div className="flex-1 min-h-0 overflow-auto pb-2" data-testid="kanban-board-content">
             <DndContext
               sensors={sensors}
