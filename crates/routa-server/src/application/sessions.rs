@@ -167,6 +167,10 @@ struct SessionEntry {
     first_prompt_sent: bool,
     /// Whether there is an active in-memory process for this session.
     is_active: bool,
+    /// Derived ACP runtime status from message_history.
+    acp_status: Option<&'static str>,
+    /// Error text when acp_status is "error".
+    acp_error: Option<String>,
 }
 
 impl SessionEntry {
@@ -188,10 +192,13 @@ impl SessionEntry {
             parent_session_id: session.parent_session_id,
             first_prompt_sent: session.first_prompt_sent,
             is_active: true,
+            acp_status: None,
+            acp_error: None,
         }
     }
 
     fn from_db(session: AcpSessionRow) -> Self {
+        let (acp_status, acp_error) = derive_acp_status(false, &session.message_history);
         Self {
             session_id: session.id,
             name: session.name,
@@ -209,6 +216,8 @@ impl SessionEntry {
             parent_session_id: session.parent_session_id,
             first_prompt_sent: session.first_prompt_sent,
             is_active: false,
+            acp_status,
+            acp_error,
         }
     }
 
@@ -236,6 +245,9 @@ impl SessionEntry {
         }
         self.first_prompt_sent = self.first_prompt_sent || db.first_prompt_sent;
         self.updated_at = Some(Value::Number(db.updated_at.into()));
+        let (acp_status, acp_error) = derive_acp_status(self.is_active, &db.message_history);
+        self.acp_status = acp_status;
+        self.acp_error = acp_error;
         self
     }
 
@@ -306,6 +318,8 @@ impl SessionEntry {
             "parentSessionId": self.parent_session_id,
             "continuityStatus": self.continuity_status(),
             "resumeCapabilities": resume_cap.and_then(|c| serde_json::to_value(c).ok()),
+            "acpStatus": self.acp_status,
+            "acpError": self.acp_error,
         })
     }
 
@@ -329,6 +343,8 @@ impl SessionEntry {
             "firstPromptSent": self.first_prompt_sent,
             "continuityStatus": self.continuity_status(),
             "resumeCapabilities": resume_cap.and_then(|c| serde_json::to_value(c).ok()),
+            "acpStatus": self.acp_status,
+            "acpError": self.acp_error,
         })
     }
 
@@ -350,6 +366,63 @@ impl SessionEntry {
             "parentSessionId": self.parent_session_id,
             "firstPromptSent": self.first_prompt_sent,
         })
+    }
+}
+
+/// Derive ACP runtime status from persisted message_history.
+///
+/// Scans history in reverse for the latest `acp_status` or `error` entry.
+/// Returns `(status, error_text)` where status is "ready", "error", or None.
+fn derive_acp_status(
+    is_active: bool,
+    message_history: &[Value],
+) -> (Option<&'static str>, Option<String>) {
+    let latest = message_history.iter().rev().find_map(|entry| {
+        // Legacy error shape: top-level "type": "error"
+        if entry.get("type").and_then(Value::as_str) == Some("error") {
+            let error_text = entry
+                .get("error")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            return Some(("error", error_text));
+        }
+
+        let update = entry.get("update")?.as_object()?;
+        let session_update = update.get("sessionUpdate")?.as_str()?;
+
+        if session_update == "error" {
+            let error_text = update
+                .get("error")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            return Some(("error", error_text));
+        }
+
+        if session_update == "acp_status" {
+            let status = update.get("status")?.as_str()?;
+            let error_text = update
+                .get("error")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            return match status {
+                "error" => Some(("error", error_text)),
+                "ready" | "connecting" => Some(("ready", None)),
+                _ => None,
+            };
+        }
+
+        None
+    });
+
+    match (is_active, latest) {
+        // Active process with persisted error: error takes precedence (process may have just crashed)
+        (true, Some(("error", err))) => (Some("error"), err),
+        // Active process, no error: ready
+        (true, _) => (Some("ready"), None),
+        // No active process, persisted error: error with text
+        (false, Some(("error", err))) => (Some("error"), err),
+        // No active process, no error or ready/connecting: omit field
+        (false, _) => (None, None),
     }
 }
 
@@ -378,7 +451,12 @@ fn merge_session_entries(
             let entry = SessionEntry::from_in_memory(session);
             match db_sessions_by_id.get(&session_id) {
                 Some(db_session) => entry.merge_db_state(db_session),
-                None => entry,
+                None => {
+                    // In-memory session without db row: process is alive, report ready
+                    let mut entry = entry;
+                    entry.acp_status = Some("ready");
+                    entry
+                }
             }
         })
         .collect();
@@ -1112,5 +1190,74 @@ mod tests {
             Value::String("2026-03-19T10:00:00Z".to_string())
         );
         assert_eq!(value["firstPromptSent"], Value::Bool(false));
+    }
+
+    #[test]
+    fn derive_acp_status_db_only_ready_history() {
+        let history = vec![json!({
+            "update": { "sessionUpdate": "acp_status", "status": "ready" }
+        })];
+        let (status, error) = super::derive_acp_status(false, &history);
+        assert_eq!(status, None);
+        assert_eq!(error, None);
+    }
+
+    #[test]
+    fn derive_acp_status_db_only_error_history() {
+        let history = vec![json!({
+            "update": { "sessionUpdate": "acp_status", "status": "error", "error": "process exited" }
+        })];
+        let (status, error) = super::derive_acp_status(false, &history);
+        assert_eq!(status, Some("error"));
+        assert_eq!(error, Some("process exited".to_string()));
+    }
+
+    #[test]
+    fn derive_acp_status_db_only_error_then_ready() {
+        let history = vec![
+            json!({"update": { "sessionUpdate": "acp_status", "status": "error", "error": "crash" }}),
+            json!({"update": { "sessionUpdate": "acp_status", "status": "ready" }}),
+        ];
+        let (status, error) = super::derive_acp_status(false, &history);
+        assert_eq!(status, None);
+        assert_eq!(error, None);
+    }
+
+    #[test]
+    fn derive_acp_status_in_memory_no_db() {
+        let (status, error) = super::derive_acp_status(true, &[]);
+        assert_eq!(status, Some("ready"));
+        assert_eq!(error, None);
+    }
+
+    #[test]
+    fn derive_acp_status_in_memory_with_db_error() {
+        let history = vec![json!({
+            "update": { "sessionUpdate": "acp_status", "status": "error", "error": "timeout" }
+        })];
+        let (status, error) = super::derive_acp_status(true, &history);
+        assert_eq!(status, Some("error"));
+        assert_eq!(error, Some("timeout".to_string()));
+    }
+
+    #[test]
+    fn derive_acp_status_legacy_error_shape() {
+        let history = vec![json!({
+            "type": "error",
+            "error": "legacy failure"
+        })];
+        let (status, error) = super::derive_acp_status(false, &history);
+        assert_eq!(status, Some("error"));
+        assert_eq!(error, Some("legacy failure".to_string()));
+    }
+
+    #[test]
+    fn derive_acp_status_session_update_error() {
+        let history = vec![json!({
+            "update": { "sessionUpdate": "error", "error": "direct error" }
+        })];
+        let (status, error) = super::derive_acp_status(false, &history);
+        assert_eq!(status, Some("error"));
+        assert_eq!(error, Some("direct error".to_string()));
     }
 }
