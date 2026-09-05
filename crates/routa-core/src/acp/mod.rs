@@ -43,6 +43,13 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
+/// Resolve the executable used by the desktop Claude Code integration.
+pub fn require_claude_cli() -> Result<String, String> {
+    crate::shell_env::which("claude").ok_or_else(|| {
+        "Claude Code CLI was not found in the system PATH. Install Claude Code and verify that `claude` runs from a login shell.".to_string()
+    })
+}
+
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, RwLock};
 
@@ -370,7 +377,7 @@ impl AcpManager {
         options: SessionLaunchOptions,
     ) -> Result<(String, String), String> {
         validate_session_cwd(&cwd)?;
-        let provider_name = provider.as_deref().unwrap_or("opencode");
+        let provider_name = provider.as_deref().unwrap_or("claude");
         let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp") {
             options.acp_mcp_servers.clone().unwrap_or_else(|| {
                 mcp_setup::build_acp_http_mcp_servers(
@@ -762,7 +769,7 @@ impl AcpManager {
         options: SessionLaunchOptions,
     ) -> Result<(String, String), String> {
         validate_session_cwd(&cwd)?;
-        let provider_name = provider.as_deref().unwrap_or("opencode");
+        let provider_name = provider.as_deref().unwrap_or("claude");
         let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp") {
             options.acp_mcp_servers.clone().unwrap_or_else(|| {
                 mcp_setup::build_acp_http_mcp_servers(

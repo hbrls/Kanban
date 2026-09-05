@@ -249,7 +249,10 @@ async fn trigger_assigned_task_acp_agent(
     let provider = task
         .assigned_provider
         .clone()
-        .unwrap_or_else(|| "opencode".to_string());
+        .unwrap_or_else(|| "claude".to_string());
+    if provider == "claude" {
+        routa_core::acp::require_claude_cli()?;
+    }
     let role = task
         .assigned_role
         .clone()

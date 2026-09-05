@@ -267,7 +267,7 @@ export class BrowserAcpClient {
       cwd: params.cwd,
       branch: params.branch,
       name: params.name,
-      provider: params.provider ?? "opencode",
+      provider: params.provider ?? "claude",
       modeId: params.modeId,
       role: params.role,
       parentSessionId: params.parentSessionId,

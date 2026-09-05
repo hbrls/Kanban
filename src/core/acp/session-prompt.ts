@@ -341,7 +341,7 @@ async function ensurePromptSessionExists(args: {
   }
 
   const cwd = recoveredSession?.cwd ?? (params.cwd as string | undefined) ?? process.cwd();
-  const defaultProvider = isServerlessEnvironment() ? "claude-code-sdk" : "opencode";
+  const defaultProvider = isServerlessEnvironment() ? "claude-code-sdk" : "claude";
   const provider = (params.provider as string | undefined) ?? recoveredSession?.provider ?? defaultProvider;
   const workspaceId = requireWorkspaceId(params.workspaceId) ?? recoveredSession?.workspaceId;
   if (!workspaceId) {

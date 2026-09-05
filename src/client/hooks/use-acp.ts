@@ -123,13 +123,13 @@ function getInitialProviderFallbacks(): AcpProviderInfo[] {
 
 export function loadSelectedAcpProvider(): string {
   if (typeof window === "undefined" || !window.localStorage) {
-    return "opencode";
+    return "claude";
   }
   try {
     const stored = window.localStorage.getItem(ACP_SELECTED_PROVIDER_STORAGE_KEY)?.trim();
-    return stored || "opencode";
+    return stored || "claude";
   } catch {
-    return "opencode";
+    return "claude";
   }
 }
 
@@ -265,7 +265,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
     updates: [],
     providers: getInitialProviderFallbacks(),
     // Always use SSR-safe default; useEffect below hydrates from localStorage
-    selectedProvider: "opencode",
+    selectedProvider: "claude",
     loading: false,
     error: null,
     authError: null,
@@ -275,9 +275,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
   // Hydrate selectedProvider from localStorage after mount to avoid SSR mismatch
   useEffect(() => {
     const persisted = loadSelectedAcpProvider();
-    if (persisted !== "opencode") {
-      setState((s) => ({ ...s, selectedProvider: persisted }));
-    }
+    setState((s) => ({ ...s, selectedProvider: persisted }));
   }, []);
   // Clean up on unmount
   useEffect(() => {
