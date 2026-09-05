@@ -664,7 +664,7 @@ async fn acp_rpc(
                         "id": id,
                         "result": {
                             "sessionId": session_id,
-                            "provider": effective_provider.as_deref().unwrap_or("opencode"),
+                            "provider": effective_provider.as_deref().unwrap_or("claude"),
                             "role": role.as_deref().unwrap_or("CRAFTER"),
                             "routaAgentId": routa_agent_id,
                         }
@@ -869,7 +869,7 @@ async fn acp_rpc(
                         tracing::info!(
                             "[ACP Route] Auto-created session: {} (provider: {:?}, agent session: {})",
                             session_id,
-                            effective_provider.as_deref().unwrap_or("opencode"),
+                            effective_provider.as_deref().unwrap_or("claude"),
                             agent_sid
                         );
                         // Persist auto-created session to DB
@@ -1271,7 +1271,7 @@ async fn acp_rpc(
             let provider = persisted_session
                 .provider
                 .clone()
-                .unwrap_or_else(|| "opencode".to_string());
+                .unwrap_or_else(|| "claude".to_string());
             let cwd = params
                 .get("cwd")
                 .and_then(|value| value.as_str())
