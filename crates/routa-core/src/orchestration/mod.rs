@@ -326,8 +326,8 @@ pub struct OrchestratorConfig {
 impl Default for OrchestratorConfig {
     fn default() -> Self {
         Self {
-            default_crafter_provider: "opencode".to_string(),
-            default_gate_provider: "opencode".to_string(),
+            default_crafter_provider: "claude".to_string(),
+            default_gate_provider: "claude".to_string(),
             default_cwd: ".".to_string(),
         }
     }
