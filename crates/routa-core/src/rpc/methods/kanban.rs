@@ -311,7 +311,7 @@ mod tests {
             None,
         );
         task.column_id = Some("todo".to_string());
-        task.assigned_provider = Some("opencode".to_string());
+        task.assigned_provider = Some("claude".to_string());
         task.assigned_role = Some("CRAFTER".to_string());
         task.assigned_specialist_id = Some("spec-1".to_string());
         task.assigned_specialist_name = Some("Todo Worker".to_string());
@@ -363,7 +363,7 @@ mod tests {
         assert_eq!(lane_session.column_name.as_deref(), Some("Todo"));
         assert_eq!(lane_session.step_id.as_deref(), Some("step-1"));
         assert_eq!(lane_session.step_name.as_deref(), Some("Planner"));
-        assert_eq!(lane_session.provider.as_deref(), Some("opencode"));
+        assert_eq!(lane_session.provider.as_deref(), Some("claude"));
         assert_eq!(lane_session.role.as_deref(), Some("CRAFTER"));
         assert_eq!(lane_session.transport.as_deref(), Some("acp"));
         assert_eq!(lane_session.context_id.as_deref(), Some("ctx-1"));
@@ -754,7 +754,7 @@ mod tests {
             .expect("todo column should exist");
         todo.automation = Some(KanbanColumnAutomation {
             enabled: true,
-            provider_id: Some("opencode".to_string()),
+            provider_id: Some("claude".to_string()),
             role: Some("CRAFTER".to_string()),
             specialist_id: Some("kanban-todo-worker".to_string()),
             specialist_name: Some("Todo Worker".to_string()),
@@ -798,7 +798,7 @@ mod tests {
             .await
             .expect("task lookup should succeed")
             .expect("task should exist");
-        assert_eq!(task.assigned_provider.as_deref(), Some("opencode"));
+        assert_eq!(task.assigned_provider.as_deref(), Some("claude"));
         assert_eq!(task.assigned_role.as_deref(), Some("CRAFTER"));
         assert_eq!(
             task.assigned_specialist_id.as_deref(),

@@ -24,7 +24,7 @@ async fn list_automations_returns_column_automation_info() {
 
     let automation = KanbanColumnAutomation {
         enabled: true,
-        provider_id: Some("opencode".to_string()),
+        provider_id: Some("claude".to_string()),
         role: Some("DEVELOPER".to_string()),
         ..Default::default()
     };
