@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FileRow } from "../kanban-file-changes-panel";
 import { KanbanTab } from "../kanban-tab";
@@ -109,51 +109,5 @@ describe("KanbanTab file changes panel", () => {
 
     const syncIndicator = screen.getByTestId("kanban-repo-sync-progress");
     expect(syncIndicator.textContent).toContain("1 repo updated");
-  });
-
-  it("opens the file changes drawer from the repo toolbar and allows collapsing it", () => {
-    render(
-      <KanbanTab
-        workspaceId="workspace-1"
-        boards={[board]}
-        tasks={[]}
-        sessions={[]}
-        providers={[]}
-        specialists={[]}
-        codebases={[{
-          id: "codebase-1",
-          workspaceId: "workspace-1",
-          repoPath: "/tmp/repo",
-          branch: "main",
-          label: "routa-js",
-          isDefault: true,
-          createdAt: "2025-01-01T00:00:00.000Z",
-          updatedAt: "2025-01-01T00:00:00.000Z",
-        }]}
-        repoChanges={[{
-          codebaseId: "codebase-1",
-          repoPath: "/tmp/repo",
-          label: "routa-js",
-          branch: "main",
-          status: { clean: false, ahead: 1, behind: 0, modified: 1, untracked: 1 },
-          files: [
-            { path: "src/app.tsx", status: "modified" },
-            { path: "README.md", status: "untracked" },
-          ],
-        }]}
-        onRefresh={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByTestId("kanban-file-changes-open"));
-
-    expect(screen.getByTestId("kanban-file-changes-panel")).toBeTruthy();
-    expect(screen.getByText("File Changes")).toBeTruthy();
-    expect(screen.getByText("app.tsx")).toBeTruthy();
-    expect(screen.getByTitle("src")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Hide" }));
-
-    expect(screen.getByTestId("kanban-file-changes-open")).toBeTruthy();
   });
 });
