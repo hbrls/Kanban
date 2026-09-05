@@ -65,7 +65,7 @@ describe("useAcp selected provider persistence", () => {
     localStorage.clear();
     vi.clearAllMocks();
     const providers: AcpProviderInfo[] = [
-      { id: "opencode", name: "OpenCode", command: "opencode", description: "OpenCode provider", status: "available", source: "static" },
+      { id: "claude", name: "Claude", command: "claude", description: "Claude provider", status: "available", source: "static" },
       { id: "codex", name: "Codex", command: "codex-acp", description: "Codex provider", status: "available", source: "static" },
     ];
     listProvidersMock.mockImplementation(async (checkLocal?: boolean, checkRegistry?: boolean) => {
@@ -77,7 +77,7 @@ describe("useAcp selected provider persistence", () => {
   });
 
   it("round-trips the selected provider through localStorage", () => {
-    expect(loadSelectedAcpProvider()).toBe("opencode");
+    expect(loadSelectedAcpProvider()).toBe("claude");
 
     saveSelectedAcpProvider("codex");
 
@@ -112,8 +112,7 @@ describe("useAcp selected provider persistence", () => {
     window.localStorage.setItem("routa.acp.selectedProvider", "claude");
     listProvidersMock.mockResolvedValue([
       { id: "claude", name: "Claude", command: "claude", description: "Claude provider", status: "unavailable", source: "static" },
-      { id: "opencode", name: "OpenCode", command: "opencode", description: "OpenCode provider", status: "available", source: "static" },
-      { id: "codex", name: "Codex", command: "codex-acp", description: "Codex provider", status: "unavailable", source: "static" },
+      { id: "codex", name: "Codex", command: "codex-acp", description: "Codex provider", status: "available", source: "static" },
     ]);
 
     const { result } = renderHook(() => useAcp());
@@ -124,10 +123,10 @@ describe("useAcp selected provider persistence", () => {
 
     await waitFor(() => {
       expect(result.current.connected).toBe(true);
-      expect(result.current.selectedProvider).toBe("opencode");
+      expect(result.current.selectedProvider).toBe("codex");
     });
 
-    expect(window.localStorage.getItem("routa.acp.selectedProvider")).toBe("opencode");
+    expect(window.localStorage.getItem("routa.acp.selectedProvider")).toBe("codex");
   });
 
   it("ignores duplicate connect calls while the client is already connected", async () => {

@@ -199,8 +199,12 @@ impl ClaudeCodeProcess {
     async fn start(&self) -> Result<(), String> {
         // Resolve the actual binary path using the full shell PATH
         // (macOS GUI apps have a minimal PATH that won't find user CLI tools)
-        let resolved_command = crate::shell_env::which(&self.config.command)
-            .unwrap_or_else(|| self.config.command.clone());
+        let resolved_command = crate::shell_env::which(&self.config.command).ok_or_else(|| {
+            format!(
+                "Claude Code CLI '{}' was not found in the system PATH",
+                self.config.command
+            )
+        })?;
 
         let mut cmd = Command::new(&resolved_command);
         cmd.arg("-p");
