@@ -7,7 +7,6 @@ import {
   Calendar,
   CircleUser,
   Monitor,
-  MonitorUp,
   Server,
   Workflow,
 } from "lucide-react";
@@ -48,9 +47,6 @@ export function AdvancedNavMenu({
   const settingsHarnessHref = normalizedWorkspaceId
     ? `/settings/harness?workspaceId=${encodeURIComponent(normalizedWorkspaceId)}`
     : "/settings/harness";
-  const settingsFluencyHref = normalizedWorkspaceId
-    ? `/settings/fluency?workspaceId=${encodeURIComponent(normalizedWorkspaceId)}`
-    : "/settings/fluency";
 
   const sections: AdvancedNavSection[] = [
     {
@@ -62,12 +58,6 @@ export function AdvancedNavMenu({
           label: t.nav.harness,
           href: settingsHarnessHref,
           icon: <HarnessMark className="h-4 w-4" title="" />,
-        },
-        {
-          id: "fluency",
-          label: t.nav.fluency,
-          href: settingsFluencyHref,
-          icon: <MonitorUp className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} />,
         },
       ],
     },
