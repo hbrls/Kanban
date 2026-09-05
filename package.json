@@ -110,7 +110,6 @@
     "git:coauthor:stats": "node --import tsx scripts/coauthor-stats.ts",
     "git:doctor": "node scripts/check-git-control-plane.js",
     "codemod:lucide-icons": "node --import tsx tools/codemods/replace-inline-svg-with-lucide.ts --write",
-    "fitness:fluency": "cargo run -p routa-cli -- fitness fluency",
     "test:arch:backend-core": "node --import tsx scripts/fitness/check-backend-architecture.ts",
     "test:arch:dsl": "node --import tsx scripts/fitness/architecture-rule-dsl.ts --json",
     "scripts:test:arch-dsl": "vitest run scripts/__tests__/architecture-rule-dsl.test.ts",

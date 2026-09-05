@@ -23,13 +23,13 @@ describe("DesktopSidebar", () => {
     expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe("/workspace/default/team");
   });
 
-  it("keeps Harness and Fluency in the lower menu and uses a direct settings link", () => {
+  it("keeps Harness in the lower menu and uses a direct settings link", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
     expect(screen.queryByRole("link", { name: "MCP Servers" })).toBeNull();
     expect(screen.getByRole("link", { name: "Spec" }).getAttribute("href")).toBe("/workspace/default/spec");
     expect(screen.getByRole("link", { name: "Harness" }).getAttribute("href")).toBe("/settings/harness?workspaceId=default");
-    expect(screen.getByRole("link", { name: "Fluency" }).getAttribute("href")).toBe("/settings/fluency?workspaceId=default");
+    expect(screen.queryByRole("link", { name: "Fluency" })).toBeNull();
     expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings?workspaceId=default");
     expect(screen.queryByRole("button", { name: "Settings" })).toBeNull();
   });

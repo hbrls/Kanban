@@ -5,7 +5,7 @@
  *
  * Provides a compact icon-based navigation with:
  * - Primary navigation icons (Home, Sessions, Kanban, Team)
- * - Secondary tools (Harness, Fluency, Settings)
+ * - Secondary tools (Harness, Settings)
  * - Workspace indicator
  */
 
@@ -56,9 +56,6 @@ export function DesktopSidebar({
   const settingsHarnessHref = normalizedWorkspaceId
     ? `/settings/harness?workspaceId=${encodeURIComponent(normalizedWorkspaceId)}`
     : "/settings/harness";
-  const settingsFluencyHref = normalizedWorkspaceId
-    ? `/settings/fluency?workspaceId=${encodeURIComponent(normalizedWorkspaceId)}`
-    : "/settings/fluency";
 
   const primaryItems: NavItem[] = [
     {
@@ -116,12 +113,6 @@ export function DesktopSidebar({
       label: t.nav.harness,
       href: settingsHarnessHref,
       icon: <HarnessMark className="h-4 w-4" title="" />,
-    },
-    {
-      id: "fluency",
-      label: t.nav.fluency,
-      href: settingsFluencyHref,
-      icon: <MonitorUp className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>,
     },
     {
       id: "settings",
