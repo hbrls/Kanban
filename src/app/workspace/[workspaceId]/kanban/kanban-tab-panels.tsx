@@ -298,22 +298,97 @@ function KanbanDropColumn({
   );
 }
 
+export function KanbanAgentPanel({
+  agentSessionId,
+  agentSession,
+  acp,
+  workspaceId,
+  boardAutoProviderId,
+  kanbanTaskAgentCopy,
+  openAgentPanel,
+  onCloseAgentPanel,
+  ensureKanbanAgentSession,
+  kanbanRepoSelection,
+  codebases,
+}: {
+  agentSessionId: string;
+  agentSession?: SessionInfo;
+  acp: UseAcpState & UseAcpActions;
+  workspaceId: string;
+  boardAutoProviderId?: string;
+  kanbanTaskAgentCopy: KanbanTaskAgentCopy;
+  openAgentPanel: (sessionId: string) => void;
+  onCloseAgentPanel: () => void;
+  ensureKanbanAgentSession: (
+    cwd?: string,
+    provider?: string,
+    modeId?: string,
+    model?: string,
+  ) => Promise<string | null>;
+  kanbanRepoSelection: RepoSelection | null;
+  codebases: CodebaseData[];
+}) {
+  return (
+    <aside
+      className="flex h-full w-lg min-w-md flex-col overflow-hidden border border-slate-200/70 bg-white dark:border-[#1c1f2e] dark:bg-[#12141c]"
+      data-testid="kanban-agent-panel"
+    >
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-[#191c28]">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{kanbanTaskAgentCopy.panelTitle}</div>
+          <div
+            className="overflow-x-auto whitespace-nowrap text-[11px] text-slate-400 dark:text-slate-500"
+            title={agentSessionId}
+          >
+            {agentSession?.provider ?? boardAutoProviderId ?? acp.selectedProvider} · {agentSessionId}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href={`/workspace/${workspaceId}/sessions/${agentSessionId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
+          >
+            {kanbanTaskAgentCopy.open}
+          </a>
+          <button
+            onClick={onCloseAgentPanel}
+            className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
+          >
+            {kanbanTaskAgentCopy.close}
+          </button>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1">
+        <ChatPanel
+          acp={acp}
+          activeSessionId={agentSessionId}
+          onEnsureSession={ensureKanbanAgentSession}
+          onSelectSession={async (sessionId) => {
+            openAgentPanel(sessionId);
+          }}
+          repoSelection={kanbanRepoSelection}
+          onRepoChange={() => {}}
+          codebases={codebases}
+          activeWorkspaceId={workspaceId}
+          agentRole="DEVELOPER"
+        />
+      </div>
+    </aside>
+  );
+}
+
 export function KanbanBoardSurface({
   moveError,
   onDismissMoveError,
   codebases,
-  workspaceId,
   repoSync: _repoSync,
   setSelectedCodebase: _setSelectedCodebase,
   fetchCodebaseWorktrees: _fetchCodebaseWorktrees,
   onRefresh,
   availableProviders,
-  acp,
   boardAutoProviderId,
-  kanbanTaskAgentCopy,
-  agentSessionId,
-  openAgentPanel,
-  agentPanelOpen,
   board,
   visibleColumns,
   boardTasks,
@@ -332,10 +407,6 @@ export function KanbanBoardSurface({
   retryTaskTrigger,
   runTaskPullRequest, // eslint-disable-line @typescript-eslint/no-unused-vars -- used in KanbanTaskCard props
   openTaskDetail,
-  agentSession,
-  onCloseAgentPanel,
-  ensureKanbanAgentSession,
-  kanbanRepoSelection,
 }: {
   moveError: string | null;
   onDismissMoveError: () => void;
@@ -439,168 +510,111 @@ export function KanbanBoardSurface({
           </div>
         </div>
       )}
-      <div className="flex min-h-0 flex-1 gap-4">
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="flex-1 min-h-0 overflow-auto pb-2" data-testid="kanban-board-content">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCorners}
-              onDragStart={handleDragStart}
-              onDragEnd={(event) => {
-                void handleDragEnd(event);
-              }}
-              onDragCancel={handleDragCancel}
-            >
-              <div className="flex min-h-full min-w-max items-start gap-3 pr-4">
-                {board.columns
-                  .slice()
-                  .sort((left, right) => left.position - right.position)
-                  .filter((column) => visibleColumns.includes(column.id))
-                  .map((column) => {
-                    const columnTasks = boardTasks.filter((task) => (task.columnId ?? "backlog") === column.id);
-                    const laneAutomation = columnAutomation[column.id] ?? column.automation;
-                    const widthClass = column.width === "compact" ? "w-[14rem]" : column.width === "wide" ? "w-[24rem]" : "w-[18rem]";
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex-1 min-h-0 overflow-visible pb-2" data-testid="kanban-board-content">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={(event) => {
+              void handleDragEnd(event);
+            }}
+            onDragCancel={handleDragCancel}
+          >
+            <div className="flex min-h-full min-w-max items-start gap-3 pr-4">
+              {board.columns
+                .slice()
+                .sort((left, right) => left.position - right.position)
+                .filter((column) => visibleColumns.includes(column.id))
+                .map((column) => {
+                  const columnTasks = boardTasks.filter((task) => (task.columnId ?? "backlog") === column.id);
+                  const laneAutomation = columnAutomation[column.id] ?? column.automation;
+                  const widthClass = column.width === "compact" ? "w-[14rem]" : column.width === "wide" ? "w-[24rem]" : "w-[18rem]";
 
-                    return (
-                      <KanbanDropColumn
-                        key={column.id}
-                        columnId={column.id}
-                        hasActiveDrag={activeDragTaskId !== null}
-                        widthClass={widthClass}
-                      >
-                        <div className="mb-3 space-y-1.5">
-                          <div className="flex items-baseline justify-between gap-3">
-                            <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{column.name}</div>
-                            <div className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">
-                              {columnTasks.length} {t.kanbanBoard.cards}
-                            </div>
-                          </div>
-                          <div
-                            className="truncate text-[10px] leading-4 text-slate-500 dark:text-slate-400"
-                            data-testid={`kanban-column-automation-${column.id}`}
-                            title={laneAutomation?.enabled ? formatLaneAutomationSummary(laneAutomation, providers, specialists, {
+                  return (
+                    <KanbanDropColumn
+                      key={column.id}
+                      columnId={column.id}
+                      hasActiveDrag={activeDragTaskId !== null}
+                      widthClass={widthClass}
+                    >
+                      <div className="mb-3 flex items-baseline gap-2">
+                        <div className="shrink-0 text-sm font-semibold text-slate-800 dark:text-slate-100">{column.name}</div>
+                        <div
+                          className="min-w-0 flex-1 truncate text-[10px] font-normal leading-4 text-slate-500 dark:text-slate-400"
+                          data-testid={`kanban-column-automation-${column.id}`}
+                          title={laneAutomation?.enabled ? formatLaneAutomationSummary(laneAutomation, providers, specialists, {
+                            autoProviderId: boardAutoProviderId,
+                            autoLabel: t.common.auto,
+                          }) : column.stage === "blocked" ? t.kanbanBoard.manualLaneOnly : t.kanbanBoard.manualLane}
+                        >
+                          {laneAutomation?.enabled
+                            ? formatLaneAutomationCompactLabel(laneAutomation, providers, specialists, {
                               autoProviderId: boardAutoProviderId,
                               autoLabel: t.common.auto,
-                            }) : column.stage === "blocked" ? t.kanbanBoard.manualLaneOnly : t.kanbanBoard.manualLane}
-                          >
-                            {laneAutomation?.enabled
-                              ? formatLaneAutomationCompactLabel(laneAutomation, providers, specialists, {
-                                autoProviderId: boardAutoProviderId,
-                                autoLabel: t.common.auto,
-                              })
-                              : column.stage === "blocked"
-                                ? t.kanbanBoard.manualLaneOnly
-                                : t.kanbanBoard.manualLane}
-                          </div>
+                            })
+                            : column.stage === "blocked"
+                              ? t.kanbanBoard.manualLaneOnly
+                              : t.kanbanBoard.manualLane}
                         </div>
+                      </div>
 
-                        <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
-                          {columnTasks.map((task) => (
-                            <KanbanCard
-                              key={task.id}
-                              task={task}
-                              boardColumns={board.columns}
-                              linkedSession={task.triggerSessionId ? sessionMap.get(task.triggerSessionId) : undefined}
-                              liveMessageTail={task.triggerSessionId ? liveSessionTails[task.triggerSessionId] : undefined}
-                              availableProviders={availableProviders}
-                              specialists={specialists}
-                              specialistLanguage={specialistLanguage}
-                              codebases={codebases}
-                              allCodebaseIds={allCodebaseIds}
-                              worktreeCache={worktreeCache}
-                              autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
-                              queuePosition={queuedPositions[task.id]}
-                              onOpenDetail={() => openTaskDetail(task)}
-                              onDelete={() => confirmDeleteTask(task)}
-                              onPatchTask={patchTask}
-                              onRetryTrigger={retryTaskTrigger}
-                              onRefresh={onRefresh}
-                            />
-                          ))}
-                        </div>
-                      </KanbanDropColumn>
-                    );
-                  })}
-              </div>
-              {activeDragTask && typeof document !== "undefined" && createPortal(
-                <DragOverlay adjustScale={false} dropAnimation={null} zIndex={80}>
-                  <div style={activeDragCardWidth ? { width: activeDragCardWidth } : undefined}>
-                    <KanbanCardOverlay
-                      task={activeDragTask}
-                      boardColumns={board.columns}
-                      linkedSession={activeDragTask.triggerSessionId ? sessionMap.get(activeDragTask.triggerSessionId) : undefined}
-                      liveMessageTail={activeDragTask.triggerSessionId ? liveSessionTails[activeDragTask.triggerSessionId] : undefined}
-                      availableProviders={availableProviders}
-                      specialists={specialists}
-                      specialistLanguage={specialistLanguage}
-                      codebases={codebases}
-                      allCodebaseIds={allCodebaseIds}
-                      worktreeCache={worktreeCache}
-                      autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
-                      queuePosition={queuedPositions[activeDragTask.id]}
-                      onOpenDetail={() => {}}
-                      onDelete={() => {}}
-                      onPatchTask={patchTask}
-                      onRetryTrigger={retryTaskTrigger}
-                      onRefresh={onRefresh}
-                    />
-                  </div>
-                </DragOverlay>,
-                document.body,
-              )}
-            </DndContext>
-          </div>
-        </div>
-
-        {agentPanelOpen && agentSessionId && acp && (
-          <aside
-            className="flex h-full w-lg min-w-md flex-col overflow-hidden border border-slate-200/70 bg-white dark:border-[#1c1f2e] dark:bg-[#12141c]"
-            data-testid="kanban-agent-panel"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-[#191c28]">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{kanbanTaskAgentCopy.panelTitle}</div>
-                <div
-                  className="overflow-x-auto whitespace-nowrap text-[11px] text-slate-400 dark:text-slate-500"
-                  title={agentSessionId}
-                >
-                  {agentSession?.provider ?? boardAutoProviderId ?? acp.selectedProvider} · {agentSessionId}
+                      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
+                        {columnTasks.map((task) => (
+                          <KanbanCard
+                            key={task.id}
+                            task={task}
+                            boardColumns={board.columns}
+                            linkedSession={task.triggerSessionId ? sessionMap.get(task.triggerSessionId) : undefined}
+                            liveMessageTail={task.triggerSessionId ? liveSessionTails[task.triggerSessionId] : undefined}
+                            availableProviders={availableProviders}
+                            specialists={specialists}
+                            specialistLanguage={specialistLanguage}
+                            codebases={codebases}
+                            allCodebaseIds={allCodebaseIds}
+                            worktreeCache={worktreeCache}
+                            autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
+                            queuePosition={queuedPositions[task.id]}
+                            onOpenDetail={() => openTaskDetail(task)}
+                            onDelete={() => confirmDeleteTask(task)}
+                            onPatchTask={patchTask}
+                            onRetryTrigger={retryTaskTrigger}
+                            onRefresh={onRefresh}
+                          />
+                        ))}
+                      </div>
+                    </KanbanDropColumn>
+                  );
+                })}
+            </div>
+            {activeDragTask && typeof document !== "undefined" && createPortal(
+              <DragOverlay adjustScale={false} dropAnimation={null} zIndex={80}>
+                <div style={activeDragCardWidth ? { width: activeDragCardWidth } : undefined}>
+                  <KanbanCardOverlay
+                    task={activeDragTask}
+                    boardColumns={board.columns}
+                    linkedSession={activeDragTask.triggerSessionId ? sessionMap.get(activeDragTask.triggerSessionId) : undefined}
+                    liveMessageTail={activeDragTask.triggerSessionId ? liveSessionTails[activeDragTask.triggerSessionId] : undefined}
+                    availableProviders={availableProviders}
+                    specialists={specialists}
+                    specialistLanguage={specialistLanguage}
+                    codebases={codebases}
+                    allCodebaseIds={allCodebaseIds}
+                    worktreeCache={worktreeCache}
+                    autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
+                    queuePosition={queuedPositions[activeDragTask.id]}
+                    onOpenDetail={() => {}}
+                    onDelete={() => {}}
+                    onPatchTask={patchTask}
+                    onRetryTrigger={retryTaskTrigger}
+                    onRefresh={onRefresh}
+                  />
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={`/workspace/${workspaceId}/sessions/${agentSessionId}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
-                >
-                  {kanbanTaskAgentCopy.open}
-                </a>
-                <button
-                  onClick={onCloseAgentPanel}
-                  className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-[#191c28]"
-                >
-                  {kanbanTaskAgentCopy.close}
-                </button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1">
-              <ChatPanel
-                acp={acp}
-                activeSessionId={agentSessionId}
-                onEnsureSession={ensureKanbanAgentSession}
-                onSelectSession={async (sessionId) => {
-                  openAgentPanel(sessionId);
-                }}
-                repoSelection={kanbanRepoSelection}
-                onRepoChange={() => {}}
-                codebases={codebases}
-                activeWorkspaceId={workspaceId}
-                agentRole="DEVELOPER"
-              />
-            </div>
-          </aside>
-        )}
+              </DragOverlay>,
+              document.body,
+            )}
+          </DndContext>
+        </div>
       </div>
     </>
   );
