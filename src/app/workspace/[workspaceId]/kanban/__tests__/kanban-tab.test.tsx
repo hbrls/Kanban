@@ -215,7 +215,12 @@ describe("KanbanTab lane automation labels", () => {
     );
 
     const laneAutomation = screen.getByTestId("kanban-column-automation-backlog");
+    const laneTitle = screen.getByText("Backlog");
     expect(laneAutomation.textContent).toBe("Auto · Claude Code · GATE");
+    expect(laneTitle.parentElement).toBe(laneAutomation.parentElement);
+    expect(laneTitle.className).toContain("font-semibold");
+    expect(laneAutomation.className).toContain("font-normal");
+    expect(screen.queryByText(/1\s+cards?/i)).toBeNull();
   });
 });
 

@@ -7,7 +7,9 @@ import type { KanbanAgentPromptHandler, KanbanBoardInfo } from "../types";
 import { KanbanTabHeader } from "./kanban-tab-header";
 import { KanbanStatusBar } from "./kanban-status-bar";
 import { KanbanGitHubImportModal } from "./kanban-github-import-modal";
-import { KanbanBoardSurface, KanbanCreateTaskModal, KanbanTaskDetailOverlay } from "./kanban-tab-panels";
+import { KanbanCreateTaskModal, KanbanTaskDetailOverlay } from "./kanban-tab-panels";
+import type { KanbanBoardSurface } from "./kanban-tab-panels";
+import { KanbanSwimlaneContainer } from "./kanban-swimlane-container";
 import { KanbanSettingsModal } from "./kanban-settings-modal";
 import { KanbanFitnessWorkbenchModal } from "./kanban-fitness-workbench-modal";
 import {
@@ -206,7 +208,7 @@ export function KanbanTabContent({
   return (
     <div className="flex flex-col h-full">
       <KanbanTabHeader {...headerProps} actionSlot={headerActionSlot}/>
-      <KanbanBoardSurface {...boardSurfaceProps}/>
+      <KanbanSwimlaneContainer {...boardSurfaceProps}/>
       <KanbanCreateTaskModal {...createTaskModalProps}/>
       <KanbanGitHubImportModal {...githubImportModalProps}/>
       <KanbanTaskDetailOverlay {...taskDetailOverlayProps}/>
