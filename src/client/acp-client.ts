@@ -101,7 +101,7 @@ export interface AcpProviderInfo {
   name: string;
   description: string;
   command: string;
-  status?: "available" | "unavailable" | "checking";
+  status?: "available" | "unavailable" | "checking" | "";
   source?: "static" | "registry";
   unavailableReason?: string;
 }
@@ -356,13 +356,27 @@ export class BrowserAcpClient {
 
   /**
    * List available ACP providers from the backend.
-   * @param check - If true, check command availability (slower). If false, return immediately with "checking" status.
+   * @param check - If true, check command availability (slower) for the requested IDs. If false, return immediately with "checking" status.
    * @param includeRegistry - If true, include registry providers (slower). If false, only local providers.
+   * @param checkIds - If provided, only check availability for these provider IDs.
    */
-  async listProviders(check: boolean = false, includeRegistry: boolean = false): Promise<AcpProviderInfo[]> {
+  async listProviders(
+    check: boolean = false,
+    includeRegistry: boolean = false,
+    checkIds?: string[],
+  ): Promise<AcpProviderInfo[]> {
     const params = new URLSearchParams();
     if (check) params.set("check", "true");
     if (includeRegistry) params.set("registry", "true");
+    if (checkIds) {
+      if (checkIds.length === 0) {
+        params.set("id", "");
+      } else {
+        for (const id of checkIds) {
+          params.append("id", id);
+        }
+      }
+    }
 
     const response = await fetch(resolveApiPath(`api/providers?${params}`, this.baseUrl));
     const data = await response.json();

@@ -1,13 +1,10 @@
 //! Providers API - Fast provider listing with lazy status checking
 //!
 //! GET /api/providers - List all providers (instant, status may be "checking")
-//! GET /api/providers?check=true - Check provider status (slower, but accurate)
+//! GET /api/providers?check=true&id=<provider> - Check selected provider statuses
 
-use axum::{
-    extract::Query,
-    routing::get,
-    Json, Router,
-};
+use axum::{routing::get, Json, Router};
+use axum_extra::extract::Query;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -30,6 +27,9 @@ struct ProviderInfo {
 struct ProvidersQuery {
     #[serde(default)]
     check: bool,
+    /// Provider IDs to check. Supports repeated query parameters and comma-separated values.
+    #[serde(default)]
+    id: Vec<String>,
 }
 
 // Simple in-memory cache
@@ -78,17 +78,32 @@ async fn list_providers(
         return Ok(Json(serde_json::json!({ "providers": providers })));
     }
 
-    // Slow path: check all provider statuses
-    let providers = get_providers_with_checking().await;
-
-    // Update cache
-    {
-        let mut cache = get_cache().lock().unwrap();
-        cache.providers = Some(providers.clone());
-        cache.timestamp = SystemTime::now();
+    // A real status check must always be explicitly scoped to provider IDs.
+    let check_ids = parse_check_ids(&query.id);
+    if check_ids.is_empty() {
+        return Err(ServerError::BadRequest(
+            "check=true requires at least one non-empty provider id".to_string(),
+        ));
     }
 
+    // Targeted checks are deliberately never written to the fast-query cache.
+    let providers = get_providers_with_checking(&check_ids).await;
+
     Ok(Json(serde_json::json!({ "providers": providers })))
+}
+
+fn parse_check_ids(raw_ids: &[String]) -> HashSet<String> {
+    raw_ids
+        .iter()
+        .flat_map(|raw| raw.split(','))
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(ToOwned::to_owned)
+        .collect()
+}
+
+fn should_check_provider(provider_id: &str, check_ids: &HashSet<String>) -> bool {
+    check_ids.contains(provider_id)
 }
 
 /// Helper to get command from agent distribution
@@ -173,7 +188,7 @@ async fn get_providers_without_checking() -> Vec<ProviderInfo> {
 }
 
 /// Slow: Check all provider command availability
-async fn get_providers_with_checking() -> Vec<ProviderInfo> {
+async fn get_providers_with_checking(check_ids: &HashSet<String>) -> Vec<ProviderInfo> {
     use crate::{acp, shell_env};
 
     let presets = acp::get_presets();
@@ -181,13 +196,16 @@ async fn get_providers_with_checking() -> Vec<ProviderInfo> {
 
     // Check static presets
     for preset in &presets {
-        let installed = shell_env::which(&preset.command).is_some();
+        let selected = should_check_provider(&preset.id, check_ids);
+        let installed = selected && shell_env::which(&preset.command).is_some();
         providers.push(ProviderInfo {
             id: preset.id.clone(),
             name: preset.name.clone(),
             description: preset.description.clone(),
             command: preset.command.clone(),
-            status: if installed {
+            status: if !selected {
+                String::new()
+            } else if installed {
                 "available".to_string()
             } else {
                 "unavailable".to_string()
@@ -200,15 +218,25 @@ async fn get_providers_with_checking() -> Vec<ProviderInfo> {
     let static_ids: HashSet<_> = providers.iter().map(|p| p.id.clone()).collect();
 
     if let Ok(registry) = super::acp_registry::fetch_registry().await {
-        let npx_available = shell_env::which("npx").is_some();
-        let uvx_available = shell_env::which("uv").is_some();
+        let mut npx_available: Option<bool> = None;
+        let mut uvx_available: Option<bool> = None;
         let platform =
             super::acp_registry::detect_platform().unwrap_or_else(|| "unknown".to_string());
 
         for agent in registry.agents {
-            let (command, status) = if agent.distribution.get("npx").is_some() {
+            let provider_id = if static_ids.contains(&agent.id) {
+                format!("{}-registry", agent.id)
+            } else {
+                agent.id.clone()
+            };
+
+            let (command, status) = if !should_check_provider(&provider_id, check_ids) {
+                (get_agent_command(&agent, &platform), String::new())
+            } else if agent.distribution.get("npx").is_some() {
                 let cmd = get_agent_command(&agent, &platform);
-                let status_str = if npx_available {
+                let available =
+                    *npx_available.get_or_insert_with(|| shell_env::which("npx").is_some());
+                let status_str = if available {
                     "available"
                 } else {
                     "unavailable"
@@ -216,7 +244,9 @@ async fn get_providers_with_checking() -> Vec<ProviderInfo> {
                 (cmd, status_str.to_string())
             } else if agent.distribution.get("uvx").is_some() {
                 let cmd = get_agent_command(&agent, &platform);
-                let status_str = if uvx_available {
+                let available =
+                    *uvx_available.get_or_insert_with(|| shell_env::which("uv").is_some());
+                let status_str = if available {
                     "available"
                 } else {
                     "unavailable"
@@ -227,12 +257,6 @@ async fn get_providers_with_checking() -> Vec<ProviderInfo> {
                 (cmd, "unavailable".to_string())
             } else {
                 (agent.id.clone(), "unavailable".to_string())
-            };
-
-            let provider_id = if static_ids.contains(&agent.id) {
-                format!("{}-registry", agent.id)
-            } else {
-                agent.id.clone()
             };
 
             let provider_name = if static_ids.contains(&agent.id) {
@@ -264,4 +288,49 @@ async fn get_providers_with_checking() -> Vec<ProviderInfo> {
     });
 
     providers
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{list_providers, parse_check_ids, should_check_provider, ProvidersQuery};
+    use crate::error::ServerError;
+    use axum_extra::extract::Query;
+
+    #[test]
+    fn parses_repeated_and_comma_separated_provider_ids() {
+        let ids = parse_check_ids(&[
+            "claude,codex".to_string(),
+            "codex".to_string(),
+            " opencode ".to_string(),
+        ]);
+
+        assert_eq!(ids.len(), 3);
+        assert!(ids.contains("claude"));
+        assert!(ids.contains("codex"));
+        assert!(ids.contains("opencode"));
+    }
+
+    #[test]
+    fn empty_provider_ids_are_rejected_for_real_checks() {
+        assert!(parse_check_ids(&[]).is_empty());
+        assert!(parse_check_ids(&[" , ".to_string()]).is_empty());
+    }
+
+    #[test]
+    fn only_requested_provider_ids_are_checked() {
+        let ids = parse_check_ids(&["codex".to_string()]);
+        assert!(should_check_provider("codex", &ids));
+        assert!(!should_check_provider("claude", &ids));
+    }
+
+    #[tokio::test]
+    async fn real_check_without_provider_ids_returns_bad_request() {
+        let result = list_providers(Query(ProvidersQuery {
+            check: true,
+            id: Vec::new(),
+        }))
+        .await;
+
+        assert!(matches!(result, Err(ServerError::BadRequest(_))));
+    }
 }

@@ -133,4 +133,28 @@ describe("SettingsPanel render", () => {
 
     expect(screen.getByText("Agent Install Panel")).not.toBeNull();
   });
+
+  it("does not render availability status for hidden providers", () => {
+    localStorage.setItem("routa.hiddenProviders", JSON.stringify(["auggie"]));
+
+    render(
+      <SettingsPanel
+        open
+        onClose={() => {}}
+        initialTab="providers"
+        providers={[
+          {
+            id: "auggie",
+            name: "Auggie",
+            status: "checking",
+            source: "static",
+            command: "auggie",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Hidden")).not.toBeNull();
+    expect(screen.queryByText("checking")).toBeNull();
+  });
 });
