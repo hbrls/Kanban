@@ -9,6 +9,7 @@ import type { SettingsTab } from "@/client/components/settings-panel-shared";
 import { useTranslation } from "@/i18n";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { normalizeWorkspaceQueryId } from "@/client/utils/workspace-id";
+import { loadHiddenProviders } from "@/client/utils/custom-acp-providers";
 import { Settings } from "lucide-react";
 
 
@@ -33,7 +34,25 @@ export function SettingsPageClient() {
         const res = await desktopAwareFetch("/api/providers");
         if (res.ok) {
           const data = await res.json();
-          setProviders(data.providers ?? []);
+          const discoveredProviders = data.providers ?? [];
+          setProviders(discoveredProviders);
+
+          const hiddenProviderIds = new Set(loadHiddenProviders());
+          const selectedProviderIds = discoveredProviders
+            .map((provider: ProviderOption) => provider.id)
+            .filter((providerId: string) => !hiddenProviderIds.has(providerId));
+
+          if (selectedProviderIds.length === 0) return;
+
+          const checkedRes = await desktopAwareFetch(
+            `/api/providers?check=true&${selectedProviderIds
+              .map((providerId: string) => `id=${encodeURIComponent(providerId)}`)
+              .join("&")}`,
+          );
+          if (checkedRes.ok) {
+            const checkedData = await checkedRes.json();
+            setProviders(checkedData.providers ?? discoveredProviders);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch providers:", error);

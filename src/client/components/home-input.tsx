@@ -514,7 +514,10 @@ export function HomeInput({
             loading={isSubmitting}
             skills={skillsHook.skills}
             repoSkills={skillsHook.repoSkills}
-            providers={acp.providers}
+            providers={acp.providers.map((provider) => ({
+              ...provider,
+              status: provider.status || undefined,
+            }))}
             selectedProvider={acp.selectedProvider}
             onProviderChange={acp.setProvider}
             repoSelection={repoSelection}
