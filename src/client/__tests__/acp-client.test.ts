@@ -200,6 +200,22 @@ describe("BrowserAcpClient", () => {
     });
   });
 
+  it("passes provider IDs to the provider availability check", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ providers: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new BrowserAcpClient("");
+    await client.listProviders(true, false, ["claude", "codex"]);
+
+    const [request] = fetchMock.mock.calls[0] as [RequestInfo | URL];
+    const url = new URL(String(request), "http://localhost");
+    expect(url.searchParams.get("check")).toBe("true");
+    expect(url.searchParams.getAll("id")).toEqual(["claude", "codex"]);
+  });
+
   it("passes taskAdaptiveHarness options through session/new", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;

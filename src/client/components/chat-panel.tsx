@@ -734,7 +734,10 @@ export function ChatPanel({
                   loading={loading || isSessionRunning}
                   skills={skills}
                   repoSkills={repoSkills}
-                  providers={acp.providers}
+                  providers={acp.providers.map((provider) => ({
+                    ...provider,
+                    status: provider.status || undefined,
+                  }))}
                   selectedProvider={acp.selectedProvider}
                   onProviderChange={acp.setProvider}
                   sessions={sessions}

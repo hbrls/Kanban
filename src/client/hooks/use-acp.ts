@@ -121,6 +121,11 @@ function getInitialProviderFallbacks(): AcpProviderInfo[] {
   );
 }
 
+function getShownProviderIds(providerIds: string[]): string[] {
+  const hiddenProviderIds = new Set(loadHiddenProviders());
+  return providerIds.filter((providerId) => !hiddenProviderIds.has(providerId));
+}
+
 export function loadSelectedAcpProvider(): string {
   if (typeof window === "undefined" || !window.localStorage) {
     return "claude";
@@ -331,9 +336,19 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
 
       await client.initialize();
 
-      // Check local providers immediately for accurate status display
+      // Discover provider IDs first so the status check can exclude hidden providers.
+      const discoveredProviders = await client.listProviders(false, false);
+
+      // Check shown providers immediately for accurate status display
       // This ensures status indicators show correct colors on first render
-      const localProviders = await client.listProviders(true, false);
+      const localProviderIds = getShownProviderIds(
+        discoveredProviders
+          .filter((provider) => provider.source === "static")
+          .map((provider) => provider.id),
+      );
+      const localProviders = localProviderIds.length > 0
+        ? await client.listProviders(true, false, localProviderIds)
+        : [];
 
       // Merge in user-defined custom ACP providers
       const customProviders = loadCustomAcpProviders().map(toAcpProviderInfo);
@@ -408,7 +423,10 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
 
           // Background task 3: Check registry provider availability (slower)
           // This updates the status from "checking" to "available" or "unavailable"
-          client.listProviders(true, true).then((checkedAllProviders) => {
+          const registryProviderIds = getShownProviderIds(allProviders.map((provider) => provider.id));
+          if (registryProviderIds.length === 0) return;
+
+          client.listProviders(true, true, registryProviderIds).then((checkedAllProviders) => {
             if (tearingDownRef.current) return;
             const disabledProvs = loadHiddenProviders();
             const checkedRegistry = sortProvidersByPreference(
