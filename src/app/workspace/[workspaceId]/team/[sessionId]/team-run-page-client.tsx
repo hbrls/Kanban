@@ -1413,7 +1413,10 @@ export function TeamRunPageClient() {
                 loading={acpLoading}
                 skills={[]}
                 repoSkills={[]}
-                providers={acpProviders}
+                providers={acpProviders.map((provider) => ({
+                  ...provider,
+                  status: provider.status || undefined,
+                }))}
                 selectedProvider={acpSelectedProvider}
                 onProviderChange={acpSetProvider}
                 sessions={[]}
