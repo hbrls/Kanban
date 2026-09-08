@@ -1,13 +1,12 @@
 "use client";
 
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import Link from "next/link";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import { RepoPicker, type RepoSelection } from "@/client/components/repo-picker";
 import { useTranslation } from "@/i18n";
 import type { KanbanRequiredTaskField } from "@/core/models/kanban";
 import type { TaskInfo, WorktreeInfo } from "../types";
-import { ExternalLink, Info, Pencil, Plus, RefreshCw, Trash2, TriangleAlert, X } from "lucide-react";
+import { Info, Pencil, Plus, RefreshCw, Trash2, TriangleAlert, X } from "lucide-react";
 
 
 export interface KanbanCodebaseModalProps {
@@ -182,14 +181,6 @@ export function KanbanCodebaseModal({
               <div className="flex items-center rounded-sm border border-desktop-border bg-desktop-bg-secondary/80 p-1">
                 {selectedCodebase && !editingCodebase ? (
                   <>
-                    <Link
-                      href={`/workspace/${selectedCodebase.workspaceId}/codebases/${selectedCodebase.id}/reposlide`}
-                      aria-label={t.kanbanModals.openRepoSlide}
-                      title={t.kanbanModals.openRepoSlide}
-                      className={commandIconButtonClassName()}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Link>
                     <button
                       type="button"
                       onClick={onStartEditCodebase}
