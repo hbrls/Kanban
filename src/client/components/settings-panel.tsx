@@ -539,7 +539,7 @@ function ProviderCatalogSection({ allProviders }: ProviderCatalogSectionProps) {
                   <span className="text-[10px] text-slate-400 dark:text-slate-500">
                     {isHidden ? t.settings.hidden : t.settings.shown}
                   </span>
-                  {provider.status && (
+                  {!isHidden && provider.status && (
                     <span
                       className={`px-2 py-0.5 text-[10px] rounded ${
                         provider.status === "available"

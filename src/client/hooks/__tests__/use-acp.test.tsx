@@ -108,6 +108,23 @@ describe("useAcp selected provider persistence", () => {
     });
   });
 
+  it("checks only the provider selected in Settings on connect", async () => {
+    window.localStorage.setItem("routa.acp.selectedProvider", "claude");
+
+    const { result } = renderHook(() => useAcp());
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    await waitFor(() => {
+      expect(result.current.connected).toBe(true);
+    });
+
+    expect(listProvidersMock).toHaveBeenNthCalledWith(1, false, false);
+    expect(listProvidersMock).toHaveBeenNthCalledWith(2, true, true, ["claude"]);
+  });
+
   it("falls back to the first available provider when the stored provider is unavailable", async () => {
     window.localStorage.setItem("routa.acp.selectedProvider", "claude");
     listProvidersMock.mockResolvedValue([
