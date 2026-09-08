@@ -4770,6 +4770,22 @@ paths:
     get:
       operationId: listProviders
       summary: List configured LLM providers
+      parameters:
+        - name: check
+          in: query
+          description: When true, perform a targeted availability check; it requires at least one non-empty id.
+          schema:
+            type: boolean
+            default: false
+        - name: id
+          in: query
+          description: Provider IDs to check when check=true. Supports repeated query keys and comma-separated values; empty values are ignored.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
       responses:
         "200":
           description: Provider list
@@ -4782,6 +4798,22 @@ paths:
                     type: array
                     items:
                       type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        command:
+                          type: string
+                        status:
+                          type: string
+                          description: Availability status; an empty string means this provider was not checked in the targeted request.
+                        source:
+                          type: string
+        "400":
+          description: check=true was sent without a non-empty id value.
 
   /api/providers/models:
     get:
