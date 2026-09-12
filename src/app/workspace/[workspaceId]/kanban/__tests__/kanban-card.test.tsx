@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { KanbanColumnInfo, TaskInfo } from "../../types";
+import type { TaskInfo } from "../../types";
 import { KanbanCard } from "../kanban-card";
 
 vi.mock("@dnd-kit/core", () => ({
@@ -12,22 +12,6 @@ vi.mock("@dnd-kit/core", () => ({
     transform: null,
   }),
 }));
-
-const boardColumns: KanbanColumnInfo[] = [
-  { id: "backlog", name: "Backlog", position: 0, stage: "backlog" },
-  { id: "todo", name: "Todo", position: 1, stage: "todo" },
-  { id: "dev", name: "Dev", position: 2, stage: "dev" },
-  {
-    id: "review",
-    name: "Review",
-    position: 3,
-    stage: "review",
-    automation: {
-      enabled: false,
-      requiredArtifacts: ["screenshot"],
-    },
-  },
-];
 
 function buildTask(overrides?: Partial<TaskInfo>): TaskInfo {
   return {
@@ -49,30 +33,23 @@ function buildTask(overrides?: Partial<TaskInfo>): TaskInfo {
   };
 }
 
-describe("KanbanCard artifact gate status", () => {
-  it("shows missing artifact gate state when the next lane is still blocked", () => {
+describe("KanbanCard cover", () => {
+  it("does not render artifact gate or count badges on the card cover", () => {
     render(
       <KanbanCard
         task={buildTask()}
-        boardColumns={boardColumns}
-        specialistLanguage="en"
-        availableProviders={[]}
-        specialists={[]}
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
         onOpenDetail={vi.fn()}
-        onDelete={vi.fn()}
-        onPatchTask={vi.fn()}
-        onRetryTrigger={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
-    expect(screen.getByTestId("kanban-card-artifact-gate").textContent).toContain("Needs Screenshot");
+    expect(screen.queryByTestId("kanban-card-artifact-gate")).toBeNull();
+    expect(screen.queryByTestId("kanban-card-artifact-count")).toBeNull();
   });
 
-  it("shows ready state and artifact count once the gate is satisfied", () => {
+  it("keeps artifact badges off the cover even when the gate is satisfied and artifacts exist", () => {
     render(
       <KanbanCard
         task={buildTask({
@@ -84,47 +61,15 @@ describe("KanbanCard artifact gate status", () => {
             },
           },
         })}
-        boardColumns={boardColumns}
-        specialistLanguage="en"
-        availableProviders={[]}
-        specialists={[]}
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
         onOpenDetail={vi.fn()}
-        onDelete={vi.fn()}
-        onPatchTask={vi.fn()}
-        onRetryTrigger={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
-    expect(screen.getByTestId("kanban-card-artifact-gate").textContent).toContain("Review ready");
-    expect(screen.getByTestId("kanban-card-artifact-count").textContent).toContain("2 artifacts");
-  });
-
-  it("renders live session tail as a single-line preview", () => {
-    render(
-      <KanbanCard
-        task={buildTask()}
-        boardColumns={boardColumns}
-        liveMessageTail="Updated parser; now handling edge-case whitespace and retry flow."
-        specialistLanguage="en"
-        availableProviders={[]}
-        specialists={[]}
-        codebases={[]}
-        allCodebaseIds={[]}
-        worktreeCache={{}}
-        onOpenDetail={vi.fn()}
-        onDelete={vi.fn()}
-        onPatchTask={vi.fn()}
-        onRetryTrigger={vi.fn()}
-        onRefresh={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText("Live Session")).toBeTruthy();
-    expect(screen.getByTestId("kanban-card-live-tail").textContent).toContain("Updated parser;");
+    expect(screen.queryByTestId("kanban-card-artifact-gate")).toBeNull();
+    expect(screen.queryByTestId("kanban-card-artifact-count")).toBeNull();
   });
 
   it("surfaces review feedback on cards returned to dev", () => {
@@ -135,18 +80,10 @@ describe("KanbanCard artifact gate status", () => {
           verificationVerdict: "NOT_APPROVED",
           verificationReport: "AC3 failed: editor still strips nested marks when pasting rich text.",
         })}
-        boardColumns={boardColumns}
-        specialistLanguage="en"
-        availableProviders={[]}
-        specialists={[]}
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
         onOpenDetail={vi.fn()}
-        onDelete={vi.fn()}
-        onPatchTask={vi.fn()}
-        onRetryTrigger={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
@@ -154,66 +91,98 @@ describe("KanbanCard artifact gate status", () => {
     expect(screen.getByTestId("kanban-card-review-feedback").textContent).toContain("AC3 failed");
   });
 
-  it("renders imported pull requests with a PR badge", () => {
+  it("does not render GitHub badges on the card cover and keeps the main status badge", () => {
     render(
       <KanbanCard
         task={buildTask({
           githubNumber: 289,
           githubUrl: "https://github.com/acme/platform/pull/289",
           isPullRequest: true,
+          githubSyncedAt: "2025-01-02T00:00:00.000Z",
         })}
-        boardColumns={boardColumns}
-        specialistLanguage="en"
-        availableProviders={[]}
-        specialists={[]}
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
         onOpenDetail={vi.fn()}
-        onDelete={vi.fn()}
-        onPatchTask={vi.fn()}
-        onRetryTrigger={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
-    expect(
-      screen.getByRole("link", { name: "PR #289" }).getAttribute("href"),
-    ).toBe("https://github.com/acme/platform/pull/289");
+    expect(screen.queryByRole("link", { name: "PR #289" })).toBeNull();
+    expect(screen.queryByText(/Synced|Not synced|Sync issue/)).toBeNull();
+    expect(screen.getByText("Idle")).toBeTruthy();
   });
 
-  it("shows a run action when the lane is automated through the board auto provider", () => {
+  it("does not render a Run or Rerun action on an automated lane card", () => {
     render(
       <KanbanCard
         task={buildTask({ columnId: "backlog" })}
-        boardColumns={[{
-          id: "backlog",
-          name: "Backlog",
-          position: 0,
-          stage: "backlog",
-          automation: {
-            enabled: true,
-            role: "ROUTA",
-            specialistId: "backlog-refiner",
-            specialistName: "Backlog Refiner",
-          },
-        }]}
-        specialistLanguage="en"
-        availableProviders={[{ id: "codex", name: "Codex", description: "Codex provider", command: "codex" }]}
-        specialists={[{ id: "backlog-refiner", name: "Backlog Refiner", role: "ROUTA", defaultProvider: "claude" }]}
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
-        autoProviderId="codex"
         onOpenDetail={vi.fn()}
-        onDelete={vi.fn()}
-        onPatchTask={vi.fn()}
-        onRetryTrigger={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Run" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rerun" })).toBeNull();
+    expect(screen.getByText("Idle")).toBeTruthy();
+  });
+
+  it("does not render a Run or Rerun action when the linked session has failed", () => {
+    render(
+      <KanbanCard
+        task={buildTask({ columnId: "dev", triggerSessionId: "session-1" })}
+        linkedSession={{
+          sessionId: "session-1",
+          cwd: "/tmp/workspace-1",
+          workspaceId: "workspace-1",
+          provider: "codex",
+          acpStatus: "error",
+          createdAt: "2025-01-01T00:00:00.000Z",
+        }}
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rerun" })).toBeNull();
+    expect(screen.getByText("Failed")).toBeTruthy();
+  });
+
+  it("does not render a Run or Rerun action while the card is queued", () => {
+    render(
+      <KanbanCard
+        task={buildTask({ columnId: "dev" })}
+        queuePosition={2}
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rerun" })).toBeNull();
+    expect(screen.getByText("Queued #2")).toBeTruthy();
+  });
+
+  it("does not render a Run or Rerun action on a terminal card", () => {
+    render(
+      <KanbanCard
+        task={buildTask({ columnId: "done" })}
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rerun" })).toBeNull();
+    expect(screen.getByText("Done")).toBeTruthy();
   });
 
   it("renders canonical story body instead of raw yaml on the card", () => {
@@ -266,18 +235,10 @@ story:
       reason: preview is visible
 \`\`\``,
         })}
-        boardColumns={boardColumns}
-        specialistLanguage="en"
-        availableProviders={[]}
-        specialists={[]}
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
         onOpenDetail={vi.fn()}
-        onDelete={vi.fn()}
-        onPatchTask={vi.fn()}
-        onRetryTrigger={vi.fn()}
-        onRefresh={vi.fn()}
       />,
     );
 
