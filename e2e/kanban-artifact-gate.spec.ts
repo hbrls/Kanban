@@ -86,8 +86,8 @@ test.describe("Kanban artifact gates", () => {
 
       await expect(devCard).toBeVisible({ timeout: 20_000 });
       await expect(reviewCard).toHaveCount(0);
-      await expect(devCard.getByTestId("kanban-card-artifact-gate")).toContainText("Needs Screenshot");
-      await expect(devCard.getByTestId("kanban-card-artifact-gate")).toContainText("+1");
+      await expect(devCard.getByTestId("kanban-card-artifact-gate")).toHaveCount(0);
+      await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveCount(0);
 
       await devCard.click();
       await expect(page.getByText("Evidence Bundle").first()).toBeVisible();
@@ -123,8 +123,8 @@ test.describe("Kanban artifact gates", () => {
       await page.getByRole("button", { name: "Evidence Bundle" }).click();
       await expect(page.getByText("review-proof.png")).toBeVisible({ timeout: 20_000 });
       await expect(page.getByText("by agent-artifact-e2e")).toBeVisible();
-      await expect(devCard.getByTestId("kanban-card-artifact-gate")).toContainText("Needs Test Results");
-      await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveText("1 artifact");
+      await expect(devCard.getByTestId("kanban-card-artifact-gate")).toHaveCount(0);
+      await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveCount(0);
 
       const provideTestResultsResponse = await request.post("/api/mcp/tools", {
         data: {
@@ -185,8 +185,8 @@ test.describe("Kanban artifact gates", () => {
       await page.getByRole("button", { name: "Evidence Bundle" }).click();
       await expect(page.getByText("review-test-results.txt")).toBeVisible({ timeout: 20_000 });
       await expect(page.getByText(TEST_RESULTS_TEXT)).toBeVisible();
-      await expect(devCard.getByTestId("kanban-card-artifact-gate")).toHaveText("Review ready");
-      await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveText("2 artifacts");
+      await expect(devCard.getByTestId("kanban-card-artifact-gate")).toHaveCount(0);
+      await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveCount(0);
 
       const moveTaskResponse = await request.patch(`/api/tasks/${taskId}`, {
         data: { columnId: "review", position: 0 },

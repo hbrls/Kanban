@@ -30,7 +30,6 @@ import type { RepoSyncState } from "./kanban-repo-sync-status";
 import type { KanbanRepoChanges } from "./kanban-file-changes-types";
 import {
   canSelectTaskSessionInAcp,
-  extractSessionLiveTail,
   getPreferredTaskSessionId,
   isA2ATaskSession,
   resolveKanbanBoardAutoProviderId,
@@ -80,7 +79,6 @@ const KANBAN_BOARD_QUERY_KEY = "boardId";
 const KANBAN_DETAIL_TASK_QUERY_KEY = "taskId";
 const MIN_DETAIL_SPLIT_RATIO = 0.32;
 const MAX_DETAIL_SPLIT_RATIO = 0.72;
-const LIVE_SESSION_TAIL_POLL_MS = 10_000;
 
 type MoveBlockedState = {
   message: string;
@@ -255,7 +253,6 @@ export function KanbanTab({
   // Worktree cache: worktreeId -> WorktreeInfo
   const [worktreeCache, setWorktreeCache] = useState<Record<string, WorktreeInfo>>({});
   const [missingWorktreeIds, setMissingWorktreeIds] = useState<Record<string, true>>({});
-  const [liveSessionTails, setLiveSessionTails] = useState<Record<string, string>>({});
   const [backfilledSessions, setBackfilledSessions] = useState<Record<string, SessionInfo>>({});
 
   // Settings state - column automation rules (initialized from board columns)
@@ -785,18 +782,6 @@ export function KanbanTab({
     }
     return Array.from(uniqueProviders.values());
   }, [providers]);
-  const activeLiveSessionIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const task of boardTasks) {
-      if (!task.triggerSessionId) continue;
-      const laneSession = task.laneSessions?.find((entry) => entry.sessionId === task.triggerSessionId);
-      if (laneSession?.status !== "running") continue;
-      const session = sessionMap.get(task.triggerSessionId);
-      if (!session) continue;
-      ids.add(task.triggerSessionId);
-    }
-    return Array.from(ids);
-  }, [boardTasks, sessionMap]);
   const agentSession = agentSessionId ? sessionMap.get(agentSessionId) : undefined;
   const kanbanRepoSelection = useMemo<RepoSelection | null>(() => {
     if (!defaultCodebase) return null;
@@ -986,72 +971,6 @@ export function KanbanTab({
 
     return scheduleKanbanRefreshBurst(onRefresh);
   }, [agentPanelOpen, agentSessionId, onRefresh]);
-
-  useEffect(() => {
-    if (activeLiveSessionIds.length === 0) {
-      setLiveSessionTails((previous) => (Object.keys(previous).length > 0 ? {} : previous));
-      return;
-    }
-    if (!isPageVisible) return;
-
-    const activeIdSet = new Set(activeLiveSessionIds);
-    let disposed = false;
-    let inFlight = false;
-
-    const pollLiveSessionTail = async () => {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      if (disposed || inFlight) return;
-      inFlight = true;
-
-      const updates = await Promise.all(activeLiveSessionIds.map(async (sessionId) => {
-        try {
-          const response = await desktopAwareFetch(`/api/sessions/${encodeURIComponent(sessionId)}/history?consolidated=true`,
-            { cache: "no-store" },
-          );
-          if (!response.ok) return [sessionId, null] as const;
-          const payload = await response.json();
-          return [sessionId, extractSessionLiveTail(payload?.history)] as const;
-        } catch {
-          return [sessionId, null] as const;
-        }
-      })).finally(() => {
-        inFlight = false;
-      });
-
-      if (disposed) return;
-
-      setLiveSessionTails((previous) => {
-        const next: Record<string, string> = {};
-        let changed = false;
-
-        for (const [sessionId, tail] of updates) {
-          if (!activeIdSet.has(sessionId) || !tail) continue;
-          next[sessionId] = tail;
-          if (previous[sessionId] !== tail) changed = true;
-        }
-
-        for (const sessionId of Object.keys(previous)) {
-          if (!activeIdSet.has(sessionId)) {
-            changed = true;
-            continue;
-          }
-          if (!next[sessionId] && previous[sessionId]) changed = true;
-        }
-
-        return changed ? next : previous;
-      });
-    };
-
-    void pollLiveSessionTail();
-    const timerId = window.setInterval(() => {
-      void pollLiveSessionTail();
-    }, LIVE_SESSION_TAIL_POLL_MS);
-
-    return () => {
-      disposed = true;
-      window.clearInterval(timerId);
-    };
-  }, [activeLiveSessionIds, isPageVisible]);
 
   // Codebase edit handlers - use RepoPicker for re-selecting/cloning
   const handleStartEditCodebase = useCallback(() => {
@@ -1994,8 +1913,6 @@ export function KanbanTab({
     repoSync,
     setSelectedCodebase,
     fetchCodebaseWorktrees,
-    onRefresh,
-    availableProviders,
     acp,
     boardAutoProviderId,
     kanbanTaskAgentCopy,
@@ -2008,16 +1925,11 @@ export function KanbanTab({
     columnAutomation,
     providers,
     specialists,
-    specialistLanguage,
     sessionMap,
-    liveSessionTails,
     allCodebaseIds,
     worktreeCache,
     queuedPositions,
     moveTask,
-    confirmDeleteTask,
-    patchTask,
-    retryTaskTrigger,
     runTaskPullRequest,
     openTaskDetail,
     agentSession,

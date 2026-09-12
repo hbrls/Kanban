@@ -476,10 +476,8 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     synced: string;
     notSynced: string;
     // Card labels
-    deleteTask: string;
     openCard: string;
     dragCard: string;
-    liveSession: string;
     repoMissing: string;
     worktreeLoading: string;
     noObjective: string;
