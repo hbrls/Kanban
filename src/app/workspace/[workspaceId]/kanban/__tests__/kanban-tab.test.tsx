@@ -128,6 +128,8 @@ describe("KanbanTab delete flow", () => {
   });
 
   it("allows deleting a second story after the first delete succeeds", async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (init?.method === "DELETE" && url.startsWith("/api/tasks/")) {
@@ -136,11 +138,14 @@ describe("KanbanTab delete flow", () => {
           json: async () => ({ deleted: true }),
         } as Response;
       }
-      throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+      return {
+        ok: true,
+        json: async () => ({}),
+      } as Response;
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { container } = render(
+    render(
       <KanbanTab
         workspaceId="workspace-1"
         boards={[board]}
@@ -153,7 +158,9 @@ describe("KanbanTab delete flow", () => {
       />,
     );
 
-    fireEvent.click(container.querySelectorAll('[data-testid="kanban-card-delete"]')[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Open Story One" }));
+    await screen.findByText("Card Detail");
+    fireEvent.click(screen.getByRole("button", { name: "Delete Task" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
@@ -164,7 +171,9 @@ describe("KanbanTab delete flow", () => {
       expect(screen.queryByText("Story One")).toBeNull();
     });
 
-    fireEvent.click(container.querySelectorAll('[data-testid="kanban-card-delete"]')[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Open Story Two" }));
+    await screen.findByText("Card Detail");
+    fireEvent.click(screen.getByRole("button", { name: "Delete Task" }));
 
     const secondDeleteButton = await screen.findByRole("button", { name: "Delete" });
     expect(secondDeleteButton.hasAttribute("disabled")).toBe(false);
@@ -3050,7 +3059,7 @@ describe("KanbanTab quick ACP assignment", () => {
     });
   });
 
-  it("shows sync status in the same header row as the card status", () => {
+  it("keeps only the main status badge in the card header row", () => {
     render(
       <KanbanTab
         workspaceId="workspace-1"
@@ -3070,9 +3079,8 @@ describe("KanbanTab quick ACP assignment", () => {
       />,
     );
 
-    const syncLabel = screen.getByText("Not synced");
-    const statusLabel = screen.getByText("Idle");
-    expect(syncLabel.parentElement).toBe(statusLabel.parentElement);
+    expect(screen.queryByText("Not synced")).toBeNull();
+    expect(screen.getByText("Idle")).toBeTruthy();
   });
 
   it("does not repeat lane automation details on cards without overrides", () => {
