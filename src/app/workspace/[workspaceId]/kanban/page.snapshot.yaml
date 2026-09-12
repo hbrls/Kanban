@@ -10,7 +10,7 @@
 - button "Open Stabilize Page Snapshot Fixtures":
   - button "Drag card Stabilize Page Snapshot Fixtures"
   - button "Delete task"
-  - text: Idle Not synced
+  - text: Idle
   - button "Run"
   - text: L Stabilize Page Snapshot Fixtures
   - paragraph: Introduce deterministic fixture data for snapshot validation.
