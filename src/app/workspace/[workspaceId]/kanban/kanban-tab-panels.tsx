@@ -386,8 +386,6 @@ export function KanbanBoardSurface({
   repoSync: _repoSync,
   setSelectedCodebase: _setSelectedCodebase,
   fetchCodebaseWorktrees: _fetchCodebaseWorktrees,
-  onRefresh,
-  availableProviders,
   boardAutoProviderId,
   board,
   visibleColumns,
@@ -395,16 +393,11 @@ export function KanbanBoardSurface({
   columnAutomation,
   providers,
   specialists,
-  specialistLanguage,
   sessionMap,
-  liveSessionTails,
   allCodebaseIds,
   worktreeCache,
   queuedPositions,
   moveTask,
-  confirmDeleteTask,
-  patchTask,
-  retryTaskTrigger,
   runTaskPullRequest, // eslint-disable-line @typescript-eslint/no-unused-vars -- used in KanbanTaskCard props
   openTaskDetail,
 }: {
@@ -415,8 +408,6 @@ export function KanbanBoardSurface({
   repoSync?: RepoSyncState;
   setSelectedCodebase: Dispatch<SetStateAction<CodebaseData | null>>;
   fetchCodebaseWorktrees: (codebase: CodebaseData) => Promise<void>;
-  onRefresh: () => void;
-  availableProviders: AcpProviderInfo[];
   acp?: UseAcpState & UseAcpActions;
   boardAutoProviderId?: string;
   kanbanTaskAgentCopy: KanbanTaskAgentCopy;
@@ -429,16 +420,11 @@ export function KanbanBoardSurface({
   columnAutomation: Record<string, ColumnAutomationConfig>;
   providers: AcpProviderInfo[];
   specialists: SpecialistOption[];
-  specialistLanguage: KanbanSpecialistLanguage;
   sessionMap: Map<string, SessionInfo>;
-  liveSessionTails: Record<string, string>;
   allCodebaseIds: string[];
   worktreeCache: Record<string, WorktreeInfo>;
   queuedPositions: Record<string, number | undefined>;
   moveTask: (taskId: string, targetColumnId: string) => Promise<void>;
-  confirmDeleteTask: (task: TaskInfo) => void;
-  patchTask: (taskId: string, payload: Record<string, unknown>) => Promise<TaskInfo>;
-  retryTaskTrigger: (taskId: string) => Promise<void>;
   runTaskPullRequest: (taskId: string) => Promise<string | null>;
   openTaskDetail: (task: TaskInfo) => Promise<void>;
   agentSession?: SessionInfo;
@@ -564,22 +550,12 @@ export function KanbanBoardSurface({
                           <KanbanCard
                             key={task.id}
                             task={task}
-                            boardColumns={board.columns}
                             linkedSession={task.triggerSessionId ? sessionMap.get(task.triggerSessionId) : undefined}
-                            liveMessageTail={task.triggerSessionId ? liveSessionTails[task.triggerSessionId] : undefined}
-                            availableProviders={availableProviders}
-                            specialists={specialists}
-                            specialistLanguage={specialistLanguage}
                             codebases={codebases}
                             allCodebaseIds={allCodebaseIds}
                             worktreeCache={worktreeCache}
-                            autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
                             queuePosition={queuedPositions[task.id]}
                             onOpenDetail={() => openTaskDetail(task)}
-                            onDelete={() => confirmDeleteTask(task)}
-                            onPatchTask={patchTask}
-                            onRetryTrigger={retryTaskTrigger}
-                            onRefresh={onRefresh}
                           />
                         ))}
                       </div>
@@ -592,22 +568,12 @@ export function KanbanBoardSurface({
                 <div style={activeDragCardWidth ? { width: activeDragCardWidth } : undefined}>
                   <KanbanCardOverlay
                     task={activeDragTask}
-                    boardColumns={board.columns}
                     linkedSession={activeDragTask.triggerSessionId ? sessionMap.get(activeDragTask.triggerSessionId) : undefined}
-                    liveMessageTail={activeDragTask.triggerSessionId ? liveSessionTails[activeDragTask.triggerSessionId] : undefined}
-                    availableProviders={availableProviders}
-                    specialists={specialists}
-                    specialistLanguage={specialistLanguage}
                     codebases={codebases}
                     allCodebaseIds={allCodebaseIds}
                     worktreeCache={worktreeCache}
-                    autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
                     queuePosition={queuedPositions[activeDragTask.id]}
                     onOpenDetail={() => {}}
-                    onDelete={() => {}}
-                    onPatchTask={patchTask}
-                    onRetryTrigger={retryTaskTrigger}
-                    onRefresh={onRefresh}
                   />
                 </div>
               </DragOverlay>,
