@@ -23,45 +23,6 @@ function normalizeProviderId(providerId: string | null | undefined): string | un
   return normalized ? normalized : undefined;
 }
 
-export function extractHistoryText(content: unknown): string | null {
-  if (typeof content === "string") return content.trim() || null;
-  if (!content || typeof content !== "object") return null;
-
-  const record = content as Record<string, unknown>;
-  if (typeof record.text === "string" && record.text.trim()) return record.text.trim();
-
-  if (Array.isArray(record.content)) {
-    const parts = record.content
-      .map((item) => (typeof item === "object" && item !== null && typeof (item as { text?: unknown }).text === "string"
-        ? (item as { text: string }).text
-        : ""))
-      .filter(Boolean);
-    if (parts.length > 0) return parts.join("").trim() || null;
-  }
-
-  return null;
-}
-
-export function extractSessionLiveTail(history: unknown): string | null {
-  if (!Array.isArray(history) || history.length === 0) return null;
-
-  for (let index = history.length - 1; index >= 0; index -= 1) {
-    const entry = history[index];
-    if (!entry || typeof entry !== "object") continue;
-    const update = (entry as { update?: unknown }).update;
-    if (!update || typeof update !== "object") continue;
-    const updateRecord = update as Record<string, unknown>;
-    const updateType = updateRecord.sessionUpdate;
-    if (updateType !== "agent_message" && updateType !== "agent_message_chunk" && updateType !== "user_message") {
-      continue;
-    }
-    const text = extractHistoryText(updateRecord.content);
-    if (text) return text.replace(/\s+/g, " ").trim();
-  }
-
-  return null;
-}
-
 export function getPreferredTaskSessionId(task: TaskInfo | null | undefined): string | null {
   if (!task) return null;
   const latestLaneSessionId = task.laneSessions && task.laneSessions.length > 0
