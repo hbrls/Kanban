@@ -310,4 +310,49 @@ describe("KanbanCodebaseModal", () => {
     expect(screen.getByRole("button", { name: /Remove|移除/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Close|关闭/ })).toBeTruthy();
   });
+
+  it("sizes the repository modal container to about 90% of the viewport", () => {
+    render(
+      <KanbanCodebaseModal
+        open
+        selectedCodebase={codebase}
+        editingCodebase={false}
+        codebases={[codebase]}
+        addRepoSelection={null}
+        setAddRepoSelection={vi.fn()}
+        addSaving={false}
+        addError={null}
+        onAddRepository={vi.fn()}
+        editRepoSelection={null}
+        onRepoSelectionChange={vi.fn()}
+        editError={null}
+        recloneError={null}
+        editSaving={false}
+        replacingAll={false}
+        setShowReplaceAllConfirm={vi.fn()}
+        handleCancelEditCodebase={vi.fn()}
+        codebaseWorktrees={[]}
+        worktreeActionError={null}
+        localTasks={[]}
+        handleDeleteCodebaseWorktrees={vi.fn()}
+        deletingWorktreeIds={[]}
+        liveBranchInfo={null}
+        branchActionError={null}
+        repoHealth={{ missingRepoTasks: 0, cwdMismatchTasks: 0 }}
+        onSelectCodebase={vi.fn()}
+        handleDeleteIssueBranch={vi.fn()}
+        handleDeleteIssueBranches={vi.fn()}
+        deletingBranchNames={[]}
+        handleReclone={vi.fn()}
+        recloning={false}
+        recloneSuccess={null}
+        onStartEditCodebase={vi.fn()}
+        onRequestRemoveCodebase={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    const modal = screen.getByTestId("codebase-detail-modal");
+    expect(modal.className).toContain("90vh");
+  });
 });

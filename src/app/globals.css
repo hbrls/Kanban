@@ -269,6 +269,25 @@ html.dark {
   margin: 0;
 }
 
+/* Kanban create-modal objective editor placeholder */
+.tiptap-objective-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #9ca3af;
+}
+
+html.dark {
+  .tiptap-objective-editor p.is-editor-empty:first-child::before {
+    color: #6b7280;
+  }
+}
+
+.tiptap-objective-editor p {
+  margin: 0;
+}
+
 .tiptap-chat-input > * + * {
   margin-top: 0.25rem;
 }

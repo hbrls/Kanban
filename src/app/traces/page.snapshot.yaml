@@ -32,8 +32,6 @@
       - /url: /workspace/default/kanban
     - link "Team":
       - /url: /workspace/default/team
-  - link "Spec":
-    - /url: /workspace/default/spec
   - link "Feature Explorer":
     - /url: /workspace/default/feature-explorer
   - link "Harness":

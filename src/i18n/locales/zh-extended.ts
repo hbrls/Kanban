@@ -1171,6 +1171,7 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
     manualTask: "手动创建任务",
     taskTitle: "任务标题",
     description: "描述",
+    descriptionPlaceholder: "描述工作内容。将保留 Markdown 格式。",
     testCases: "测试用例",
     testCasesPlaceholder: "每行一个测试用例\n示例：用户可以成功提交表单",
     testCasesHint: "用于人类可读的场景描述。可执行命令请单独放在验证部分。",

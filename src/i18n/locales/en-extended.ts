@@ -1171,6 +1171,7 @@ export const enExtended: ExtendedTranslationDictionarySections = {
     manualTask: "Manual Task",
     taskTitle: "Task title",
     description: "Description",
+    descriptionPlaceholder: "Describe the work. Markdown formatting will be preserved.",
     testCases: "Test Cases",
     testCasesPlaceholder: "One test case per line\nExample: User can submit the form successfully",
     testCasesHint: "Use this for human-readable scenarios. Keep executable commands in verification separately.",
