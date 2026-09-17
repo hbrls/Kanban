@@ -1338,7 +1338,7 @@ export class RoutaOrchestrator {
 
     if (groupId) {
       const group = this.delegationGroups.get(groupId);
-      const reports = [];
+      const reports: any[] = [];
       if (group) {
         for (const childId of group.childAgentIds) {
           const childRecord = this.childAgents.get(childId);

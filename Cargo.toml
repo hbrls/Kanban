@@ -19,8 +19,19 @@ edition = "2021"
 license = "MIT"
 authors = ["phodal"]
 
+# Agent 为主的工作流：不打断点，只依赖 panic backtrace 的文件名+行号定位失败
+[profile.dev]
+debug = "line-tables-only"
+
+# 依赖开优化加速测试执行；自身 crate 保持 opt-level = 0 以保留增量编译速度
+[profile.dev.package."*"]
+opt-level = 2
+debug = 0
+
 [profile.release]
-opt-level = 3
-lto = true
 codegen-units = 1
-strip = true
+lto = "thin"
+opt-level = "s"
+# spec detector 依赖 catch_unwind 将单个探测器失败降级为 warning
+panic = "unwind"
+strip = "symbols"

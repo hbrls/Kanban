@@ -102,7 +102,7 @@ export class PostgresSpecialistStore implements SpecialistStore {
   }
 
   async list(filter?: SpecialistFilter): Promise<SpecialistConfig[]> {
-    const conditions = [];
+    const conditions: any[] = [];
 
     if (filter?.source) {
       conditions.push(eq(specialists.source, filter.source));

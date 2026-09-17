@@ -20,16 +20,15 @@ to use, configure, or self-host Routa, start with [Quick Start](/quick-start),
 ### Web
 
 ```bash
-npm install --legacy-peer-deps
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 ### Desktop
 
 ```bash
-npm install --legacy-peer-deps
-npm --prefix apps/desktop install
-npm run tauri:dev
+pnpm install
+pnpm run tauri:dev
 ```
 
 ## Development Expectations

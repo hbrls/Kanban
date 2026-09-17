@@ -4,10 +4,10 @@ import { defineConfig } from "@playwright/test";
  * Playwright configuration for testing the Tauri/Rust backend.
  * 
  * Usage:
- *   npx playwright test --config=playwright.tauri.config.ts
+ *   pnpm exec playwright test --config=playwright.tauri.config.ts
  * 
  * The Rust backend should be running on port 3210 before running tests.
- * Start it with: cd apps/desktop && npm run tauri dev
+ * Start it with: pnpm run tauri:dev
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -31,4 +31,3 @@ export default defineConfig({
     },
   ],
 });
-

@@ -26,7 +26,7 @@ describe("run-vitest-fast helpers", () => {
 
   it("skips unrelated changes", () => {
     expect(isVitestRelevantChange("package.json")).toBe(false);
-    expect(isVitestRelevantChange("package-lock.json")).toBe(false);
+    expect(isVitestRelevantChange("pnpm-lock.yaml")).toBe(false);
     expect(isVitestRelevantChange("docs/fitness/README.md")).toBe(false);
     expect(isVitestRelevantChange("crates/harness-monitor/src/tui.rs")).toBe(false);
   });

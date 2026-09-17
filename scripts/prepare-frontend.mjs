@@ -2,7 +2,7 @@
 /**
  * Cross-platform script to prepare the static frontend for Tauri bundling.
  *
- * 1. Runs `npm run build:static` to produce the Next.js static export in out/
+ * 1. Runs `pnpm run build:static` to produce the Next.js static export in out/
  * 2. Removes apps/desktop/src-tauri/frontend/ if it exists
  * 3. Copies out/ -> apps/desktop/src-tauri/frontend/
  *
@@ -38,7 +38,7 @@ const featureTreeBundleFile = join(featureTreeBundleDir, "feature-tree-generator
 try {
   // 1. Build the static frontend
   console.log("[prepare-frontend] Running build:static ...");
-  execSync("npm run build:static", {
+  execSync("pnpm run build:static", {
     cwd: rootDir,
     stdio: "inherit",
   });
