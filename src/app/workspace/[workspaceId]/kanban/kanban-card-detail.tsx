@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { Maximize2, Minimize2, X } from "lucide-react";
+import { Maximize2, Minimize2, MonitorX, X } from "lucide-react";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import { Select } from "@/client/components/select";
@@ -15,7 +15,6 @@ import { getKanbanAutomationSteps, type KanbanAutomationStep } from "@/core/mode
 import type { KanbanColumnInfo, SessionInfo, TaskInfo, WorktreeInfo } from "../types";
 import { KanbanCardActivityPanel } from "./kanban-card-activity";
 import { KanbanDescriptionEditor } from "./kanban-description-editor";
-import { KanbanTaskChangesTab } from "./components/kanban-task-changes-tab";
 import { MarkdownViewer } from "@/client/components/markdown/markdown-viewer";
 import { splitLegacyTaskComment } from "@/core/models/task";
 import type { FallbackAgent } from "@/core/models/task";
@@ -26,11 +25,8 @@ import {
   type KanbanSpecialistOption as SpecialistOption,
 } from "./kanban-card-session-utils";
 export { KanbanCardActivityBar } from "./kanban-card-activity";
-import { KanbanCardArtifacts } from "./kanban-card-artifacts";
 import { KanbanCardProviderOverrideDropdown } from "./kanban-card-provider-override-dropdown";
-// Legacy imports - removed, functionality replaced by KanbanTaskGitWorkflowPanel
-// import { TaskFileDiffPreview, TaskCommitDiffPreview, CommitRow } from "./kanban-diff-preview";
-import { StoryReadinessPanel, EvidenceBundlePanel, JitContextPanel, ReviewFeedbackPanel } from "./kanban-detail-panels";
+import { StoryReadinessPanel, ReviewFeedbackPanel } from "./kanban-detail-panels";
 import { getKanbanSessionCopy } from "./i18n/kanban-session-copy";
 import {
   findSpecialistById,
@@ -43,7 +39,6 @@ import { useTranslation } from "@/i18n";
 
 export interface KanbanCardDetailProps {
   task: TaskInfo;
-  refreshSignal?: number;
   boardColumns?: KanbanColumnInfo[];
   availableProviders: AcpProviderInfo[];
   specialists: SpecialistOption[];
@@ -52,32 +47,29 @@ export interface KanbanCardDetailProps {
   allCodebaseIds: string[];
   worktreeCache: Record<string, WorktreeInfo>;
   sessionInfo?: SessionInfo | null;
-  sessions?: SessionInfo[];
   fullWidth?: boolean;
   selectedProvider?: string | null;
   onPatchTask: (taskId: string, payload: Record<string, unknown>) => Promise<TaskInfo>;
   onRetryTrigger: (taskId: string) => Promise<void>;
-  onRunPullRequest?: (taskId: string) => Promise<string | null>;
   onDelete: () => void;
   onRefresh: () => void;
   onProviderChange?: (providerId: string | null) => void;
   onRepositoryChange?: (codebaseIds: string[]) => void;
   onSelectSession?: (sessionId: string) => void;
-  jitContextSessionId?: string | null;
-  onLoadJitContextIntoSession?: (sessionId: string, prompt: string) => Promise<void>;
-  onOpenJitContextHistoryAnalysis?: (prompt: string, targetWindow: Window | null) => Promise<void>;
   isFullscreen?: boolean;
   onToggleFullscreen?: (next: boolean) => void;
   onClose?: () => void;
-  canShowSessionPane?: boolean;
-  isSessionPaneVisible?: boolean;
-  onShowSessionPane?: () => void;
 }
 
 const ROLE_OPTIONS = ["CRAFTER", "ROUTA", "GATE", "DEVELOPER"];
-type KanbanDetailTabId = "overview" | "readiness" | "execution" | "jitContext" | "changes" | "evidence" | "runs";
+const KANBAN_DETAIL_TAB_IDS = ["overview", "execution", "activity"] as const;
+type KanbanDetailTabId = (typeof KANBAN_DETAIL_TAB_IDS)[number];
 
-const persistedKanbanDetailTabs = new Map<string, KanbanDetailTabId>();
+const persistedKanbanDetailTabs = new Map<string, string>();
+
+export function normalizeKanbanDetailTab(tab: string | undefined): KanbanDetailTabId {
+  return (KANBAN_DETAIL_TAB_IDS as readonly string[]).includes(tab ?? "") ? (tab as KanbanDetailTabId) : "overview";
+}
 
 function getProviderName(providerId: string | undefined, availableProviders: AcpProviderInfo[]): string {
   if (!providerId) return "Workspace default";
@@ -230,7 +222,6 @@ function getEvidenceStatus(task: TaskInfo, t: ReturnType<typeof useTranslation>[
 
 export function KanbanCardDetail({
   task,
-  refreshSignal,
   boardColumns,
   availableProviders,
   specialists,
@@ -239,30 +230,21 @@ export function KanbanCardDetail({
   allCodebaseIds,
   worktreeCache,
   sessionInfo,
-  sessions,
   fullWidth,
   selectedProvider,
   onPatchTask,
   onRetryTrigger,
-  onRunPullRequest,
   onDelete,
   onRefresh,
   onProviderChange,
   onRepositoryChange,
   onSelectSession,
-  jitContextSessionId,
-  onLoadJitContextIntoSession,
-  onOpenJitContextHistoryAnalysis,
   isFullscreen = false,
   onToggleFullscreen,
   onClose,
-  canShowSessionPane = false,
-  isSessionPaneVisible = false,
-  onShowSessionPane,
 }: KanbanCardDetailProps) {
   const { t } = useTranslation();
   const progressNotes = useMemo(() => resolveTaskCommentEntries(task), [task]);
-  const sessionCopy = getKanbanSessionCopy(specialistLanguage);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editObjective, setEditObjective] = useState(task.objective ?? "");
   const [editTestCases, setEditTestCases] = useState((task.testCases ?? []).join("\n"));
@@ -277,7 +259,6 @@ export function KanbanCardDetail({
   const displayedObjective = isDescriptionEditing ? editObjective : (task.objective ?? "");
   const displayedTestCases = isTestCasesEditing ? editTestCases : (task.testCases ?? []).join("\n");
   const displayedPriority = task.priority ?? editPriority;
-  const resolvedWorkspaceId = codebases[0]?.workspaceId ?? "";
 
   const getTaskRepositoryPath = (): string | null => {
     const worktreePath = task.worktreeId ? worktreeCache[task.worktreeId]?.worktreePath : null;
@@ -288,21 +269,8 @@ export function KanbanCardDetail({
     return primaryCodebase?.repoPath ?? null;
   };
 
-  const getTaskHistoryRepositoryPath = (): string | null => {
-    const taskCodebaseIds = task.codebaseIds && task.codebaseIds.length > 0 ? task.codebaseIds : allCodebaseIds;
-    if (taskCodebaseIds.length === 0) {
-      return getTaskRepositoryPath();
-    }
-    const primaryCodebase = codebases.find((codebase) => codebase.id === taskCodebaseIds[0]);
-    return primaryCodebase?.repoPath ?? getTaskRepositoryPath();
-  };
-
   const currentLane = useMemo(
     () => boardColumns?.find((column) => column.id === (task.columnId ?? "backlog")),
-    [boardColumns, task.columnId],
-  );
-  const nextTransitionArtifacts = useMemo(
-    () => resolveKanbanTransitionArtifacts(boardColumns ?? [], task.columnId),
     [boardColumns, task.columnId],
   );
   const orderedSessionIds = useMemo(() => getOrderedSessionIds(task), [task]);
@@ -322,7 +290,7 @@ export function KanbanCardDetail({
   } | null>(null);
   const activeTab = tabSelection?.key === tabStateKey
     ? tabSelection.tab
-    : persistedKanbanDetailTabs.get(tabStateKey) ?? "overview";
+    : normalizeKanbanDetailTab(persistedKanbanDetailTabs.get(tabStateKey));
   const tabListId = `kanban-detail-tabs-${task.id}`;
   const storyReadinessValue = task.storyReadiness
     ? (task.storyReadiness.ready ? t.kanbanDetail.readyForDev : t.kanbanDetail.blockedForDev)
@@ -330,12 +298,8 @@ export function KanbanCardDetail({
   const evidenceValue = getEvidenceStatus(task, t);
   const detailTabs = [
     { id: "overview" as const, label: t.kanbanDetail.overview },
-    { id: "readiness" as const, label: t.kanbanDetail.storyReadiness },
     { id: "execution" as const, label: t.kanbanDetail.execution },
-    { id: "jitContext" as const, label: t.kanbanDetail.jitContext },
-    { id: "changes" as const, label: t.kanbanDetail.changes },
-    { id: "evidence" as const, label: t.kanbanDetail.evidenceBundle },
-    { id: "runs" as const, label: t.kanbanDetail.runs },
+    { id: "activity" as const, label: t.kanbanDetail.activity },
   ];
 
   return (
@@ -351,21 +315,11 @@ export function KanbanCardDetail({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:border-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-200"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
                   aria-label={t.kanbanDetail.closeCardDetail}
                   title={t.kanbanDetail.closeCardDetail}
                 >
-                  <X className="h-3 w-3" />
-                  <span>{t.kanbanDetail.closeCardDetail}</span>
-                </button>
-              ) : null}
-              {canShowSessionPane && !isSessionPaneVisible && onShowSessionPane ? (
-                <button
-                  type="button"
-                  onClick={onShowSessionPane}
-                  className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-300 dark:hover:border-amber-700 dark:hover:bg-amber-900/20 dark:hover:text-amber-200"
-                >
-                  {sessionCopy.showSessionPane}
+                  <MonitorX className="h-3.5 w-3.5" />
                 </button>
               ) : null}
               {onToggleFullscreen ? (
@@ -564,6 +518,14 @@ export function KanbanCardDetail({
               </section>
 
               <DetailSection
+                title={t.kanbanDetail.storyReadiness}
+                description={compactMode ? undefined : t.kanbanDetail.storyReadinessHint}
+                compact={compactMode}
+              >
+                <StoryReadinessPanel task={task} compact={compactMode} />
+              </DetailSection>
+
+              <DetailSection
                 title={t.kanbanDetail.reviewFeedback}
                 description={compactMode ? undefined : t.kanbanDetail.evidenceBundleHint}
                 compact={compactMode}
@@ -698,54 +660,6 @@ export function KanbanCardDetail({
             </>
           )}
 
-          {activeTab === "readiness" && (
-            <DetailSection
-              title={t.kanbanDetail.storyReadiness}
-              description={compactMode ? undefined : t.kanbanDetail.storyReadinessHint}
-              compact={compactMode}
-            >
-              <StoryReadinessPanel task={task} compact={compactMode} />
-            </DetailSection>
-          )}
-
-          {activeTab === "changes" && (
-            <DetailSection
-              title={t.kanbanDetail.changes}
-              description={compactMode ? undefined : t.kanbanDetail.changesHint}
-              compact={compactMode}
-            >
-              <KanbanTaskChangesTab
-                task={task}
-                codebases={codebases}
-                taskId={task.id}
-                workspaceId={resolvedWorkspaceId}
-                refreshSignal={refreshSignal}
-                onRefresh={onRefresh}
-                onRunPullRequest={onRunPullRequest}
-                onSelectSession={onSelectSession}
-              />
-            </DetailSection>
-          )}
-
-          {activeTab === "evidence" && (
-            <>
-              <DetailSection
-                title={t.kanbanDetail.evidenceBundle}
-                description={compactMode ? undefined : t.kanbanDetail.evidenceBundleHint}
-                compact={compactMode}
-              >
-                <EvidenceBundlePanel task={task} compact={compactMode} />
-              </DetailSection>
-
-              <KanbanCardArtifacts
-                taskId={task.id}
-                compact={compactMode}
-                requiredArtifacts={nextTransitionArtifacts.nextRequiredArtifacts}
-                refreshSignal={refreshSignal}
-              />
-            </>
-          )}
-
           {activeTab === "execution" && (
             <>
               <ExecutionSection
@@ -781,30 +695,10 @@ export function KanbanCardDetail({
             </>
           )}
 
-          {activeTab === "jitContext" && (
-            <JitContextPanel
-              task={task}
-              workspaceId={resolvedWorkspaceId || undefined}
-              repoPath={getTaskHistoryRepositoryPath()}
-              specialistLanguage={specialistLanguage}
-              activeSessionId={jitContextSessionId}
-              onPatchTask={onPatchTask}
-              onLoadIntoSession={onLoadJitContextIntoSession}
-              onOpenHistoryAnalysis={onOpenJitContextHistoryAnalysis}
-              compact={compactMode}
-            />
-          )}
-
-          {activeTab === "runs" && (
+          {activeTab === "activity" && (
             <KanbanCardActivityPanel
               task={task}
-              refreshSignal={refreshSignal}
-              sessions={sessions ?? []}
-              specialists={specialists}
               specialistLanguage={specialistLanguage}
-              autoProviderId={selectedProvider ?? undefined}
-              currentSessionId={activeRunSessionId}
-              onSelectSession={onSelectSession}
               compact={compactMode}
             />
           )}

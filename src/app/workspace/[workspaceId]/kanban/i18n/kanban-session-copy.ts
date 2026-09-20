@@ -5,11 +5,7 @@ export interface KanbanSessionCopy {
   activityDescription: string;
   runs: string;
   handoffs: string;
-  runHistoryTitle: string;
-  runHistoryCount: (count: number) => string;
   noRunsInline: string;
-  noRunsHistory: string;
-  noRunsHistoryHint: string;
   emptyPaneEyebrow: string;
   emptyPaneTitle: string;
   emptyPaneDescription: string;
@@ -22,14 +18,10 @@ export interface KanbanSessionCopy {
 const KANBAN_SESSION_COPY: Record<KanbanSpecialistLanguage, KanbanSessionCopy> = {
   en: {
     activityTitle: "Activity",
-    activityDescription: "Run history, lane handoffs, and issue linkage collected on the right for faster switching.",
+    activityDescription: "Lane handoffs and issue linkage collected on the right for faster switching.",
     runs: "Runs",
     handoffs: "Handoffs",
-    runHistoryTitle: "Run History",
-    runHistoryCount: (count) => `${count} recorded automation runs for this card.`,
     noRunsInline: "No automation runs yet",
-    noRunsHistory: "No automation runs yet.",
-    noRunsHistoryHint: "Once this card enters an automated lane, each run will show up here.",
     emptyPaneEyebrow: "Session",
     emptyPaneTitle: "No session has started yet",
     emptyPaneDescription: "This card does not have a recorded automation run yet, so the session pane is waiting for the first trigger.",
@@ -40,14 +32,10 @@ const KANBAN_SESSION_COPY: Record<KanbanSpecialistLanguage, KanbanSessionCopy> =
   },
   "zh-CN": {
     activityTitle: "活动",
-    activityDescription: "运行历史、lane 交接和 GitHub 关联会集中显示在右侧，方便快速切换。",
+    activityDescription: "lane 交接和 GitHub 关联会集中显示在右侧，方便快速切换。",
     runs: "运行",
     handoffs: "交接",
-    runHistoryTitle: "运行历史",
-    runHistoryCount: (count) => `这张卡已有 ${count} 次自动化运行记录。`,
     noRunsInline: "还没有自动化运行记录",
-    noRunsHistory: "还没有自动化运行记录。",
-    noRunsHistoryHint: "等这张卡进入自动化 lane 后，每一次运行都会显示在这里。",
     emptyPaneEyebrow: "会话",
     emptyPaneTitle: "当前还没有启动 session",
     emptyPaneDescription: "这张卡还没有记录任何自动化运行，所以右侧 session pane 会先显示等待中的空态。",
