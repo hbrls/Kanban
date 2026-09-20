@@ -31,6 +31,12 @@ vi.mock("@/i18n", () => ({
         placeholder: "Send a message to start.",
         repoPath: "Repo path",
         sessionInfo: "Session info",
+        resume: "Resume",
+        resuming: "Resuming...",
+        resumeHint: "Resume this session",
+        new: "New",
+        creatingNew: "Creating...",
+        newHint: "Start a fresh session",
       },
       common: {
         tasks: "Tasks",
@@ -336,5 +342,113 @@ describe("ChatPanel session targeting", () => {
     expect(canvasButton.getAttribute("title")).toBe("Connect first");
     fireEvent.click(canvasButton);
     expect(onPrepareCanvasPrompt).not.toHaveBeenCalled();
+  });
+
+  it("renders both Resume and New actions for the active session and invokes their handlers", async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    const onResumeActiveSession = vi.fn(async () => {});
+    const onNewActiveSession = vi.fn(async () => {});
+    const acp = {
+      connected: true,
+      sessionId: "session-123",
+      updates: [],
+      providers: [],
+      selectedProvider: "codex",
+      loading: false,
+      error: null,
+      authError: null,
+      dockerConfigError: null,
+      connect: vi.fn(),
+      createSession: vi.fn(),
+      resumeSession: vi.fn(),
+      forkSession: vi.fn(),
+      selectSession: vi.fn(),
+      setProvider: vi.fn(),
+      setMode: vi.fn(),
+      prompt: vi.fn(),
+      promptSession: vi.fn(async () => {}),
+      respondToUserInput: vi.fn(),
+      respondToUserInputForSession: vi.fn(),
+      writeTerminal: vi.fn(),
+      resizeTerminal: vi.fn(),
+      cancel: vi.fn(),
+      disconnect: vi.fn(),
+      clearAuthError: vi.fn(),
+      clearDockerConfigError: vi.fn(),
+      listProviderModels: vi.fn(),
+    } satisfies Partial<UseAcpState & UseAcpActions> as UseAcpState & UseAcpActions;
+
+    render(
+      <ChatPanel
+        acp={acp}
+        activeSessionId="session-123"
+        onEnsureSession={vi.fn(async () => "session-123")}
+        onSelectSession={vi.fn(async () => {})}
+        repoSelection={null}
+        onRepoChange={vi.fn()}
+        onResumeActiveSession={onResumeActiveSession}
+        onNewActiveSession={onNewActiveSession}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume" }));
+    await waitFor(() => {
+      expect(onResumeActiveSession).toHaveBeenCalledTimes(1);
+    });
+    expect(onNewActiveSession).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    await waitFor(() => {
+      expect(onNewActiveSession).toHaveBeenCalledTimes(1);
+    });
+    expect(onResumeActiveSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the New button when no new-session handler is provided", () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    const acp = {
+      connected: true,
+      sessionId: "session-123",
+      updates: [],
+      providers: [],
+      selectedProvider: "codex",
+      loading: false,
+      error: null,
+      authError: null,
+      dockerConfigError: null,
+      connect: vi.fn(),
+      createSession: vi.fn(),
+      resumeSession: vi.fn(),
+      forkSession: vi.fn(),
+      selectSession: vi.fn(),
+      setProvider: vi.fn(),
+      setMode: vi.fn(),
+      prompt: vi.fn(),
+      promptSession: vi.fn(async () => {}),
+      respondToUserInput: vi.fn(),
+      respondToUserInputForSession: vi.fn(),
+      writeTerminal: vi.fn(),
+      resizeTerminal: vi.fn(),
+      cancel: vi.fn(),
+      disconnect: vi.fn(),
+      clearAuthError: vi.fn(),
+      clearDockerConfigError: vi.fn(),
+      listProviderModels: vi.fn(),
+    } satisfies Partial<UseAcpState & UseAcpActions> as UseAcpState & UseAcpActions;
+
+    render(
+      <ChatPanel
+        acp={acp}
+        activeSessionId="session-123"
+        onEnsureSession={vi.fn(async () => "session-123")}
+        onSelectSession={vi.fn(async () => {})}
+        repoSelection={null}
+        onRepoChange={vi.fn()}
+        onResumeActiveSession={vi.fn(async () => {})}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Resume" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "New" })).toBeNull();
   });
 });
