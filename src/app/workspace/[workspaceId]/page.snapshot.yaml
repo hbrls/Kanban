@@ -1,0 +1,45 @@
+# page-id: workspace
+# route: /workspace/default
+# source-page: src/app/workspace/[workspaceId]/page.tsx
+# url: http://127.0.0.1:51127/workspace/default/kanban
+# title: Routa - Multi-Agent Coordinator
+# generated-at: 2026-04-18T14:18:47.772Z
+# generator: playwright
+# playwright-version: 1.58.2
+- banner:
+  - button "..."
+  - button "Checking Docker..." [disabled]
+  - link "Checking MCP...":
+    - /url: /settings/mcp?tab=tools
+  - button "EN"
+  - button "中文"
+  - button "Light"
+  - button "Dark"
+  - button "System" [pressed]
+- complementary:
+  - img "Routa"
+  - text: Routa
+  - button "Close sidebar":
+    - img
+  - navigation:
+    - link "Home":
+      - /url: /
+    - link "Sessions":
+      - /url: /workspace/default/sessions
+    - link "Kanban":
+      - /url: /workspace/default/kanban
+    - link "Team":
+      - /url: /workspace/default/team
+  - link "Feature Explorer":
+    - /url: /workspace/default/feature-explorer
+  - link "Harness":
+    - /url: /settings/harness?workspaceId=default
+  - link "Fluency":
+    - /url: /settings/fluency?workspaceId=default
+  - link "Settings":
+    - /url: /settings?workspaceId=default
+- main:
+  - heading "Kanban Board" [level=1]
+  - button "Refresh"
+  - text: No board available yet.
+- alert

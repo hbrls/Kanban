@@ -1,0 +1,67 @@
+# page-id: traces
+# route: /traces?view=trace
+# source-page: src/app/traces/page.tsx
+# url: http://127.0.0.1:58066/traces?view=trace
+# title: Routa - Multi-Agent Coordinator
+# generated-at: 2026-04-27T14:25:07.362Z
+# generator: playwright
+# playwright-version: 1.58.2
+- banner:
+  - button "Default Workspace"
+  - link "Home":
+    - /url: /
+  - button "Docker fixture" [disabled]
+  - link "MCP ready":
+    - /url: /settings/mcp?tab=tools
+  - button "EN"
+  - button "中文"
+  - button "Light"
+  - button "Dark"
+  - button "System" [pressed]
+- complementary:
+  - img "Routa"
+  - text: Routa
+  - button "Close sidebar":
+    - img
+  - navigation:
+    - link "Home":
+      - /url: /
+    - link "Sessions":
+      - /url: /workspace/default/sessions
+    - link "Kanban":
+      - /url: /workspace/default/kanban
+    - link "Team":
+      - /url: /workspace/default/team
+  - link "Spec":
+    - /url: /workspace/default/spec
+  - link "Feature Explorer":
+    - /url: /workspace/default/feature-explorer
+  - link "Harness":
+    - /url: /settings/harness?workspaceId=default
+  - link "Fluency":
+    - /url: /settings/fluency?workspaceId=default
+  - link "Settings":
+    - /url: /settings?workspaceId=default
+- main:
+  - heading "Agent Trace Viewer" [level=1]
+  - paragraph: Browse and analyze agent execution traces
+  - text: "Session:"
+  - code: <id>…
+  - button "Copy link"
+  - button "Hide Sessions"
+  - button "Refresh"
+  - button "Chat"
+  - button "Trace"
+  - complementary:
+    - heading "sessions" [level=2]
+    - paragraph: 2 sessions found
+    - button "Stabilize Page Snapshot Fixtures · Backlog Refiner 1 <localized-datetime> CRAFTER opencode"
+    - button "Snapshot Fixture Session 6 <localized-datetime> CRAFTER opencode"
+  - region "Trace content":
+    - text: 🔗 EventBridge View 1 events
+    - button "All"
+    - button "Chat"
+    - button "Tools"
+    - button "thoughts"
+    - text: ▶ Session Started opencode <time>
+- alert
