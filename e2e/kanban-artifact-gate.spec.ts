@@ -90,8 +90,10 @@ test.describe("Kanban artifact gates", () => {
       await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveCount(0);
 
       await devCard.click();
-      await expect(page.getByText("Evidence Bundle").first()).toBeVisible();
-      await expect(page.getByText("Evidence incomplete")).toBeVisible();
+      const evidencePane = page.getByTestId("kanban-detail-evidence-pane");
+      await expect(evidencePane).toBeVisible();
+      await expect(evidencePane.getByText("Evidence Bundle")).toBeVisible();
+      await expect(evidencePane.getByText("Evidence incomplete")).toBeVisible();
 
       const provideArtifactResponse = await request.post("/api/mcp/tools", {
         data: {
@@ -120,9 +122,8 @@ test.describe("Kanban artifact gates", () => {
         status: "provided",
       });
 
-      await page.getByRole("button", { name: "Evidence Bundle" }).click();
-      await expect(page.getByText("review-proof.png")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText("by agent-artifact-e2e")).toBeVisible();
+      await expect(evidencePane.getByText("review-proof.png")).toBeVisible({ timeout: 20_000 });
+      await expect(evidencePane.getByText("by agent-artifact-e2e")).toBeVisible();
       await expect(devCard.getByTestId("kanban-card-artifact-gate")).toHaveCount(0);
       await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveCount(0);
 
@@ -182,9 +183,8 @@ test.describe("Kanban artifact gates", () => {
         ]),
       });
 
-      await page.getByRole("button", { name: "Evidence Bundle" }).click();
-      await expect(page.getByText("review-test-results.txt")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText(TEST_RESULTS_TEXT)).toBeVisible();
+      await expect(evidencePane.getByText("review-test-results.txt")).toBeVisible({ timeout: 20_000 });
+      await expect(evidencePane.getByText(TEST_RESULTS_TEXT)).toBeVisible();
       await expect(devCard.getByTestId("kanban-card-artifact-gate")).toHaveCount(0);
       await expect(devCard.getByTestId("kanban-card-artifact-count")).toHaveCount(0);
 

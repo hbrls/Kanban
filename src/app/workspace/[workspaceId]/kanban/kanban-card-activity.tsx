@@ -1,29 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
-import {
-  Braces,
-  Check,
-  CircleCheckBig,
-  ClipboardList,
-  Copy,
-  GitPullRequest,
-  Inbox,
-  Layers3,
-  ShieldCheck,
-} from "lucide-react";
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { Check, Copy } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import { resolveEffectiveTaskAutomation } from "@/core/kanban/effective-task-automation";
 import type { KanbanColumnInfo } from "../types";
 import type { SessionInfo, TaskInfo, TaskRunInfo } from "../types";
 import {
-  buildSessionDisplayLabel,
   createKanbanSpecialistResolver,
   formatSessionTimestamp,
   getLaneSessionStepLabel,
-  getOrderedSessionIds,
-  getStableOrderedSessionIds,
   getSpecialistName,
   type KanbanSpecialistOption,
 } from "./kanban-card-session-utils";
@@ -31,19 +18,10 @@ import type { KanbanSpecialistLanguage } from "./kanban-specialist-language";
 import { getKanbanSessionCopy } from "./i18n/kanban-session-copy";
 import { useTaskRuns } from "./use-task-runs";
 
-type ActivityTabId = "runs" | "handoffs" | "github";
+type ActivityTabId = "handoffs" | "github";
 
 function formatTaskRunKind(kind: TaskRunInfo["kind"] | undefined): string {
-  switch (kind) {
-    case "a2a_task":
-      return "A2A";
-    case "runner_acp":
-      return "Runner ACP";
-    case "embedded_acp":
-      return "ACP";
-    default:
-      return "Run";
-  }
+  return kind ?? "unknown";
 }
 
 function formatTaskRunStatus(status: TaskRunInfo["status"] | undefined): string {
@@ -77,66 +55,6 @@ function getTaskRunStatusClasses(status: TaskRunInfo["status"] | undefined): str
     default:
       return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
   }
-}
-
-function getLaneBadgeClasses(laneLabel: string | undefined): string {
-  const normalized = laneLabel?.trim().toLowerCase() ?? "";
-
-  if (normalized.includes("backlog") || normalized.includes("梳理")) {
-    return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
-  }
-  if (normalized.includes("todo") || normalized.includes("编排")) {
-    return "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-200";
-  }
-  if (
-    normalized.includes("dev")
-    || normalized.includes("develop")
-    || normalized.includes("开发")
-    || normalized.includes("execute")
-  ) {
-    return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200";
-  }
-  if (normalized.includes("review") || normalized.includes("评审") || normalized.includes("gate")) {
-    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200";
-  }
-  if (normalized.includes("pr") || normalized.includes("publish")) {
-    return "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-200";
-  }
-  if (normalized.includes("done") || normalized.includes("complete") || normalized.includes("completed")) {
-    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200";
-  }
-
-  return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
-}
-
-function getRunTabClasses(status: TaskRunInfo["status"] | undefined, active: boolean): string {
-  const stateClasses = (() => {
-    switch (status) {
-      case "completed":
-        return active
-          ? "border-emerald-300 bg-emerald-50 text-slate-900 dark:border-emerald-700/70 dark:bg-emerald-900/20 dark:text-slate-100"
-          : "border-emerald-200/80 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-800/70 dark:bg-transparent dark:text-slate-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-900/10";
-      case "failed":
-      case "timed_out":
-        return active
-          ? "border-rose-300 bg-rose-50 text-slate-900 dark:border-rose-700/70 dark:bg-rose-900/20 dark:text-slate-100"
-          : "border-rose-200/80 bg-white text-slate-600 hover:border-rose-300 hover:bg-rose-50 dark:border-rose-800/70 dark:bg-transparent dark:text-slate-300 dark:hover:border-rose-700 dark:hover:bg-rose-900/10";
-      case "running":
-        return active
-          ? "border-sky-300 bg-sky-50 text-slate-900 dark:border-sky-700/70 dark:bg-sky-900/20 dark:text-slate-100"
-          : "border-sky-200/80 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50 dark:border-sky-800/70 dark:bg-transparent dark:text-slate-300 dark:hover:border-sky-700 dark:hover:bg-sky-900/10";
-      case "transitioned":
-        return active
-          ? "border-amber-300 bg-amber-50 text-slate-900 dark:border-amber-700/70 dark:bg-amber-900/20 dark:text-slate-100"
-          : "border-amber-200/80 bg-white text-slate-600 hover:border-amber-300 hover:bg-amber-50 dark:border-amber-800/70 dark:bg-transparent dark:text-slate-300 dark:hover:border-amber-700 dark:hover:bg-amber-900/10";
-      default:
-        return active
-          ? "border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-          : "border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-transparent dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-900/40";
-    }
-  })();
-
-  return `inline-flex min-w-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] font-medium transition-colors ${stateClasses}`;
 }
 
 function formatAgentCardTarget(agentCardUrl?: string): string | undefined {
@@ -200,37 +118,6 @@ function formatLaneSessionHeading(
   return session?.name ?? session?.provider ?? "Automation Run";
 }
 
-function renderLaneIcon(laneLabel: string | undefined) {
-  const normalized = laneLabel?.trim().toLowerCase() ?? "";
-  const iconClassName = "h-3.5 w-3.5";
-
-  if (normalized.includes("backlog") || normalized.includes("梳理")) {
-    return <Inbox className={iconClassName} aria-hidden="true" />;
-  }
-  if (normalized.includes("todo") || normalized.includes("编排")) {
-    return <ClipboardList className={iconClassName} aria-hidden="true" />;
-  }
-  if (
-    normalized.includes("dev")
-    || normalized.includes("develop")
-    || normalized.includes("开发")
-    || normalized.includes("execute")
-  ) {
-    return <Braces className={iconClassName} aria-hidden="true" />;
-  }
-  if (normalized.includes("review") || normalized.includes("评审") || normalized.includes("gate")) {
-    return <ShieldCheck className={iconClassName} aria-hidden="true" />;
-  }
-  if (normalized.includes("pr") || normalized.includes("publish")) {
-    return <GitPullRequest className={iconClassName} aria-hidden="true" />;
-  }
-  if (normalized.includes("done") || normalized.includes("complete") || normalized.includes("completed")) {
-    return <CircleCheckBig className={iconClassName} aria-hidden="true" />;
-  }
-
-  return <Layers3 className={iconClassName} aria-hidden="true" />;
-}
-
 function ActivitySection({
   title,
   description,
@@ -253,19 +140,6 @@ function ActivitySection({
       {children}
     </section>
   );
-}
-
-function handleSessionRowKeyDown(
-  event: KeyboardEvent<HTMLDivElement>,
-  onSelectSession: ((sessionId: string) => void) | undefined,
-  sessionId: string,
-) {
-  if (event.key !== "Enter" && event.key !== " ") {
-    return;
-  }
-
-  event.preventDefault();
-  onSelectSession?.(sessionId);
 }
 
 function SessionIdChip({
@@ -310,39 +184,103 @@ function SessionIdChip({
   );
 }
 
+export function KanbanSessionRunMetadata({
+  laneSession,
+  run,
+  session,
+  specialists,
+  compact = false,
+}: {
+  laneSession?: NonNullable<TaskInfo["laneSessions"]>[number];
+  run?: TaskRunInfo;
+  session?: SessionInfo;
+  specialists: KanbanSpecialistOption[];
+  compact?: boolean;
+}) {
+  const { t } = useTranslation();
+  const sessionId = laneSession?.sessionId ?? run?.sessionId ?? session?.sessionId ?? "";
+  const laneSpecialist = getSpecialistName(
+    laneSession?.specialistId,
+    run?.specialistName ?? laneSession?.specialistName,
+    specialists,
+  );
+  const isA2ARun = laneSession?.transport === "a2a";
+
+  return (
+    <div
+      className={`w-full border-b border-slate-200/70 text-left last:border-b-0 ${compact ? "px-2.5 py-2" : "px-3 py-2.5"} text-slate-700 dark:border-slate-700 dark:text-slate-300`}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        {run && (
+          <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:text-slate-200">
+            {formatTaskRunKind(run.kind)}
+          </span>
+        )}
+        {laneSession?.transport && (
+          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+            {laneSession.transport}
+          </span>
+        )}
+        {(run?.status ?? laneSession?.status) && (
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getTaskRunStatusClasses(run?.status ?? laneSession?.status)}`}>
+            {formatTaskRunStatus(run?.status ?? laneSession?.status)}
+          </span>
+        )}
+      </div>
+      <div className="mt-2 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className={`truncate font-medium text-slate-900 dark:text-slate-100 ${compact ? "text-[13px]" : "text-sm"}`}>
+            {laneSession ? formatLaneSessionHeading(laneSession, session) : (session?.name ?? session?.provider ?? t.kanban.acpSession)}
+          </div>
+          <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            {isA2ARun
+              ? [
+                "Remote task",
+                laneSession?.role ?? t.kanban.unknownRole,
+                laneSpecialist,
+              ].filter(Boolean).join(" · ")
+              : [
+                laneSession?.provider ?? session?.provider ?? t.kanban.unknownProvider,
+                laneSession?.role ?? session?.role ?? t.kanban.unknownRole,
+                laneSpecialist,
+              ].filter(Boolean).join(" · ")}
+          </div>
+          <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
+            {formatSessionTimestamp(run?.startedAt ?? session?.createdAt ?? laneSession?.startedAt)}
+          </div>
+        </div>
+        <SessionIdChip
+          sessionId={run?.externalTaskId ?? laneSession?.externalTaskId ?? sessionId}
+          compact={compact}
+        />
+      </div>
+      <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+        <span className="truncate">
+          {isA2ARun
+            ? (run?.contextId ?? laneSession?.contextId) ? `Context ${run?.contextId ?? laneSession?.contextId}` : "Remote task metadata available"
+            : session?.cwd ?? t.kanban.workingDirUnavailable}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function KanbanCardActivityPanel({
   task,
-  sessions,
-  specialists,
   specialistLanguage = "en",
-  autoProviderId: _autoProviderId,
-  currentSessionId,
-  onSelectSession,
-  refreshSignal,
   compact = false,
 }: {
   task: TaskInfo;
-  sessions: SessionInfo[];
-  specialists: KanbanSpecialistOption[];
   specialistLanguage?: KanbanSpecialistLanguage;
-  autoProviderId?: string;
-  currentSessionId?: string;
-  onSelectSession?: (sessionId: string) => void;
-  refreshSignal?: number;
   compact?: boolean;
 }) {
   const copy = getKanbanSessionCopy(specialistLanguage);
-  const { runs, error } = useTaskRuns(
-    task.id,
-    `${refreshSignal ?? ""}:${task.updatedAt ?? ""}:${task.triggerSessionId ?? ""}:${task.laneSessions?.length ?? 0}`,
-  );
   const tabs: Array<{ id: ActivityTabId; label: string; count?: number }> = [
-    { id: "runs", label: copy.runs, count: runs?.length ?? getOrderedSessionIds(task).length },
     ...((task.laneHandoffs?.length ?? 0) > 0 ? [{ id: "handoffs" as const, label: copy.handoffs, count: task.laneHandoffs?.length }] : []),
     ...(task.githubNumber ? [{ id: "github" as const, label: "GitHub" }] : []),
   ];
-  const [activeTab, setActiveTab] = useState<ActivityTabId>(tabs[0]?.id ?? "runs");
-  const visibleTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : (tabs[0]?.id ?? "runs");
+  const [activeTab, setActiveTab] = useState<ActivityTabId | null>(null);
+  const visibleTab = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id;
 
   return (
     <ActivitySection
@@ -351,58 +289,45 @@ export function KanbanCardActivityPanel({
       compact={compact}
     >
       <div>
-        {error && (
-          <div className="mb-2 border-l-2 border-amber-300 px-3 py-2 text-xs text-amber-800 dark:border-amber-700/80 dark:text-amber-200">
-            Run ledger unavailable, showing local run history. {error}
+        {tabs.length > 0 && (
+          <div className="flex flex-wrap border-b border-slate-200/70 dark:border-[#232736]">
+            {tabs.map((tab) => {
+              const active = tab.id === visibleTab;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`inline-flex items-center justify-between gap-1 border-b-2 border-transparent px-3 py-2 text-[11px] font-medium transition-colors ${
+                    active
+                      ? "border-b-[#b45309] text-amber-800 dark:border-b-[#f59e0b] dark:text-amber-200"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {typeof tab.count === "number" && (
+                    <span className={`rounded-none border px-1 py-0.5 text-[10px] ${active ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-100" : "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"}`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
-        <div className="flex flex-wrap border-b border-slate-200/70 dark:border-[#232736]">
-          {tabs.map((tab) => {
-            const active = tab.id === activeTab;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center justify-between gap-1 border-b-2 border-transparent px-3 py-2 text-[11px] font-medium transition-colors ${
-                  active
-                    ? "border-b-[#b45309] text-amber-800 dark:border-b-[#f59e0b] dark:text-amber-200"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                }`}
-              >
-                <span>{tab.label}</span>
-                {typeof tab.count === "number" && (
-                  <span className={`rounded-none border px-1 py-0.5 text-[10px] ${active ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/50 dark:bg-amber-900/10 dark:text-amber-100" : "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"}`}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <div className={compact ? "mt-3" : "mt-4"}>
-          {visibleTab === "runs" && (
-            <SessionHistoryPanel
-              task={task}
-              runs={runs ?? undefined}
-              specialists={specialists}
-              sessions={sessions}
-              specialistLanguage={specialistLanguage}
-              currentSessionId={currentSessionId}
-              onSelectSession={onSelectSession}
-              compact={compact}
-            />
-          )}
-          {visibleTab === "handoffs" && (
-            <HandoffPanel
-              task={task}
-              compact={compact}
-            />
-          )}
-          {visibleTab === "github" && (
-            <GitHubPanel task={task} compact={compact} />
-          )}
-        </div>
+        {visibleTab && (
+          <div className={compact ? "mt-3" : "mt-4"}>
+            {visibleTab === "handoffs" && (
+              <HandoffPanel
+                task={task}
+                compact={compact}
+              />
+            )}
+            {visibleTab === "github" && (
+              <GitHubPanel task={task} compact={compact} />
+            )}
+          </div>
+        )}
       </div>
     </ActivitySection>
   );
@@ -411,61 +336,52 @@ export function KanbanCardActivityPanel({
 export function KanbanCardActivityBar({
   task,
   sessions = [],
+  specialists = [],
   specialistLanguage = "en",
   currentSessionId,
   onSelectSession,
-  onCloseSession,
+  refreshSignal,
 }: {
   task: TaskInfo;
   sessions?: SessionInfo[];
+  specialists?: KanbanSpecialistOption[];
   specialistLanguage?: KanbanSpecialistLanguage;
   currentSessionId?: string;
   onSelectSession?: (sessionId: string) => void;
-  onCloseSession?: () => void;
+  refreshSignal?: number;
 }) {
   const { t } = useTranslation();
   const copy = getKanbanSessionCopy(specialistLanguage);
   const sessionTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const { runs, error } = useTaskRuns(
     task.id,
-    `${task.updatedAt ?? ""}:${task.triggerSessionId ?? ""}:${task.laneSessions?.length ?? 0}`,
+    `${refreshSignal ?? ""}:${task.updatedAt ?? ""}:${task.triggerSessionId ?? ""}:${task.laneSessions?.length ?? 0}`,
   );
-  const orderedSessionIds = getStableOrderedSessionIds(task, runs);
   const laneSessions = task.laneSessions ?? [];
-  const laneSessionMap = new Map(laneSessions.map((entry) => [entry.sessionId, entry]));
   const sessionMap = new Map(sessions.map((session) => [session.sessionId, session]));
+  const laneSessionMap = new Map(laneSessions.map((entry) => [entry.sessionId, entry]));
   const runMap = new Map((runs ?? []).map((run) => [run.sessionId ?? run.id, run]));
-  const selectedRunId = currentSessionId && orderedSessionIds.includes(currentSessionId)
+  const selectedSessionId = currentSessionId && laneSessionMap.has(currentSessionId)
     ? currentSessionId
-    : orderedSessionIds[orderedSessionIds.length - 1];
-  const selectedLaneSession = selectedRunId ? laneSessionMap.get(selectedRunId) : undefined;
-  const selectedRun = selectedRunId ? runMap.get(selectedRunId) : undefined;
-  const selectedStepLabel = getLaneSessionStepLabel(selectedLaneSession);
+    : laneSessions[laneSessions.length - 1]?.sessionId;
+  const selectedLaneSession = selectedSessionId ? laneSessionMap.get(selectedSessionId) : undefined;
+  const selectedRun = selectedSessionId ? runMap.get(selectedSessionId) : undefined;
+  const selectedSession = selectedSessionId ? sessionMap.get(selectedSessionId) : undefined;
+  const tabPanelId = `kanban-session-tabpanel-${task.id}`;
 
   useEffect(() => {
-    if (!selectedRunId) return;
-    sessionTabRefs.current[selectedRunId]?.scrollIntoView({
+    if (!selectedSessionId) return;
+    sessionTabRefs.current[selectedSessionId]?.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
       inline: "nearest",
     });
-  }, [selectedRunId]);
+  }, [selectedSessionId]);
 
-  if (orderedSessionIds.length === 0) {
+  if (laneSessions.length === 0) {
     return (
       <div className="flex items-center justify-between gap-3 border-b border-dashed border-slate-300 px-3 py-2 text-[11px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
         <span>{copy.noRunsInline}</span>
-        {onCloseSession && (
-          <button
-            type="button"
-            onClick={onCloseSession}
-            className="inline-flex h-6 w-6 shrink-0 items-center justify-center border border-slate-200 text-sm font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-slate-200"
-            aria-label={copy.closeSessionPane}
-            title={copy.closeSessionPane}
-          >
-            ×
-          </button>
-        )}
       </div>
     );
   }
@@ -477,246 +393,57 @@ export function KanbanCardActivityBar({
           Run ledger unavailable, using cached task history.
         </div>
       )}
-      <div className="flex items-start gap-2 border-b border-slate-200/70 pb-2 dark:border-[#232736]">
-        <div className="flex min-w-0 flex-1 flex-wrap items-end gap-1.5 border-slate-200/70 pr-1 pb-1">
-          {orderedSessionIds.map((sessionId, index) => {
-            const active = sessionId === selectedRunId;
-            const laneSession = laneSessionMap.get(sessionId);
-            const run = runMap.get(sessionId);
-            const laneLabel = laneSession?.columnName ?? laneSession?.columnId ?? t.kanban.runLabel;
-            const runLabel = buildSessionDisplayLabel(sessionId, index, sessionMap);
-            const fullTabLabel = laneSession?.stepName?.trim() || runLabel;
-
-            return (
-              <button
-                key={sessionId}
-                type="button"
-                ref={(node) => {
-                  sessionTabRefs.current[sessionId] = node;
-                }}
-                onClick={() => onSelectSession?.(sessionId)}
-                className={getRunTabClasses(run?.status ?? laneSession?.status, active)}
-                aria-pressed={active}
-                title={`${fullTabLabel} · ${laneLabel} · Run ${index + 1}`}
-              >
-                <span
-                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${getLaneBadgeClasses(laneLabel)}`}
-                  aria-label={laneLabel}
-                  title={laneLabel}
-                >
-                  {renderLaneIcon(laneLabel)}
-                </span>
-                <span className={`px-0.5 text-[10px] font-semibold tabular-nums ${
-                  active
-                    ? "text-slate-700 dark:text-slate-200"
-                    : "text-slate-500 dark:text-slate-400"
-                }`}>
-                  {index + 1}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {onCloseSession && (
-          <button
-            type="button"
-            onClick={onCloseSession}
-            className="inline-flex h-6 w-6 shrink-0 items-center justify-center border border-slate-200 text-sm font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-slate-200"
-            aria-label={copy.closeSessionPane}
-            title={copy.closeSessionPane}
-          >
-            ×
-          </button>
-        )}
-      </div>
-      {(selectedLaneSession?.columnName || selectedStepLabel || selectedLaneSession?.status) && (
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200/80 pb-1 text-[10px] dark:border-[#232736]">
-          {selectedLaneSession?.columnName && (
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
-              {selectedLaneSession.columnName}
-            </span>
-          )}
-          {selectedLaneSession?.transport && (
-            <span className="rounded-full bg-violet-100 px-2 py-0.5 font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-              {selectedLaneSession.transport}
-            </span>
-          )}
-          {selectedRun && (
-            <span className={`rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide ${getTaskRunStatusClasses(selectedRun.status)}`}>
-              {formatTaskRunStatus(selectedRun.status)}
-            </span>
-          )}
-          {selectedStepLabel && (
-            <span className="rounded-full bg-blue-100 px-2 py-0.5 font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-              {selectedStepLabel}
-            </span>
-          )}
-          {selectedLaneSession?.status && (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
-              {selectedLaneSession.status}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SessionHistoryPanel({
-  task,
-  runs,
-  specialists,
-  sessions,
-  specialistLanguage = "en",
-  currentSessionId,
-  onSelectSession,
-  compact = false,
-}: {
-  task: TaskInfo;
-  runs?: TaskRunInfo[];
-  specialists: KanbanSpecialistOption[];
-  sessions: SessionInfo[];
-  specialistLanguage?: KanbanSpecialistLanguage;
-  currentSessionId?: string;
-  onSelectSession?: (sessionId: string) => void;
-  compact?: boolean;
-}) {
-  const { t } = useTranslation();
-  const copy = getKanbanSessionCopy(specialistLanguage);
-  const laneSessions = task.laneSessions ?? [];
-  const orderedSessionIds = getStableOrderedSessionIds(task, runs);
-
-  if (orderedSessionIds.length === 0) {
-    return (
-      <div className={`border-b border-dashed border-slate-300 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400 ${compact ? "px-3 py-3" : "px-4 py-4"}`}>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{copy.runHistoryTitle}</div>
-        <div className="mt-2">{copy.noRunsHistory} {copy.noRunsHistoryHint}</div>
-      </div>
-    );
-  }
-
-  const sessionMap = new Map(sessions.map((session) => [session.sessionId, session]));
-  const laneSessionMap = new Map(laneSessions.map((entry) => [entry.sessionId, entry]));
-  const runMap = new Map((runs ?? []).map((run) => [run.sessionId ?? run.id, run]));
-
-  return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{copy.runHistoryTitle}</div>
-          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {copy.runHistoryCount(orderedSessionIds.length)}
-          </div>
-        </div>
-        <div className="border border-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:text-slate-300">
-          {t.kanban.currentLane}: {task.columnId ?? t.kanban.backlog}
-        </div>
-      </div>
-      <div className={`overflow-y-auto pr-1 ${compact ? "mt-3 max-h-80 space-y-1.5" : "mt-4 max-h-[34rem] space-y-2"}`}>
-        {orderedSessionIds.map((sessionId, index) => {
-          const session = sessionMap.get(sessionId);
-          const isCurrent = sessionId === currentSessionId;
-          const laneSession = laneSessionMap.get(sessionId);
-          const run = runMap.get(sessionId);
-          const selectedSessionId = run?.sessionId ?? sessionId;
-          const laneSpecialist = getSpecialistName(
-            laneSession?.specialistId,
-            run?.specialistName ?? laneSession?.specialistName,
-            specialists,
-          );
-          const stepLabel = getLaneSessionStepLabel(laneSession);
-          const isA2ARun = laneSession?.transport === "a2a";
-          const reconnectLabel = run?.resumeTarget?.type === "external_task" ? t.kanban.inspectLabel : t.kanban.openLabel;
+      <div
+        role="tablist"
+        aria-label={copy.runs}
+        className="flex min-w-0 flex-wrap items-end gap-1 border-b border-desktop-border"
+      >
+        {laneSessions.map((laneSession, index) => {
+          const sessionId = laneSession.sessionId;
+          const active = sessionId === selectedSessionId;
+          const laneLabel = laneSession.columnName?.trim() || laneSession.columnId?.trim() || t.kanban.runLabel;
+          const stepLabel = laneSession.stepName?.trim() || t.kanban.acpSession;
+          const tabLabel = `# ${index + 1} ${laneLabel} - ${stepLabel}`;
+          const fullTabLabel = `${tabLabel} · ${sessionId}`;
 
           return (
-            <div
+            <button
               key={sessionId}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelectSession?.(selectedSessionId)}
-              onKeyDown={(event) => handleSessionRowKeyDown(event, onSelectSession, selectedSessionId)}
-              className={`w-full border-b border-slate-200/70 text-left transition-colors last:border-b-0 ${compact ? "px-2.5 py-2" : "px-3 py-2.5"} ${
-                isCurrent
-                  ? "text-amber-900 dark:text-amber-200"
-                  : "text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:text-slate-300"
-              } focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950`}
-              aria-pressed={isCurrent}
+              type="button"
+              id={`kanban-session-tab-${task.id}-${index}`}
+              role="tab"
+              ref={(node) => {
+                sessionTabRefs.current[sessionId] = node;
+              }}
+              onClick={() => onSelectSession?.(sessionId)}
+              aria-selected={active}
+              aria-controls={tabPanelId}
+              tabIndex={active ? 0 : -1}
+              title={fullTabLabel}
+              aria-label={fullTabLabel}
+              className={`shrink-0 border-b-2 px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                active
+                  ? "border-b-desktop-accent bg-desktop-bg-active text-desktop-accent"
+                  : "border-b-transparent text-desktop-text-secondary hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
+              }`}
             >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                  {t.kanban.runLabel} {index + 1}
-                </span>
-                {run && (
-                  <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:text-slate-200">
-                    {formatTaskRunKind(run.kind)}
-                  </span>
-                )}
-                {laneSession?.columnName && (
-                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">
-                    {laneSession.columnName}
-                  </span>
-                )}
-                {laneSession?.transport && (
-                  <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
-                    {laneSession.transport}
-                  </span>
-                )}
-                {stepLabel && (
-                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                    {stepLabel}
-                  </span>
-                )}
-                {isCurrent && (
-                  <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-800/40 dark:text-amber-200">
-                    {t.common.active}
-                  </span>
-                )}
-                {(run?.status ?? laneSession?.status) && (
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${getTaskRunStatusClasses(run?.status ?? laneSession?.status)}`}>
-                    {formatTaskRunStatus(run?.status ?? laneSession?.status)}
-                  </span>
-                )}
-              </div>
-              <div className="mt-2 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className={`truncate font-medium text-slate-900 dark:text-slate-100 ${compact ? "text-[13px]" : "text-sm"}`}>
-                    {laneSession ? formatLaneSessionHeading(laneSession, session) : (session?.name ?? session?.provider ?? t.kanban.acpSession)}
-                  </div>
-                  <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    {isA2ARun
-                      ? [
-                        "Remote task",
-                        laneSession?.role ?? t.kanban.unknownRole,
-                        laneSpecialist,
-                      ].filter(Boolean).join(" · ")
-                      : [
-                        laneSession?.provider ?? session?.provider ?? t.kanban.unknownProvider,
-                        laneSession?.role ?? session?.role ?? t.kanban.unknownRole,
-                        laneSpecialist,
-                      ].filter(Boolean).join(" · ")}
-                  </div>
-                  <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                    {formatSessionTimestamp(run?.startedAt ?? session?.createdAt ?? laneSession?.startedAt)}
-                  </div>
-                </div>
-                <SessionIdChip
-                  sessionId={run?.externalTaskId ?? laneSession?.externalTaskId ?? sessionId}
-                  compact={compact}
-                />
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400">
-                <span className="truncate">
-                  {isA2ARun
-                    ? (run?.contextId ?? laneSession?.contextId) ? `Context ${run?.contextId ?? laneSession?.contextId}` : "Remote task metadata available"
-                    : session?.cwd ?? t.kanban.workingDirUnavailable}
-                </span>
-                <span className="font-medium text-amber-600 dark:text-amber-300">{reconnectLabel}</span>
-              </div>
-            </div>
+              {tabLabel}
+            </button>
           );
         })}
       </div>
-    </>
+      {selectedLaneSession && (
+        <div id={tabPanelId} className="border-b border-slate-200/80 dark:border-[#232736]">
+          <KanbanSessionRunMetadata
+            laneSession={selectedLaneSession}
+            run={selectedRun}
+            session={selectedSession}
+            specialists={specialists}
+            compact
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -727,7 +454,6 @@ export function KanbanEmptySessionPane({
   specialists,
   specialistLanguage = "en",
   autoProviderId,
-  onCloseSession,
 }: {
   task: TaskInfo;
   boardColumns: KanbanColumnInfo[];
@@ -735,7 +461,6 @@ export function KanbanEmptySessionPane({
   specialists: KanbanSpecialistOption[];
   specialistLanguage?: KanbanSpecialistLanguage;
   autoProviderId?: string;
-  onCloseSession?: () => void;
 }) {
   const { t } = useTranslation();
   const copy = getKanbanSessionCopy(specialistLanguage);
@@ -754,7 +479,6 @@ export function KanbanEmptySessionPane({
         <KanbanCardActivityBar
           task={task}
           specialistLanguage={specialistLanguage}
-          onCloseSession={onCloseSession}
         />
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center p-4">

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskInfo } from "../../types";
-import { KanbanCard } from "../kanban-card";
+import { getLatestCardLaneSession, KanbanCard } from "../kanban-card";
 
 vi.mock("@dnd-kit/core", () => ({
   useDraggable: () => ({
@@ -32,6 +32,51 @@ function buildTask(overrides?: Partial<TaskInfo>): TaskInfo {
     ...overrides,
   };
 }
+
+describe("getLatestCardLaneSession", () => {
+  it("returns the last lane session matching the current column", () => {
+    const task = buildTask({
+      columnId: "dev",
+      laneSessions: [
+        { sessionId: "session-backlog", columnId: "backlog", status: "completed", startedAt: "2025-01-01T00:00:00.000Z" },
+        { sessionId: "session-dev-1", columnId: "dev", status: "failed", startedAt: "2025-01-02T00:00:00.000Z" },
+        { sessionId: "session-dev-2", columnId: "dev", status: "running", startedAt: "2025-01-03T00:00:00.000Z" },
+      ],
+    });
+
+    expect(getLatestCardLaneSession(task)?.sessionId).toBe("session-dev-2");
+    expect(getLatestCardLaneSession(task)?.status).toBe("running");
+  });
+
+  it("uses array order instead of startedAt ordering", () => {
+    const task = buildTask({
+      columnId: "dev",
+      laneSessions: [
+        { sessionId: "session-newer", columnId: "dev", status: "failed", startedAt: "2025-01-03T00:00:00.000Z" },
+        { sessionId: "session-older", columnId: "dev", status: "running", startedAt: "2025-01-01T00:00:00.000Z" },
+      ],
+    });
+
+    expect(getLatestCardLaneSession(task)?.sessionId).toBe("session-older");
+  });
+
+  it("ignores sessions from other lanes", () => {
+    const task = buildTask({
+      columnId: "review",
+      laneSessions: [
+        { sessionId: "session-dev", columnId: "dev", status: "completed", startedAt: "2025-01-01T00:00:00.000Z" },
+      ],
+    });
+
+    expect(getLatestCardLaneSession(task)).toBeUndefined();
+  });
+
+  it("returns undefined when the task has no column or no lane sessions", () => {
+    expect(getLatestCardLaneSession(buildTask({ columnId: undefined }))).toBeUndefined();
+    expect(getLatestCardLaneSession(buildTask({ columnId: "dev", laneSessions: [] }))).toBeUndefined();
+    expect(getLatestCardLaneSession(buildTask({ columnId: "dev" }))).toBeUndefined();
+  });
+});
 
 describe("KanbanCard cover", () => {
   it("does not render artifact gate or count badges on the card cover", () => {
@@ -128,18 +173,17 @@ describe("KanbanCard cover", () => {
     expect(screen.getByText("Idle")).toBeTruthy();
   });
 
-  it("does not render a Run or Rerun action when the linked session has failed", () => {
+  it("does not render a Run or Rerun action when the latest lane session has failed", () => {
     render(
       <KanbanCard
-        task={buildTask({ columnId: "dev", triggerSessionId: "session-1" })}
-        linkedSession={{
-          sessionId: "session-1",
-          cwd: "/tmp/workspace-1",
-          workspaceId: "workspace-1",
-          provider: "codex",
-          acpStatus: "error",
-          createdAt: "2025-01-01T00:00:00.000Z",
-        }}
+        task={buildTask({
+          columnId: "dev",
+          triggerSessionId: "session-1",
+          laneSessions: [
+            { sessionId: "session-1", columnId: "dev", status: "failed", startedAt: "2025-01-01T00:00:00.000Z" },
+          ],
+        })}
+        laneSessionStatus="failed"
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
@@ -182,7 +226,68 @@ describe("KanbanCard cover", () => {
 
     expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Rerun" })).toBeNull();
-    expect(screen.getByText("Done")).toBeTruthy();
+    expect(screen.getByText("Idle")).toBeTruthy();
+  });
+
+  it("renders the raw lane session status for the current lane", () => {
+    render(
+      <KanbanCard
+        task={buildTask({
+          columnId: "dev",
+          laneSessions: [
+            { sessionId: "session-1", columnId: "backlog", status: "completed", startedAt: "2025-01-01T00:00:00.000Z" },
+            { sessionId: "session-2", columnId: "dev", status: "running", startedAt: "2025-01-02T00:00:00.000Z" },
+          ],
+        })}
+        laneSessionStatus="running"
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Running")).toBeTruthy();
+    expect(screen.queryByText("Live")).toBeNull();
+  });
+
+  it("renders completed, timed_out and transitioned statuses without conversion", () => {
+    for (const [status, label] of [
+      ["completed", "Completed"],
+      ["timed_out", "Timed out"],
+      ["transitioned", "Transitioned"],
+    ] as const) {
+      const { unmount } = render(
+        <KanbanCard
+          task={buildTask({ columnId: "dev" })}
+          laneSessionStatus={status}
+          codebases={[]}
+          allCodebaseIds={[]}
+          worktreeCache={{}}
+          onOpenDetail={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(label)).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("prefers queued over the lane session status", () => {
+    render(
+      <KanbanCard
+        task={buildTask({ columnId: "dev" })}
+        laneSessionStatus="running"
+        queuePosition={2}
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Queued #2")).toBeTruthy();
+    expect(screen.queryByText("Running")).toBeNull();
   });
 
   it("renders canonical story body instead of raw yaml on the card", () => {

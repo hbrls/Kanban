@@ -61,25 +61,6 @@ export interface KanbanRepoChanges {
   behind?: number;
 }
 
-export interface KanbanTaskChanges extends KanbanRepoChanges {
-  source: "worktree" | "repo";
-  worktreeId?: string;
-  worktreePath?: string;
-  mode?: "worktree" | "commits";
-  baseRef?: string;
-  remoteUrl?: string;
-  commits?: KanbanCommitChangeItem[];
-}
-
-export interface KanbanFileDiffPreview {
-  path: string;
-  previousPath?: string;
-  status: KanbanFileChangeStatus;
-  patch: string;
-  additions?: number;
-  deletions?: number;
-}
-
 export interface KanbanCommitChangeItem {
   sha: string;
   shortSha: string;
@@ -88,10 +69,6 @@ export interface KanbanCommitChangeItem {
   authoredAt: string;
   additions: number;
   deletions: number;
-}
-
-export interface KanbanCommitDiffPreview extends KanbanCommitChangeItem {
-  patch: string;
 }
 
 /** Extended commit information with file list for the commits section */

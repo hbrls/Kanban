@@ -10,17 +10,20 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { useMemo, useState, type Dispatch, type SetStateAction, type ReactNode, type RefObject } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "@/i18n";
-import type { AcpProviderInfo, AcpTaskAdaptiveHarnessOptions } from "@/client/acp-client";
+import type { AcpProviderInfo } from "@/client/acp-client";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import type { UseAcpActions, UseAcpState } from "@/client/hooks/use-acp";
 import { ChatPanel } from "@/client/components/chat-panel";
 import type { RepoSelection } from "@/client/components/repo-picker";
 import { resolveEffectiveTaskAutomation } from "@/core/kanban/effective-task-automation";
-import { KanbanCard, KanbanCardOverlay } from "./kanban-card";
+import { resolveKanbanTransitionArtifacts } from "@/core/kanban/transition-artifacts";
+import { getLatestCardLaneSession, KanbanCard, KanbanCardOverlay } from "./kanban-card";
 import { KanbanCardActivityBar, KanbanCardDetail } from "./kanban-card-detail";
+import { KanbanCardArtifacts } from "./kanban-card-artifacts";
+import { EvidenceBundlePanel } from "./kanban-detail-panels";
 import type { KanbanTaskAgentCopy } from "./i18n/kanban-task-agent";
 import { KanbanCreateModal, type TaskDraft } from "../kanban-create-modal";
 import { KanbanCardActivityPanel, KanbanEmptySessionPane } from "./kanban-card-activity";
@@ -38,7 +41,6 @@ import {
 } from "./kanban-tab-helpers";
 import type { ColumnAutomationConfig } from "./kanban-settings-modal";
 import type { KanbanBoardInfo, SessionInfo, TaskInfo, WorktreeInfo } from "../types";
-import { buildKanbanTaskAdaptiveHarnessOptions } from "./kanban-task-adaptive";
 import { ChevronRight as _ChevronRight, GitBranch as _GitBranch } from "lucide-react";
 
 interface SessionRestoreTranscriptMessage {
@@ -144,112 +146,6 @@ export function buildKanbanSessionRestorePrompt(
     "",
     "Next: inspect the repo if needed, then proceed with the smallest next action for this card.",
   ].filter(Boolean).join("\n");
-}
-
-function buildKanbanHistoryAnalysisSessionName(
-  task: TaskInfo,
-  specialistLanguage: KanbanSpecialistLanguage,
-): string {
-  return specialistLanguage === "zh-CN"
-    ? `历史分析 · ${task.title}`
-    : `History Analysis · ${task.title}`;
-}
-
-function buildKanbanHistoryAnalysisCreationError(
-  payload: { error?: { message?: string } } | null,
-  fallbackMessage: string,
-): string {
-  return payload?.error?.message || fallbackMessage;
-}
-
-function buildKanbanHistoryAnalysisSessionUrl(workspaceId: string, sessionId: string): string {
-  return `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`;
-}
-
-async function startKanbanHistoryAnalysisSession(params: {
-  workspaceId: string;
-  task: TaskInfo;
-  repoPath?: string;
-  branch?: string;
-  provider?: string;
-  specialistLanguage: KanbanSpecialistLanguage;
-  taskAdaptiveHarness: AcpTaskAdaptiveHarnessOptions;
-  prompt: string;
-  targetWindow: Window | null;
-  fallbackErrorMessage: string;
-}): Promise<string> {
-  if (!params.targetWindow) {
-    throw new Error(params.fallbackErrorMessage);
-  }
-
-  const response = await desktopAwareFetch("/api/acp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: `kanban-history-analysis:${Date.now()}`,
-      method: "session/new",
-      params: {
-        workspaceId: params.workspaceId,
-        cwd: params.repoPath,
-        branch: params.branch,
-        role: "ROUTA",
-        name: buildKanbanHistoryAnalysisSessionName(params.task, params.specialistLanguage),
-        provider: params.provider,
-        specialistId: "history-summary-analyst",
-        specialistLocale: params.specialistLanguage,
-        toolMode: "full",
-        mcpProfile: "kanban-planning",
-        allowedNativeTools: ["Skill", "Read", "Glob", "Grep"],
-        taskAdaptiveHarness: params.taskAdaptiveHarness,
-      },
-    }),
-  });
-
-  const payload = await response.json().catch(() => null) as {
-    result?: { sessionId?: string };
-    error?: { message?: string };
-  } | null;
-
-  if (!response.ok) {
-    throw new Error(buildKanbanHistoryAnalysisCreationError(payload, params.fallbackErrorMessage));
-  }
-  if (payload?.error?.message) {
-    throw new Error(payload.error.message);
-  }
-
-  const sessionId = payload?.result?.sessionId;
-  if (!sessionId) {
-    throw new Error(params.fallbackErrorMessage);
-  }
-
-  params.targetWindow.location.href = buildKanbanHistoryAnalysisSessionUrl(params.workspaceId, sessionId);
-
-  const promptResponse = await desktopAwareFetch("/api/acp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: `kanban-history-analysis-prompt:${Date.now()}`,
-      method: "session/prompt",
-      params: {
-        sessionId,
-        prompt: [{ type: "text", text: params.prompt }],
-      },
-    }),
-  });
-
-  const promptPayload = await promptResponse.json().catch(() => null) as {
-    error?: { message?: string };
-  } | null;
-  if (!promptResponse.ok) {
-    throw new Error(buildKanbanHistoryAnalysisCreationError(promptPayload, params.fallbackErrorMessage));
-  }
-  if (promptPayload?.error?.message) {
-    throw new Error(promptPayload.error.message);
-  }
-
-  return sessionId;
 }
 
 async function fetchSessionTranscriptForRestore(sessionId: string): Promise<SessionRestoreTranscriptMessage[]> {
@@ -393,12 +289,11 @@ export function KanbanBoardSurface({
   columnAutomation,
   providers,
   specialists,
-  sessionMap,
+  sessionMap: _sessionMap,
   allCodebaseIds,
   worktreeCache,
   queuedPositions,
   moveTask,
-  runTaskPullRequest, // eslint-disable-line @typescript-eslint/no-unused-vars -- used in KanbanTaskCard props
   openTaskDetail,
 }: {
   moveError: string | null;
@@ -425,7 +320,6 @@ export function KanbanBoardSurface({
   worktreeCache: Record<string, WorktreeInfo>;
   queuedPositions: Record<string, number | undefined>;
   moveTask: (taskId: string, targetColumnId: string) => Promise<void>;
-  runTaskPullRequest: (taskId: string) => Promise<string | null>;
   openTaskDetail: (task: TaskInfo) => Promise<void>;
   agentSession?: SessionInfo;
   onCloseAgentPanel: () => void;
@@ -550,7 +444,7 @@ export function KanbanBoardSurface({
                           <KanbanCard
                             key={task.id}
                             task={task}
-                            linkedSession={task.triggerSessionId ? sessionMap.get(task.triggerSessionId) : undefined}
+                            laneSessionStatus={getLatestCardLaneSession(task)?.status}
                             codebases={codebases}
                             allCodebaseIds={allCodebaseIds}
                             worktreeCache={worktreeCache}
@@ -568,7 +462,7 @@ export function KanbanBoardSurface({
                 <div style={activeDragCardWidth ? { width: activeDragCardWidth } : undefined}>
                   <KanbanCardOverlay
                     task={activeDragTask}
-                    linkedSession={activeDragTask.triggerSessionId ? sessionMap.get(activeDragTask.triggerSessionId) : undefined}
+                    laneSessionStatus={getLatestCardLaneSession(activeDragTask)?.status}
                     codebases={codebases}
                     allCodebaseIds={allCodebaseIds}
                     worktreeCache={worktreeCache}
@@ -659,10 +553,11 @@ function A2ASessionPane({
         <KanbanCardActivityBar
           task={task}
           sessions={sessions}
+          specialists={specialists}
           specialistLanguage={specialistLanguage}
           currentSessionId={currentSessionId}
           onSelectSession={onSelectSession}
-          onCloseSession={onCloseSession}
+          refreshSignal={refreshSignal}
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-gradient-to-br from-white via-sky-50/40 to-amber-50/30 p-5 dark:from-[#12141c] dark:via-[#101824] dark:to-[#17131c]">
@@ -693,12 +588,7 @@ function A2ASessionPane({
           </section>
           <KanbanCardActivityPanel
             task={task}
-            refreshSignal={refreshSignal}
-            sessions={sessions}
-            specialists={specialists}
             specialistLanguage={specialistLanguage}
-            currentSessionId={currentSessionId}
-            onSelectSession={onSelectSession}
             compact
           />
         </div>
@@ -716,9 +606,6 @@ export function KanbanTaskDetailOverlay({
   acp,
   boardAutoProviderId,
   onBoardProviderChange,
-  detailSplitContainerRef,
-  detailSplitRatio,
-  setIsDraggingDetailSplit,
   refreshSignal,
   availableProviders,
   specialists,
@@ -729,7 +616,6 @@ export function KanbanTaskDetailOverlay({
   combinedSessions,
   patchTask,
   retryTaskTrigger,
-  runTaskPullRequest,
   confirmDeleteTask,
   onRefresh,
   setActiveSessionId,
@@ -747,9 +633,6 @@ export function KanbanTaskDetailOverlay({
   acp?: UseAcpState & UseAcpActions;
   boardAutoProviderId?: string;
   onBoardProviderChange: (providerId: string) => void;
-  detailSplitContainerRef: RefObject<HTMLDivElement | null>;
-  detailSplitRatio: number;
-  setIsDraggingDetailSplit: Dispatch<SetStateAction<boolean>>;
   refreshSignal?: number;
   availableProviders: AcpProviderInfo[];
   specialists: SpecialistOption[];
@@ -760,7 +643,6 @@ export function KanbanTaskDetailOverlay({
   combinedSessions: SessionInfo[];
   patchTask: (taskId: string, payload: Record<string, unknown>) => Promise<TaskInfo>;
   retryTaskTrigger: (taskId: string) => Promise<void>;
-  runTaskPullRequest: (taskId: string) => Promise<string | null>;
   confirmDeleteTask: (task: TaskInfo) => void;
   onRefresh: () => void;
   setActiveSessionId: Dispatch<SetStateAction<string | null>>;
@@ -783,7 +665,12 @@ export function KanbanTaskDetailOverlay({
   const selectedLaneSession = getTaskLaneSession(activeTask, activeSessionId);
   const isA2ASessionPane = Boolean(activeTask && isA2ATaskSession(activeTask, activeSessionId));
   const canShowSessionPane = Boolean(showEmptySessionPane || isA2ASessionPane || (activeSessionId && acp));
-  const [hiddenSessionPaneTaskId, setHiddenSessionPaneTaskId] = useState<string | null>(null);
+  const nextTransitionArtifacts = useMemo(
+    () => activeTask
+      ? resolveKanbanTransitionArtifacts(board?.columns ?? [], activeTask.columnId)
+      : null,
+    [activeTask, board?.columns],
+  );
   const [sessionRecoveryInputPrefill, setSessionRecoveryInputPrefill] = useState<string | null>(null);
   const isSessionPaneVisible = activeTaskId ? hiddenSessionPaneTaskId !== activeTaskId : true;
   const hasSessionPane = canShowSessionPane && isSessionPaneVisible;
@@ -849,6 +736,43 @@ export function KanbanTaskDetailOverlay({
     onRefresh();
   };
 
+  const startNewActiveSession = async () => {
+    if (!acp || !activeSessionId) return;
+    const targetSessionInfo = sessionMap.get(activeSessionId);
+    if (!targetSessionInfo?.cwd) return;
+
+    const replacement = await acp.createSession(
+      targetSessionInfo.cwd,
+      targetSessionInfo.provider ?? boardAutoProviderId ?? acp.selectedProvider,
+      targetSessionInfo.modeId,
+      targetSessionInfo.role,
+      targetSessionInfo.workspaceId || workspaceId,
+      targetSessionInfo.model,
+      undefined,
+      targetSessionInfo.specialistId,
+      undefined,
+      undefined,
+      undefined,
+      targetSessionInfo.branch,
+    );
+
+    if (!replacement?.sessionId) return;
+
+    if (activeTask) {
+      const nextSessionIds = [
+        ...(activeTask.sessionIds ?? []),
+        activeSessionId,
+        replacement.sessionId,
+      ].filter((sessionId, index, values) => sessionId && values.indexOf(sessionId) === index);
+      await patchTask(activeTask.id, { sessionIds: nextSessionIds });
+    }
+
+    setActiveSessionId(replacement.sessionId);
+    acp.selectSession(replacement.sessionId);
+    setSessionRecoveryInputPrefill(null);
+    onRefresh();
+  };
+
   if (!isOverlayOpen) return null;
 
   return (
@@ -862,20 +786,22 @@ export function KanbanTaskDetailOverlay({
           isTaskDetailFullscreen ? "h-screen max-w-none border-0" : "h-[88vh] max-w-7xl"
         }`}
       >
-        <div ref={detailSplitContainerRef} className="flex h-full">
-          {activeTaskId && (() => {
-            const task = activeTask;
-            if (!task) return null;
-            const sessionInfo = activeSessionId ? sessionMap.get(activeSessionId) ?? null : null;
-            return (
-              <div
-                className={`${hasSessionPane ? "shrink-0" : "flex-1"} h-full min-w-0 border-r border-slate-200/80 dark:border-[#202433]`}
-                style={hasSessionPane ? { width: `${detailSplitRatio * 100}%` } : undefined}
-              >
+        <div
+          className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)] grid-cols-[minmax(0,4fr)_minmax(0,4fr)_minmax(0,2fr)]"
+          data-testid="kanban-detail-grid"
+        >
+          <div
+            className="h-full min-h-0 min-w-0 overflow-hidden border-r border-slate-200/80 dark:border-[#202433]"
+            data-testid="kanban-detail-task-pane"
+          >
+            {activeTaskId && (() => {
+              const task = activeTask;
+              if (!task) return null;
+              const sessionInfo = activeSessionId ? sessionMap.get(activeSessionId) ?? null : null;
+              return (
                 <KanbanCardDetail
                   key={task.id}
                   task={task}
-                  refreshSignal={refreshSignal}
                   boardColumns={board?.columns ?? []}
                   availableProviders={availableProviders}
                   specialists={specialists}
@@ -884,12 +810,10 @@ export function KanbanTaskDetailOverlay({
                   allCodebaseIds={allCodebaseIds}
                   worktreeCache={worktreeCache}
                   sessionInfo={sessionInfo}
-                  sessions={combinedSessions}
-                  fullWidth={!hasSessionPane}
+                  fullWidth={false}
                   selectedProvider={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId) ?? null}
                   onPatchTask={patchTask}
                   onRetryTrigger={retryTaskTrigger}
-                  onRunPullRequest={runTaskPullRequest}
                   onDelete={() => confirmDeleteTask(task)}
                   onRefresh={onRefresh}
                   onProviderChange={(providerId) => {
@@ -903,56 +827,6 @@ export function KanbanTaskDetailOverlay({
                   onSelectSession={(sessionId) => {
                     selectTaskSession(task, sessionId);
                   }}
-                  jitContextSessionId={activeSessionId}
-                  onLoadJitContextIntoSession={acp && activeSessionId
-                    ? async (sessionId, prompt) => {
-                      setHiddenSessionPaneTaskId(null);
-                      setActiveSessionId(sessionId);
-                      acp.selectSession(sessionId);
-                      await acp.promptSession(sessionId, prompt);
-                    }
-                    : undefined}
-                  onOpenJitContextHistoryAnalysis={acp
-                    ? async (prompt, targetWindow) => {
-                      const taskCodebaseIds = task.codebaseIds && task.codebaseIds.length > 0
-                        ? task.codebaseIds
-                        : allCodebaseIds;
-                      const primaryCodebase = taskCodebaseIds.length > 0
-                        ? codebases.find((codebase) => codebase.id === taskCodebaseIds[0])
-                        : null;
-                      const taskWorktree = task.worktreeId
-                        ? worktreeCache[task.worktreeId] ?? null
-                        : null;
-                      const taskRepoPath = primaryCodebase?.repoPath
-                        ?? taskWorktree?.worktreePath
-                        ?? sessionInfo?.cwd;
-                      const taskBranch = sessionInfo?.branch
-                        ?? taskWorktree?.branch
-                        ?? primaryCodebase?.branch
-                        ?? undefined;
-                      const taskAdaptiveHarness = buildKanbanTaskAdaptiveHarnessOptions(task.title, {
-                        locale: specialistLanguage,
-                        role: task.assignedRole,
-                        task,
-                      });
-                      if (!taskAdaptiveHarness) {
-                        throw new Error(t.kanbanDetail.jitContextNeedsRefinement);
-                      }
-
-                      await startKanbanHistoryAnalysisSession({
-                        workspaceId,
-                        task,
-                        repoPath: taskRepoPath ?? undefined,
-                        branch: taskBranch,
-                        provider: sessionInfo?.provider ?? resolveKanbanBoardAutoProviderId(board, boardAutoProviderId) ?? acp.selectedProvider,
-                        specialistLanguage,
-                        taskAdaptiveHarness,
-                        prompt,
-                        targetWindow,
-                        fallbackErrorMessage: t.kanbanDetail.jitContextHistoryAnalysisFailed,
-                      });
-                    }
-                    : undefined}
                   isFullscreen={isTaskDetailFullscreen}
                   onToggleFullscreen={onToggleTaskDetailFullscreen}
                   onClose={closeTaskDetail}
@@ -960,48 +834,39 @@ export function KanbanTaskDetailOverlay({
                   isSessionPaneVisible={hasSessionPane}
                   onShowSessionPane={() => setHiddenSessionPaneTaskId(null)}
                 />
-              </div>
-            );
-          })()}
-          {activeTaskId && hasSessionPane && (
-            <div
-              className="hidden h-full w-3 shrink-0 cursor-col-resize items-center justify-center bg-transparent hover:bg-amber-50/80 dark:hover:bg-amber-900/10 md:flex"
-              onMouseDown={() => setIsDraggingDetailSplit(true)}
-              data-testid="kanban-detail-split-handle"
-            >
-              <div className="h-12 w-1 rounded-full bg-slate-300 transition-colors hover:bg-amber-400 dark:bg-slate-700 dark:hover:bg-amber-500" />
-            </div>
-          )}
-          {hasSessionPane ? (() => {
-            const taskCodebaseIds = activeTask?.codebaseIds && activeTask.codebaseIds.length > 0
-              ? activeTask.codebaseIds
-              : allCodebaseIds;
-            const primaryCodebase = taskCodebaseIds.length > 0
-              ? codebases.find((codebase) => codebase.id === taskCodebaseIds[0])
-              : null;
-            const activeSessionInfo = activeSessionId
-              ? sessionMap.get(activeSessionId) ?? null
-              : null;
-            const activeWorktree = activeTask?.worktreeId
-              ? worktreeCache[activeTask.worktreeId] ?? null
-              : null;
-            const repoSelection = primaryCodebase
-              ? {
-                  path: activeSessionInfo?.cwd ?? activeWorktree?.worktreePath ?? primaryCodebase.repoPath,
-                  branch: activeSessionInfo?.branch ?? activeWorktree?.branch ?? primaryCodebase.branch ?? "",
-                  name: primaryCodebase.label ?? primaryCodebase.repoPath.split("/").pop() ?? "",
-                }
-              : null;
-            const taskAgentRole = activeSessionInfo?.role
-              ?? selectedLaneSession?.role
-              ?? undefined;
+              );
+            })()}
+          </div>
+          <div
+            className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-r border-slate-200/80 dark:border-[#202433]"
+            data-testid="kanban-detail-session-pane"
+          >
+            {hasSessionPane ? (() => {
+              const taskCodebaseIds = activeTask?.codebaseIds && activeTask.codebaseIds.length > 0
+                ? activeTask.codebaseIds
+                : allCodebaseIds;
+              const primaryCodebase = taskCodebaseIds.length > 0
+                ? codebases.find((codebase) => codebase.id === taskCodebaseIds[0])
+                : null;
+              const activeSessionInfo = activeSessionId
+                ? sessionMap.get(activeSessionId) ?? null
+                : null;
+              const activeWorktree = activeTask?.worktreeId
+                ? worktreeCache[activeTask.worktreeId] ?? null
+                : null;
+              const repoSelection = primaryCodebase
+                ? {
+                    path: activeSessionInfo?.cwd ?? activeWorktree?.worktreePath ?? primaryCodebase.repoPath,
+                    branch: activeSessionInfo?.branch ?? activeWorktree?.branch ?? primaryCodebase.branch ?? "",
+                    name: primaryCodebase.label ?? primaryCodebase.repoPath.split("/").pop() ?? "",
+                  }
+                : null;
+              const taskAgentRole = activeSessionInfo?.role
+                ?? selectedLaneSession?.role
+                ?? undefined;
 
-            if (showEmptySessionPane && activeTask) {
-              return (
-                <div
-                  className="flex h-full min-w-0 flex-1 flex-col overflow-hidden"
-                  style={activeTaskId ? { width: `${(1 - detailSplitRatio) * 100}%` } : undefined}
-                >
+              if (showEmptySessionPane && activeTask) {
+                return (
                   <KanbanEmptySessionPane
                     task={activeTask}
                     boardColumns={board?.columns ?? []}
@@ -1011,63 +876,84 @@ export function KanbanTaskDetailOverlay({
                     autoProviderId={resolveKanbanBoardAutoProviderId(board, boardAutoProviderId)}
                     onCloseSession={() => setHiddenSessionPaneTaskId(activeTask?.id ?? null)}
                   />
-                </div>
-              );
-            }
+                );
+              }
 
-            return (
-              <div
-                className="flex h-full min-w-0 flex-1 flex-col overflow-hidden"
-                style={activeTaskId ? { width: `${(1 - detailSplitRatio) * 100}%` } : undefined}
-              >
-                {activeTask && !isA2ASessionPane && (
-                  <div className="shrink-0 border-b border-slate-200/80 p-2 dark:border-[#202433]">
-                    <KanbanCardActivityBar
+              return (
+                <>
+                  {activeTask && !isA2ASessionPane && (
+                    <div className="shrink-0 border-b border-slate-200/80 p-2 dark:border-[#202433]">
+                      <KanbanCardActivityBar
+                        task={activeTask}
+                        sessions={combinedSessions}
+                        specialists={specialists}
+                        specialistLanguage={specialistLanguage}
+                        currentSessionId={activeSessionId ?? undefined}
+                        onSelectSession={(sessionId) => selectTaskSession(activeTask, sessionId)}
+                        refreshSignal={refreshSignal}
+                      />
+                    </div>
+                  )}
+                  {isA2ASessionPane && activeTask ? (
+                    <A2ASessionPane
                       task={activeTask}
+                      laneSession={selectedLaneSession}
                       sessions={combinedSessions}
+                      specialists={specialists}
                       specialistLanguage={specialistLanguage}
+                      refreshSignal={refreshSignal}
                       currentSessionId={activeSessionId ?? undefined}
                       onSelectSession={(sessionId) => selectTaskSession(activeTask, sessionId)}
                       onCloseSession={() => setHiddenSessionPaneTaskId(activeTask.id)}
                     />
-                  </div>
-                )}
-                {isA2ASessionPane && activeTask ? (
-                  <A2ASessionPane
-                    task={activeTask}
-                    laneSession={selectedLaneSession}
-                    sessions={combinedSessions}
-                    specialists={specialists}
-                    specialistLanguage={specialistLanguage}
-                    refreshSignal={refreshSignal}
-                    currentSessionId={activeSessionId ?? undefined}
-                    onSelectSession={(sessionId) => selectTaskSession(activeTask, sessionId)}
-                    onCloseSession={() => setHiddenSessionPaneTaskId(activeTask.id)}
-                  />
-                ) : acp && (
-                  <div className="min-h-0 flex-1">
-                    <ChatPanel
-                      acp={acp}
-                      activeSessionId={activeSessionId}
-                      onEnsureSession={async () => activeSessionId}
-                      onSelectSession={async (sessionId) => {
-                        setActiveSessionId(sessionId);
-                        acp.selectSession(sessionId);
-                      }}
-                      repoSelection={repoSelection}
-                      onRepoChange={() => {}}
-                      codebases={codebases}
-                      activeWorkspaceId={workspaceId}
-                      agentRole={taskAgentRole}
-                      inputPrefill={sessionRecoveryInputPrefill}
-                      onInputPrefillConsumed={() => setSessionRecoveryInputPrefill(null)}
-                      onResumeActiveSession={recoverActiveAcpSession}
                     />
-                  </div>
-                )}
+                  ) : acp && (
+                    <div className="min-h-0 flex-1">
+                      <ChatPanel
+                        acp={acp}
+                        activeSessionId={activeSessionId}
+                        onEnsureSession={async () => activeSessionId}
+                        onSelectSession={async (sessionId) => {
+                          setActiveSessionId(sessionId);
+                          acp.selectSession(sessionId);
+                        }}
+                        repoSelection={repoSelection}
+                        onRepoChange={() => {}}
+                        codebases={codebases}
+                        activeWorkspaceId={workspaceId}
+                        agentRole={taskAgentRole}
+                        inputPrefill={sessionRecoveryInputPrefill}
+                        onInputPrefillConsumed={() => setSessionRecoveryInputPrefill(null)}
+                        onResumeActiveSession={recoverActiveAcpSession}
+                        onNewActiveSession={startNewActiveSession}
+                      />
+                    </div>
+                  )}
+                </>
+              );
+            })() : null}
+          </div>
+          <aside
+            className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
+            data-testid="kanban-detail-evidence-pane"
+          >
+            {activeTask ? (
+              <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+                  {t.kanbanDetail.evidenceBundle}
+                </div>
+                <div className="space-y-3">
+                  <EvidenceBundlePanel task={activeTask} compact />
+                  <KanbanCardArtifacts
+                    taskId={activeTask.id}
+                    compact
+                    requiredArtifacts={nextTransitionArtifacts?.nextRequiredArtifacts}
+                    refreshSignal={refreshSignal}
+                  />
+                </div>
               </div>
-            );
-          })() : null}
+            ) : null}
+          </aside>
         </div>
       </div>
     </div>
