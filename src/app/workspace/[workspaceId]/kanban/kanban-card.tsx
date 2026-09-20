@@ -5,12 +5,27 @@ import { useDraggable } from "@dnd-kit/core";
 import { useTranslation } from "@/i18n";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import { parseCanonicalStory } from "@/core/kanban/canonical-story";
-import type { SessionInfo, TaskInfo, WorktreeInfo } from "../types";
+import type { TaskLaneSessionStatus } from "@/core/models/task";
+import type { TaskInfo, WorktreeInfo } from "../types";
 import { GripVertical } from "lucide-react";
+
+export function getLatestCardLaneSession(task: TaskInfo): NonNullable<TaskInfo["laneSessions"]>[number] | undefined {
+  const currentColumnId = task.columnId;
+  if (!currentColumnId) return undefined;
+
+  const laneSessions = task.laneSessions ?? [];
+  for (let index = laneSessions.length - 1; index >= 0; index -= 1) {
+    const session = laneSessions[index];
+    if (session.columnId === currentColumnId) {
+      return session;
+    }
+  }
+  return undefined;
+}
 
 export interface KanbanCardProps {
   task: TaskInfo;
-  linkedSession?: SessionInfo;
+  laneSessionStatus?: TaskLaneSessionStatus;
   codebases: CodebaseData[];
   allCodebaseIds: string[];
   worktreeCache: Record<string, WorktreeInfo>;
@@ -69,30 +84,20 @@ function getPrioritySizeLabel(priority?: string) {
   }
 }
 
-function getSessionTone(sessionStatus?: "connecting" | "ready" | "error", queuePosition?: number) {
-  if (queuePosition) {
-    return "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:ring-amber-900/40";
-  }
-
-  switch (sessionStatus) {
-    case "ready":
-      return "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:ring-emerald-900/40";
-    case "error":
-      return "bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:ring-rose-900/40";
-    case "connecting":
+function getCardStatusTone(cardStatus: string) {
+  switch (cardStatus) {
+    case "queued":
+      return "bg-amber-100 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:ring-amber-900/40";
+    case "running":
       return "bg-sky-100 text-sky-700 ring-1 ring-inset ring-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:ring-sky-900/40";
+    case "completed":
+      return "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:ring-emerald-900/40";
+    case "failed":
+    case "timed_out":
+      return "bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:ring-rose-900/40";
     default:
       return "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-[#181c28] dark:text-slate-300 dark:ring-white/5";
   }
-}
-
-function getStatusLabel(sessionStatus?: "connecting" | "ready" | "error", queuePosition?: number) {
-  // Note: This returns English status keys; they will be overridden in the component
-  if (queuePosition) return `queued`;
-  if (sessionStatus === "connecting") return "starting";
-  if (sessionStatus === "ready") return "live";
-  if (sessionStatus === "error") return "failed";
-  return "idle";
 }
 
 function normalizeCardPreviewText(value: string): string {
@@ -124,7 +129,7 @@ function buildCardSummary(task: TaskInfo, fallback: string): string {
 
 function KanbanCardSurface({
   task,
-  linkedSession,
+  laneSessionStatus,
   codebases,
   allCodebaseIds,
   worktreeCache,
@@ -137,19 +142,13 @@ function KanbanCardSurface({
   wrapperRef,
 }: KanbanCardSurfaceProps) {
   const { t } = useTranslation();
-  const sessionStatus = linkedSession?.acpStatus;
-  const isTerminalCard = task.columnId === "done" || task.columnId === "blocked";
+  const cardStatus = queuePosition ? "queued" : laneSessionStatus ?? "idle";
   const priorityTone = getPriorityTone(task.priority);
   const prioritySizeLabel = getPrioritySizeLabel(task.priority);
-  const sessionTone = isTerminalCard
-    ? "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:ring-emerald-900/40"
-    : getSessionTone(sessionStatus, queuePosition);
-  const statusLabel = getStatusLabel(sessionStatus, queuePosition);
-  const resolvedStatusLabel = isTerminalCard
-    ? t.kanban.done
-    : queuePosition
-      ? `${t.kanban.queued} #${queuePosition}`
-      : (t.kanban as Record<string, string>)[statusLabel] ?? statusLabel;
+  const sessionTone = getCardStatusTone(cardStatus);
+  const resolvedStatusLabel = queuePosition
+    ? `${t.kanban.queued} #${queuePosition}`
+    : (t.kanban as Record<string, string>)[cardStatus] ?? cardStatus;
   const visibleLabels = (task.labels ?? []).slice(0, 2);
   const remainingLabelCount = Math.max((task.labels?.length ?? 0) - visibleLabels.length, 0);
   const visibleCodebaseIds = (task.codebaseIds && task.codebaseIds.length > 0 ? task.codebaseIds : allCodebaseIds).slice(0, 1);

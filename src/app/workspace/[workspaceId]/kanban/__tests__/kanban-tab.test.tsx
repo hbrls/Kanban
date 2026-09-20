@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import { KanbanTab } from "../kanban-tab";
-import { KanbanCardDetail } from "../kanban-card-detail";
+import { KanbanCardDetail, normalizeKanbanDetailTab } from "../kanban-card-detail";
 import type { KanbanBoardInfo, TaskInfo } from "../../types";
 import type { UseAcpActions, UseAcpState } from "@/client/hooks/use-acp";
 import { resetDesktopAwareFetchToGlobalFetch } from "./test-utils";
@@ -1277,7 +1277,7 @@ describe("KanbanTab manual run provider selection", () => {
   });
 });
 
-describe("KanbanCardDetail changes tab", () => {
+describe("KanbanCardDetail detail tabs", () => {
   it("shows committed change count in the detail header when delivery readiness reports local commits", () => {
     render(
       <KanbanCardDetail
@@ -1317,482 +1317,69 @@ describe("KanbanCardDetail changes tab", () => {
     expect(screen.getByText("1")).toBeTruthy();
   });
 
-  it("loads task-scoped worktree changes when the changes tab opens", async () => {
-    desktopAwareFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        changes: {
-          codebaseId: "codebase-1",
-          repoPath: "/tmp/repos/main",
-          label: "feature-worktree",
-          branch: "task/story-one",
-              status: {
-                clean: false,
-                ahead: 0,
-                behind: 0,
-                modified: 1,
-                untracked: 1,
-              },
-              files: [
-                { path: "src/app.tsx", status: "modified", additions: 3, deletions: 1 },
-                { path: "notes/todo.md", status: "untracked", additions: 8, deletions: 0 },
-              ],
-          source: "worktree",
-          worktreeId: "wt-1",
-          worktreePath: "/tmp/worktrees/story-one",
-        },
-      }),
-    } as Response);
-
+  it("renders only Overview, Execution, and Activity tabs", () => {
     render(
       <KanbanCardDetail
-        task={createTask("task-1", "Story One", {
-          worktreeId: "wt-1",
-          codebaseIds: ["codebase-1"],
-        })}
+        task={createTask("task-tabs-1", "Story One")}
         availableProviders={[]}
         specialists={[]}
         specialistLanguage="en"
-        codebases={[{
-          id: "codebase-1",
-          workspaceId: "workspace-1",
-          repoPath: "/tmp/repos/main",
-          branch: "main",
-          isDefault: true,
-          sourceType: "github",
-          sourceUrl: "https://example.com/repo.git",
-          createdAt: "2025-01-01T00:00:00.000Z",
-          updatedAt: "2025-01-01T00:00:00.000Z",
-        }]}
-        allCodebaseIds={["codebase-1"]}
-        worktreeCache={{
-          "wt-1": {
-            id: "wt-1",
-            codebaseId: "codebase-1",
-            workspaceId: "workspace-1",
-            worktreePath: "/tmp/worktrees/story-one",
-            branch: "task/story-one",
-            baseBranch: "main",
-            status: "active",
-            createdAt: "2025-01-01T00:00:00.000Z",
-            updatedAt: "2025-01-01T00:00:00.000Z",
-          },
-        }}
-        onPatchTask={vi.fn(async () => createTask("task-1", "Story One"))}
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        onPatchTask={vi.fn(async () => createTask("task-tabs-1", "Story One"))}
         onRetryTrigger={vi.fn()}
         onDelete={vi.fn()}
         onRefresh={vi.fn()}
       />,
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
-
-    await waitFor(() => {
-      expect(desktopAwareFetch).toHaveBeenCalledWith("/api/tasks/task-1/changes", { cache: "no-store" });
-    });
-
-    expect(await screen.findByText("feature-worktree")).toBeTruthy();
-    expect(screen.getByText("/tmp/worktrees/story-one")).toBeTruthy();
-    expect(screen.getByText("app.tsx")).toBeTruthy();
-    expect(screen.getByText("todo.md")).toBeTruthy();
-    expect(screen.getByText("+3")).toBeTruthy();
-    expect(screen.getByText("-1")).toBeTruthy();
-    expect(screen.getByText("+8")).toBeTruthy();
-    expect(screen.getByText("-0")).toBeTruthy();
-    expect(screen.getByTitle("src")).toBeTruthy();
-    expect(screen.getByTitle("notes")).toBeTruthy();
+    expect(screen.getByTestId("kanban-detail-tab-overview")).toBeTruthy();
+    expect(screen.getByTestId("kanban-detail-tab-execution")).toBeTruthy();
+    expect(screen.queryByTestId("kanban-detail-tab-jitContext")).toBeNull();
+    expect(screen.getByTestId("kanban-detail-tab-activity")).toBeTruthy();
+    expect(screen.queryByTestId("kanban-detail-tab-changes")).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Changes" })).toBeNull();
+    expect(screen.getByTestId("kanban-detail-panel-overview")).toBeTruthy();
+    expect(screen.queryByTestId("kanban-detail-panel-changes")).toBeNull();
   });
 
-  it("loads and renders a file diff preview when a change row is selected", async () => {
-    desktopAwareFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      if (url === "/api/tasks/task-1/changes") {
-        return {
-          ok: true,
-          json: async () => ({
-            changes: {
-              codebaseId: "codebase-1",
-              repoPath: "/tmp/repos/main",
-              label: "feature-worktree",
-              branch: "task/story-one",
-              status: {
-                clean: false,
-                ahead: 0,
-                behind: 0,
-                modified: 1,
-                untracked: 0,
-              },
-              files: [
-                { path: "src/app.tsx", status: "modified", additions: 1, deletions: 1 },
-              ],
-              source: "worktree",
-              worktreeId: "wt-1",
-              worktreePath: "/tmp/worktrees/story-one",
-            },
-          }),
-        } as Response;
-      }
-      if (url === "/api/tasks/task-1/changes/file?path=src%2Fapp.tsx&status=modified") {
-        return {
-          ok: true,
-          json: async () => ({
-            diff: {
-              path: "src/app.tsx",
-              status: "modified",
-              additions: 1,
-              deletions: 1,
-              patch: [
-                "diff --git a/src/app.tsx b/src/app.tsx",
-                "index 1111111..2222222 100644",
-                "--- a/src/app.tsx",
-                "+++ b/src/app.tsx",
-                "@@ -1 +1 @@",
-                "-const next = 1;",
-                "+const next = 2;",
-              ].join("\n"),
-            },
-          }),
-        } as Response;
-      }
-      return fetch(input, init);
-    });
-
+  it("does not request task changes or commit diffs when the card detail opens", async () => {
     render(
       <KanbanCardDetail
-        task={createTask("task-1", "Story One", {
+        task={createTask("task-tabs-2", "Story One", {
           worktreeId: "wt-1",
           codebaseIds: ["codebase-1"],
         })}
         availableProviders={[]}
         specialists={[]}
         specialistLanguage="en"
-        codebases={[{
-          id: "codebase-1",
-          workspaceId: "workspace-1",
-          repoPath: "/tmp/repos/main",
-          branch: "main",
-          isDefault: true,
-          sourceType: "github",
-          sourceUrl: "https://example.com/repo.git",
-          createdAt: "2025-01-01T00:00:00.000Z",
-          updatedAt: "2025-01-01T00:00:00.000Z",
-        }]}
+        codebases={[]}
         allCodebaseIds={["codebase-1"]}
-        worktreeCache={{
-          "wt-1": {
-            id: "wt-1",
-            codebaseId: "codebase-1",
-            workspaceId: "workspace-1",
-            worktreePath: "/tmp/worktrees/story-one",
-            branch: "task/story-one",
-            baseBranch: "main",
-            status: "active",
-            createdAt: "2025-01-01T00:00:00.000Z",
-            updatedAt: "2025-01-01T00:00:00.000Z",
-          },
-        }}
-        onPatchTask={vi.fn(async () => createTask("task-1", "Story One"))}
+        worktreeCache={{}}
+        onPatchTask={vi.fn(async () => createTask("task-tabs-2", "Story One"))}
         onRetryTrigger={vi.fn()}
         onDelete={vi.fn()}
         onRefresh={vi.fn()}
       />,
     );
 
-    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
-
     await waitFor(() => {
-      expect(desktopAwareFetch).toHaveBeenCalledWith("/api/tasks/task-1/changes", { cache: "no-store" });
+      expect(screen.getByTestId("kanban-detail-panel-overview")).toBeTruthy();
     });
 
-    fireEvent.click(await screen.findByTestId("kanban-file-row-src/app.tsx"));
-
-    await waitFor(() => {
-      expect(desktopAwareFetch).toHaveBeenCalledWith(
-        "/api/tasks/task-1/changes/file?path=src%2Fapp.tsx&status=modified",
-        { cache: "no-store", signal: expect.any(AbortSignal) },
-      );
-    });
-
-    expect(await screen.findByText("const next = 2;")).toBeTruthy();
-    expect(screen.getByText("const next = 1;")).toBeTruthy();
-    expect(screen.getAllByText("+1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("-1").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("kanban-diff-old-line-5").textContent).toBe("1");
-    expect(screen.getByTestId("kanban-diff-new-line-6").textContent).toBe("1");
+    const requestedUrls = desktopAwareFetch.mock.calls.map(([input]) => String(input));
+    expect(requestedUrls.some((url) => url.includes("/changes"))).toBe(false);
   });
 
-  it("falls back to committed changes when the worktree is clean but the branch is ahead", async () => {
-    desktopAwareFetch.mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      if (url === "/api/tasks/task-1/changes") {
-        return {
-          ok: true,
-          json: async () => ({
-            changes: {
-              codebaseId: "codebase-1",
-              repoPath: "/tmp/repos/main",
-              label: "feature-worktree",
-              branch: "task/story-one",
-              status: {
-                clean: true,
-                ahead: 3,
-                behind: 0,
-                modified: 0,
-                untracked: 0,
-              },
-              files: [],
-              mode: "commits",
-              baseRef: "origin/main",
-              commits: [
-                {
-                  sha: "abc1234567890",
-                  shortSha: "abc1234",
-                  summary: "Upgrade tiptap core",
-                  authorName: "Codex",
-                  authoredAt: "2025-01-01T00:00:00.000Z",
-                  additions: 12,
-                  deletions: 4,
-                },
-                {
-                  sha: "def1234567890",
-                  shortSha: "def1234",
-                  summary: "Add regression coverage",
-                  authorName: "Codex",
-                  authoredAt: "2025-01-01T00:05:00.000Z",
-                  additions: 24,
-                  deletions: 1,
-                },
-                {
-                  sha: "fed1234567890",
-                  shortSha: "fed1234",
-                  summary: "Normalize editor integration",
-                  authorName: "Codex",
-                  authoredAt: "2025-01-01T00:10:00.000Z",
-                  additions: 7,
-                  deletions: 2,
-                },
-              ],
-              source: "worktree",
-              worktreeId: "wt-1",
-              worktreePath: "/tmp/worktrees/story-one",
-            },
-          }),
-        } as Response;
-      }
-      if (url === "/api/tasks/task-1/changes/commit?sha=abc1234567890&context=full") {
-        return {
-          ok: true,
-          json: async () => ({
-            diff: {
-              sha: "abc1234567890",
-              shortSha: "abc1234",
-              summary: "Upgrade tiptap core",
-              authorName: "Codex",
-              authoredAt: "2025-01-01T00:00:00.000Z",
-              additions: 12,
-              deletions: 4,
-              patch: [
-                "commit abc1234567890",
-                "Author: Codex",
-                "Date:   2025-01-01T00:00:00.000Z",
-                "",
-                "    Upgrade tiptap core",
-                "",
-                "diff --git a/package.json b/package.json",
-                "index 1111111..2222222 100644",
-                "--- a/package.json",
-                "+++ b/package.json",
-                "@@ -1 +1 @@",
-                '-  "version": "1.0.0",',
-                '+  "version": "1.1.0",',
-              ].join("\n"),
-            },
-          }),
-        } as Response;
-      }
-      return fetch(input, init);
-    });
-
-    render(
-      <KanbanCardDetail
-        task={createTask("task-1", "Story One", {
-          worktreeId: "wt-1",
-          codebaseIds: ["codebase-1"],
-          deliveryReadiness: {
-            checked: true,
-            repoPath: "/tmp/worktrees/story-one",
-            branch: "task/story-one",
-            baseBranch: "main",
-            baseRef: "origin/main",
-            modified: 0,
-            untracked: 0,
-            ahead: 3,
-            behind: 0,
-            commitsSinceBase: 3,
-            hasCommitsSinceBase: true,
-            hasUncommittedChanges: false,
-            isGitHubRepo: true,
-            canCreatePullRequest: true,
-          },
-        })}
-        availableProviders={[]}
-        specialists={[]}
-        specialistLanguage="en"
-        codebases={[{
-          id: "codebase-1",
-          workspaceId: "workspace-1",
-          repoPath: "/tmp/repos/main",
-          branch: "main",
-          isDefault: true,
-          sourceType: "github",
-          sourceUrl: "https://example.com/repo.git",
-          createdAt: "2025-01-01T00:00:00.000Z",
-          updatedAt: "2025-01-01T00:00:00.000Z",
-        }]}
-        allCodebaseIds={["codebase-1"]}
-        worktreeCache={{
-          "wt-1": {
-            id: "wt-1",
-            codebaseId: "codebase-1",
-            workspaceId: "workspace-1",
-            worktreePath: "/tmp/worktrees/story-one",
-            branch: "task/story-one",
-            baseBranch: "main",
-            status: "active",
-            createdAt: "2025-01-01T00:00:00.000Z",
-            updatedAt: "2025-01-01T00:00:00.000Z",
-          },
-        }}
-        onPatchTask={vi.fn(async () => createTask("task-1", "Story One"))}
-        onRetryTrigger={vi.fn()}
-        onDelete={vi.fn()}
-        onRefresh={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
-
-    expect(await screen.findByText("Upgrade tiptap core")).toBeTruthy();
-    expect(screen.getByText("Add regression coverage")).toBeTruthy();
-    expect(screen.getByText("Normalize editor integration")).toBeTruthy();
-    expect(screen.getByText("Showing committed changes relative to origin/main.")).toBeTruthy();
-
-    fireEvent.click(screen.getByTestId("kanban-commit-row-abc1234567890"));
-
-    await waitFor(() => {
-      expect(desktopAwareFetch).toHaveBeenCalledWith(
-        "/api/tasks/task-1/changes/commit?sha=abc1234567890&context=full",
-        { cache: "no-store", signal: expect.any(AbortSignal) },
-      );
-    });
-
-    expect(await screen.findByText("package.json")).toBeTruthy();
-    expect(screen.getByText("1 Files Changed")).toBeTruthy();
-  });
-
-  it("still shows committed changes when the branch is ahead and the worktree is dirty", async () => {
-    desktopAwareFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        changes: {
-          codebaseId: "codebase-1",
-          repoPath: "/tmp/repos/main",
-          label: "feature-worktree",
-          branch: "task/story-one",
-          status: {
-            clean: false,
-            ahead: 5,
-            behind: 0,
-            modified: 4,
-            untracked: 2002,
-          },
-          files: [
-            { path: "src/editor.ts", status: "modified", additions: 4, deletions: 1 },
-          ],
-          mode: "commits",
-          baseRef: "origin/main",
-          commits: [
-            {
-              sha: "abc1234567890",
-              shortSha: "abc1234",
-              summary: "Upgrade tiptap core",
-              authorName: "Codex",
-              authoredAt: "2025-01-01T00:00:00.000Z",
-              additions: 12,
-              deletions: 4,
-            },
-          ],
-          source: "worktree",
-          worktreeId: "wt-1",
-          worktreePath: "/tmp/worktrees/story-one",
-        },
-      }),
-    } as Response);
-
-    render(
-      <KanbanCardDetail
-        task={createTask("task-1", "Story One", {
-          worktreeId: "wt-1",
-          codebaseIds: ["codebase-1"],
-          deliveryReadiness: {
-            checked: true,
-            repoPath: "/tmp/worktrees/story-one",
-            branch: "task/story-one",
-            baseBranch: "main",
-            baseRef: "origin/main",
-            modified: 4,
-            untracked: 2002,
-            ahead: 5,
-            behind: 0,
-            commitsSinceBase: 5,
-            hasCommitsSinceBase: true,
-            hasUncommittedChanges: true,
-            isGitHubRepo: true,
-            canCreatePullRequest: false,
-          },
-        })}
-        availableProviders={[]}
-        specialists={[]}
-        specialistLanguage="en"
-        codebases={[{
-          id: "codebase-1",
-          workspaceId: "workspace-1",
-          repoPath: "/tmp/repos/main",
-          branch: "main",
-          isDefault: true,
-          sourceType: "github",
-          sourceUrl: "https://example.com/repo.git",
-          createdAt: "2025-01-01T00:00:00.000Z",
-          updatedAt: "2025-01-01T00:00:00.000Z",
-        }]}
-        allCodebaseIds={["codebase-1"]}
-        worktreeCache={{
-          "wt-1": {
-            id: "wt-1",
-            codebaseId: "codebase-1",
-            workspaceId: "workspace-1",
-            worktreePath: "/tmp/worktrees/story-one",
-            branch: "task/story-one",
-            baseBranch: "main",
-            status: "active",
-            createdAt: "2025-01-01T00:00:00.000Z",
-            updatedAt: "2025-01-01T00:00:00.000Z",
-          },
-        }}
-        onPatchTask={vi.fn(async () => createTask("task-1", "Story One"))}
-        onRetryTrigger={vi.fn()}
-        onDelete={vi.fn()}
-        onRefresh={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("tab", { name: "Changes" }));
-
-    expect(await screen.findByText("Committed Changes")).toBeTruthy();
-    expect(screen.getByText("Local Changes")).toBeTruthy();
-    expect(await screen.findByText("Upgrade tiptap core")).toBeTruthy();
-    expect(screen.getByText("editor.ts")).toBeTruthy();
-    expect(screen.queryByText("No local changes in this task worktree.")).toBeNull();
+  it("falls back to the overview tab for removed or legacy persisted tab values", () => {
+    expect(normalizeKanbanDetailTab(undefined)).toBe("overview");
+    expect(normalizeKanbanDetailTab("changes")).toBe("overview");
+    expect(normalizeKanbanDetailTab("readiness")).toBe("overview");
+    expect(normalizeKanbanDetailTab("overview")).toBe("overview");
+    expect(normalizeKanbanDetailTab("execution")).toBe("execution");
+    expect(normalizeKanbanDetailTab("jitContext")).toBe("overview");
+    expect(normalizeKanbanDetailTab("activity")).toBe("activity");
   });
 });
 
@@ -2845,140 +2432,6 @@ describe.skip("KanbanTab card detail manual runs", () => {
   });
 });
 
-describe("KanbanTab JIT Context session hydration", () => {
-  it("loads matched file seeds into the active ACP session", async () => {
-    desktopAwareFetch.mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url === "/api/harness/task-adaptive") {
-        return new Response(JSON.stringify({
-          summary: "Use the Kanban workflow history as a seed.",
-          warnings: ["Prefer the API route before the UI shell."],
-          featureId: "kanban-workflow",
-          featureName: "Kanban Workflow",
-          selectedFiles: ["src/app/page.tsx"],
-          matchedFileDetails: [{
-            filePath: "src/app/page.tsx",
-            changes: 2,
-            sessions: 1,
-            updatedAt: "2026-04-21T02:03:00.000Z",
-          }],
-          matchedSessionIds: [],
-          failures: [{
-            provider: "codex",
-            sessionId: "session-history",
-            message: "Operation not permitted",
-            toolName: "exec_command",
-          }],
-          repeatedReadFiles: ["src/app/page.tsx"],
-          sessions: [],
-          frictionProfiles: [],
-        }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      if (url === "/api/sessions/session-123/history?consolidated=true") {
-        return new Response(JSON.stringify({ history: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      throw new Error(`Unexpected desktopAwareFetch: ${url}`);
-    });
-
-    const acp = {
-      connected: true,
-      sessionId: "session-123",
-      updates: [],
-      providers: [{ id: "claude", name: "Claude Code", description: "Claude Code provider", command: "claude" }],
-      selectedProvider: "claude",
-      loading: false,
-      error: null,
-      authError: null,
-      dockerConfigError: null,
-      connect: vi.fn(),
-      createSession: vi.fn(),
-      resumeSession: vi.fn(),
-      forkSession: vi.fn(),
-      selectSession: vi.fn(),
-      setProvider: vi.fn(),
-      setMode: vi.fn(),
-      prompt: vi.fn(),
-      promptSession: vi.fn(async () => {}),
-      respondToUserInput: vi.fn(),
-      respondToUserInputForSession: vi.fn(),
-      writeTerminal: vi.fn(),
-      resizeTerminal: vi.fn(),
-      cancel: vi.fn(),
-      disconnect: vi.fn(),
-      clearAuthError: vi.fn(),
-      clearDockerConfigError: vi.fn(),
-      listProviderModels: vi.fn(),
-    } satisfies Partial<UseAcpState & UseAcpActions> as UseAcpState & UseAcpActions;
-
-    render(
-      <KanbanTab
-        workspaceId="workspace-1"
-        boards={[board]}
-        tasks={[createTask("task-1", "Story One", {
-          codebaseIds: ["repo-a"],
-          triggerSessionId: "session-123",
-          assignedRole: "DEVELOPER",
-          contextSearchSpec: {
-            query: "kanban workflow seed",
-            featureCandidates: ["kanban-workflow"],
-            relatedFiles: ["src/app/page.tsx"],
-          },
-        })]}
-        sessions={[{
-          sessionId: "session-123",
-          workspaceId: "workspace-1",
-          cwd: "/tmp/repo-a",
-          provider: "claude",
-          role: "DEVELOPER",
-          createdAt: "2025-01-01T00:00:00.000Z",
-        }]}
-        providers={[{ id: "claude", name: "Claude Code", description: "Claude Code provider", command: "claude" }]}
-        specialists={[]}
-        codebases={[{
-          id: "repo-a",
-          workspaceId: "workspace-1",
-          repoPath: "/tmp/repo-a",
-          label: "Repo A",
-          isDefault: true,
-          sourceType: "local",
-          createdAt: "2025-01-01T00:00:00.000Z",
-          updatedAt: "2025-01-01T00:00:00.000Z",
-        }]}
-        onRefresh={vi.fn()}
-        acp={acp}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Open Story One" }));
-    await screen.findByText("Card Detail");
-
-    fireEvent.click(screen.getByRole("tab", { name: "History Memory" }));
-    fireEvent.click(screen.getByRole("button", { name: "Show History Memory" }));
-    await screen.findByText("Matched feature");
-
-    fireEvent.click(screen.getByRole("button", { name: "Load into current session" }));
-
-    await waitFor(() => {
-      expect(acp.promptSession).toHaveBeenCalledWith(
-        "session-123",
-        expect.stringContaining("Matched feature: Kanban Workflow"),
-      );
-    });
-    expect(acp.promptSession).toHaveBeenCalledWith(
-      "session-123",
-      expect.stringContaining("src/app/page.tsx (changes 2, sessions 1)"),
-    );
-    expect(screen.getByText("History memory was queued in the current session.")).toBeTruthy();
-  });
-});
 
 describe("KanbanTab quick ACP assignment", () => {
   afterEach(() => {

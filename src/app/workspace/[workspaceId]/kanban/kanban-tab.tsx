@@ -74,11 +74,8 @@ function isLikelyGitHubCodebase(codebase: CodebaseData | null | undefined): bool
   return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(codebase.label?.trim() ?? "");
 }
 
-const KANBAN_DETAIL_SPLIT_RATIO_KEY = "routa:kanban-detail-split-ratio";
 const KANBAN_BOARD_QUERY_KEY = "boardId";
 const KANBAN_DETAIL_TASK_QUERY_KEY = "taskId";
-const MIN_DETAIL_SPLIT_RATIO = 0.32;
-const MAX_DETAIL_SPLIT_RATIO = 0.72;
 
 type MoveBlockedState = {
   message: string;
@@ -218,8 +215,6 @@ export function KanbanTab({
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
   const [showFitnessWorkbench, setShowFitnessWorkbench] = useState(false);
   const [fitnessWorkbenchSessionId, setFitnessWorkbenchSessionId] = useState<string | null>(null);
-  const [detailSplitRatio, setDetailSplitRatio] = useState(0.48);
-  const [isDraggingDetailSplit, setIsDraggingDetailSplit] = useState(false);
 
   // Codebase detail popup state
   const [showCodebaseModal, setShowCodebaseModal] = useState(false);
@@ -264,7 +259,6 @@ export function KanbanTab({
   const [moveError, setMoveError] = useState<string | null>(null);
   const [moveBlockedState, setMoveBlockedState] = useState<MoveBlockedState | null>(null);
   const [moveBlockedDelegatingTaskId, setMoveBlockedDelegatingTaskId] = useState<string | null>(null);
-  const detailSplitContainerRef = useRef<HTMLDivElement | null>(null);
   const [isTaskDetailFullscreen, setIsTaskDetailFullscreen] = useState(false);
   const sessionBackfillInFlightRef = useRef(new Set<string>());
   const emptySessionRecoveryRef = useRef<string | null>(null);
@@ -315,49 +309,6 @@ export function KanbanTab({
     [activeTask, board?.columns, boardAutoProviderId, resolveSpecialist],
   );
   const queuedPositions = boardQueue?.queuedPositions ?? {};
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const localStorageApi = window.localStorage;
-    if (!localStorageApi || typeof localStorageApi.getItem !== "function") return;
-    const stored = Number(localStorageApi.getItem(KANBAN_DETAIL_SPLIT_RATIO_KEY));
-    if (!Number.isFinite(stored)) return;
-    setDetailSplitRatio(Math.min(MAX_DETAIL_SPLIT_RATIO, Math.max(MIN_DETAIL_SPLIT_RATIO, stored)));
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const localStorageApi = window.localStorage;
-    if (!localStorageApi || typeof localStorageApi.setItem !== "function") return;
-    localStorageApi.setItem(KANBAN_DETAIL_SPLIT_RATIO_KEY, String(detailSplitRatio));
-  }, [detailSplitRatio]);
-
-  useEffect(() => {
-    if (!isDraggingDetailSplit) return;
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const container = detailSplitContainerRef.current;
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      if (rect.width <= 0) return;
-      const nextRatio = (event.clientX - rect.left) / rect.width;
-      setDetailSplitRatio(Math.min(MAX_DETAIL_SPLIT_RATIO, Math.max(MIN_DETAIL_SPLIT_RATIO, nextRatio)));
-    };
-
-    const handleMouseUp = () => setIsDraggingDetailSplit(false);
-
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDraggingDetailSplit]);
 
   const openAgentPanel = useCallback((sessionId: string) => {
     setAgentSessionId(sessionId);
@@ -1570,26 +1521,6 @@ export function KanbanTab({
     onRefresh();
   }
 
-  async function runTaskPullRequest(taskId: string): Promise<string | null> {
-    await ensureBoardAutoProviderPersisted();
-    const response = await desktopAwareFetch(`/api/tasks/${encodeURIComponent(taskId)}/pr-run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ specialistLocale: specialistLanguage }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(typeof data?.error === "string" ? data.error : "Failed to start PR session");
-    }
-    const sessionId = typeof data?.sessionId === "string" ? data.sessionId : null;
-    if (sessionId) {
-      setActiveSessionId(sessionId);
-      acp?.selectSession(sessionId);
-      onRefresh();
-    }
-    return sessionId;
-  }
-
   function confirmDeleteTask(task: TaskInfo) {
     setIsDeleting(false);
     setDeleteConfirmTask(task);
@@ -1930,7 +1861,6 @@ export function KanbanTab({
     worktreeCache,
     queuedPositions,
     moveTask,
-    runTaskPullRequest,
     openTaskDetail,
     agentSession,
     onCloseAgentPanel: () => setAgentPanelOpen(false),
@@ -1947,9 +1877,6 @@ export function KanbanTab({
     acp,
     boardAutoProviderId,
     onBoardProviderChange: setKanbanBoardProvider,
-    detailSplitContainerRef,
-    detailSplitRatio,
-    setIsDraggingDetailSplit,
     refreshSignal,
     availableProviders,
     specialists,
@@ -1960,7 +1887,6 @@ export function KanbanTab({
     combinedSessions,
     patchTask,
     retryTaskTrigger,
-    runTaskPullRequest,
     confirmDeleteTask,
     onRefresh,
     setActiveSessionId,

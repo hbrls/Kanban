@@ -60,7 +60,6 @@ describe("KanbanCardDetail provider override", () => {
         codebases={[]}
         allCodebaseIds={[]}
         worktreeCache={{}}
-        sessions={[]}
         fullWidth
         onPatchTask={onPatchTask}
         onRetryTrigger={vi.fn()}
