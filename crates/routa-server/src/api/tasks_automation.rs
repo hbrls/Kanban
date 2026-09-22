@@ -265,7 +265,7 @@ async fn trigger_assigned_task_acp_agent(
         })
         .unwrap_or_else(|| ".".to_string());
 
-    state
+    let (_our_session_id, provider_session_id) = state
         .acp_manager
         .create_session(
             session_id.clone(),
@@ -296,6 +296,12 @@ async fn trigger_assigned_task_acp_agent(
         })
         .await
         .map_err(|error| format!("Failed to persist ACP session: {error}"))?;
+
+    state
+        .acp_session_store
+        .set_provider_session_id(&session_id, Some(&provider_session_id))
+        .await
+        .map_err(|error| format!("Failed to persist provider session ID: {error}"))?;
 
     let mut ordered_columns = board.map(|value| value.columns.clone()).unwrap_or_default();
     ordered_columns.sort_by_key(|column| column.position);
