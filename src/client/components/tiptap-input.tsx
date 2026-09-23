@@ -16,7 +16,7 @@
  *   - GitHub clone button (bottom-left)
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { desktopAwareFetch } from "../utils/diagnostics";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -495,6 +495,8 @@ interface TiptapInputProps {
   onSend: (text: string, context: InputContext) => void;
   /** Called when user clicks stop button during loading */
   onStop?: () => void;
+  /** Optional action rendered immediately before the send/stop button. */
+  beforeSendAction?: ReactNode;
   placeholder?: string;
   disabled?: boolean;
   loading?: boolean;
@@ -535,6 +537,7 @@ interface TiptapInputProps {
 export function TiptapInput({
   onSend,
   onStop,
+  beforeSendAction,
   placeholder = "Type a message...",
   disabled = false,
   loading = false,
@@ -586,12 +589,8 @@ export function TiptapInput({
     ? "tiptap-chat-input outline-none min-h-[120px] max-h-[360px] overflow-y-auto text-base leading-8 text-slate-900 dark:text-slate-100"
     : "tiptap-chat-input outline-none min-h-[60px] max-h-[240px] overflow-y-auto text-sm text-slate-900 dark:text-slate-100";
   const wrapperClass = isHero
-    ? `tiptap-input-wrapper relative rounded-[24px] border border-[#d6e5fb] bg-white/88 px-4 py-3 shadow-[0_18px_48px_-36px_rgba(14,116,144,0.32)] transition-colors focus-within:ring-2 focus-within:ring-sky-500 focus-within:border-transparent dark:border-white/10 dark:bg-[#101a2d]/88 ${
-        disabled ? "opacity-40 cursor-not-allowed" : ""
-      }`
-    : `tiptap-input-wrapper relative px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent ${
-        disabled ? "opacity-40 cursor-not-allowed" : ""
-      }`;
+    ? "tiptap-input-wrapper relative rounded-[24px] border border-[#d6e5fb] bg-white/88 px-4 py-3 shadow-[0_18px_48px_-36px_rgba(14,116,144,0.32)] transition-colors focus-within:ring-2 focus-within:ring-sky-500 focus-within:border-transparent dark:border-white/10 dark:bg-[#101a2d]/88"
+    : "tiptap-input-wrapper relative px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#161922] transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent";
   const toolbarClass = isHero
     ? "mt-2.5 flex min-w-0 items-center gap-2.5 overflow-visible"
     : "mt-1.5 -mb-0.5 flex min-w-0 items-center gap-2 overflow-hidden";
@@ -1116,6 +1115,7 @@ export function TiptapInput({
             </div>
           )}
 
+          {beforeSendAction}
           {loading ? (
             <button
               type="button"

@@ -238,13 +238,7 @@ fn resolve_static_target(path: &str) -> (String, &'static str) {
 ///
 /// Returns the actual address the server is listening on.
 pub async fn start_server(config: ServerConfig) -> Result<SocketAddr, String> {
-    // Initialize tracing (ignore if already initialized)
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "routa_core=info,routa_server=info,tower_http=info".into()),
-        )
-        .try_init();
+    init_tracing();
 
     // Resolve and set the full shell PATH early so all child processes
     // (agent CLIs, git, etc.) can be found even when launched from Finder.
@@ -275,6 +269,10 @@ pub async fn start_server_with_state(
     config: ServerConfig,
     state: state::AppState,
 ) -> Result<SocketAddr, String> {
+    // Tauri starts through this shared-state path, so tracing must be initialized
+    // here as well as in the standalone server entry point.
+    init_tracing();
+
     std::env::set_var(
         "ROUTA_SERVER_URL",
         format!("http://{}:{}", config.host, config.port),
@@ -417,6 +415,19 @@ pub async fn start_server_with_state(
     });
 
     Ok(local_addr)
+}
+
+/// Initialize the Rust log consumer for both standalone and Tauri startup.
+///
+/// The default filter intentionally includes the ACP crates at `info`, so the
+/// desktop app emits lifecycle logs without requiring `RUST_LOG`.
+fn init_tracing() {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "routa_core=info,routa_server=info,tower_http=info".into()),
+        )
+        .try_init();
 }
 
 async fn health_check() -> axum::Json<serde_json::Value> {

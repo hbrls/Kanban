@@ -28,7 +28,6 @@ import type { KanbanTaskAgentCopy } from "./i18n/kanban-task-agent";
 import { KanbanCreateModal, type TaskDraft } from "../kanban-create-modal";
 import { KanbanCardActivityPanel, KanbanEmptySessionPane } from "./kanban-card-activity";
 import { formatSessionTimestamp } from "./kanban-card-session-utils";
-import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import type { RepoSyncState } from "./kanban-repo-sync-status";
 import type { KanbanSpecialistLanguage } from "./kanban-specialist-language";
 import {
@@ -53,14 +52,6 @@ interface SessionRestoreTranscriptMessage {
 const KANBAN_RESTORE_CONTEXT_MESSAGE_LIMIT = 4;
 const KANBAN_RESTORE_CONTEXT_CHAR_LIMIT = 1800;
 const KANBAN_RESTORE_MESSAGE_CHAR_LIMIT = 700;
-
-function isRecoverableAcpSessionError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const message = (error as { message?: unknown }).message;
-  if (typeof message !== "string") return false;
-  return message.includes("embedded ACP processes cannot be resumed on a different instance")
-    || message.includes("session/load not supported");
-}
 
 function normalizeRestoreContent(content: string): string {
   return content
@@ -146,13 +137,6 @@ export function buildKanbanSessionRestorePrompt(
     "",
     "Next: inspect the repo if needed, then proceed with the smallest next action for this card.",
   ].filter(Boolean).join("\n");
-}
-
-async function fetchSessionTranscriptForRestore(sessionId: string): Promise<SessionRestoreTranscriptMessage[]> {
-  const response = await desktopAwareFetch(`/api/sessions/${encodeURIComponent(sessionId)}/transcript`, { cache: "no-store" });
-  if (!response.ok) return [];
-  const data = await response.json().catch(() => null) as { messages?: unknown } | null;
-  return Array.isArray(data?.messages) ? data.messages as SessionRestoreTranscriptMessage[] : [];
 }
 
 interface SpecialistOption {
@@ -688,89 +672,14 @@ export function KanbanTaskDetailOverlay({
     const targetSessionInfo = sessionMap.get(activeSessionId);
     if (!targetSessionInfo?.cwd) return;
 
-    try {
-      const resumed = await acp.resumeSession(activeSessionId, targetSessionInfo.cwd, { throwOnError: true });
-      if (resumed?.sessionId) {
-        setActiveSessionId(resumed.sessionId);
-        setSessionRecoveryInputPrefill(null);
-        onRefresh();
-      }
-      return;
-    } catch (error) {
-      if (!isRecoverableAcpSessionError(error)) {
-        throw error;
-      }
+    const resumed = await acp.resumeSessionStrict(activeSessionId, targetSessionInfo.cwd);
+    if (resumed?.sessionId) {
+      setActiveSessionId(resumed.sessionId);
+      setSessionRecoveryInputPrefill(null);
+      onRefresh();
     }
 
-    const transcript = await fetchSessionTranscriptForRestore(activeSessionId);
-    const replacement = await acp.createSession(
-      targetSessionInfo.cwd,
-      targetSessionInfo.provider ?? boardAutoProviderId ?? acp.selectedProvider,
-      targetSessionInfo.modeId,
-      targetSessionInfo.role,
-      targetSessionInfo.workspaceId || workspaceId,
-      targetSessionInfo.model,
-      undefined,
-      targetSessionInfo.specialistId,
-      undefined,
-      undefined,
-      undefined,
-      targetSessionInfo.branch,
-    );
-
-    if (!replacement?.sessionId) return;
-
-    if (activeTask) {
-      const nextSessionIds = [
-        ...(activeTask.sessionIds ?? []),
-        activeSessionId,
-        replacement.sessionId,
-      ].filter((sessionId, index, values) => sessionId && values.indexOf(sessionId) === index);
-      await patchTask(activeTask.id, { sessionIds: nextSessionIds });
-    }
-
-    setActiveSessionId(replacement.sessionId);
-    acp.selectSession(replacement.sessionId);
-    setSessionRecoveryInputPrefill(buildKanbanSessionRestorePrompt(activeTask, targetSessionInfo, transcript));
-    setHiddenSessionPaneTaskId(null);
-    onRefresh();
-  };
-
-  const startNewActiveSession = async () => {
-    if (!acp || !activeSessionId) return;
-    const targetSessionInfo = sessionMap.get(activeSessionId);
-    if (!targetSessionInfo?.cwd) return;
-
-    const replacement = await acp.createSession(
-      targetSessionInfo.cwd,
-      targetSessionInfo.provider ?? boardAutoProviderId ?? acp.selectedProvider,
-      targetSessionInfo.modeId,
-      targetSessionInfo.role,
-      targetSessionInfo.workspaceId || workspaceId,
-      targetSessionInfo.model,
-      undefined,
-      targetSessionInfo.specialistId,
-      undefined,
-      undefined,
-      undefined,
-      targetSessionInfo.branch,
-    );
-
-    if (!replacement?.sessionId) return;
-
-    if (activeTask) {
-      const nextSessionIds = [
-        ...(activeTask.sessionIds ?? []),
-        activeSessionId,
-        replacement.sessionId,
-      ].filter((sessionId, index, values) => sessionId && values.indexOf(sessionId) === index);
-      await patchTask(activeTask.id, { sessionIds: nextSessionIds });
-    }
-
-    setActiveSessionId(replacement.sessionId);
-    acp.selectSession(replacement.sessionId);
-    setSessionRecoveryInputPrefill(null);
-    onRefresh();
+    return;
   };
 
   if (!isOverlayOpen) return null;
@@ -925,7 +834,6 @@ export function KanbanTaskDetailOverlay({
                         inputPrefill={sessionRecoveryInputPrefill}
                         onInputPrefillConsumed={() => setSessionRecoveryInputPrefill(null)}
                         onResumeActiveSession={recoverActiveAcpSession}
-                        onNewActiveSession={startNewActiveSession}
                       />
                     </div>
                   )}
