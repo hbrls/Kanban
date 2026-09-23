@@ -11,6 +11,7 @@
 
 import type { McpServerProfile } from "@/core/mcp/mcp-server-profiles";
 import { resolveApiPath } from "@/client/config/backend";
+import { desktopAwareFetch } from "@/client/utils/diagnostics";
 
 export interface AcpSessionNotification {
   sessionId: string;
@@ -311,6 +312,27 @@ export class BrowserAcpClient {
     const result = await this.rpc<AcpLoadSessionResult>("session/load", {
       sessionId: params.sessionId,
       cwd: params.cwd,
+    });
+    this._sessionId = params.sessionId;
+    this.attachSession(params.sessionId);
+    return {
+      ...result,
+      sessionId: result.sessionId ?? params.sessionId,
+    };
+  }
+
+  /** Strictly resume through the Kanban REST endpoint; never recreates. */
+  async resumeSessionStrict(params: {
+    sessionId: string;
+    cwd?: string;
+    toolMode?: "essential" | "full";
+    mcpProfile?: McpServerProfile;
+  }): Promise<AcpLoadSessionResult> {
+    const result = await this.rest<AcpLoadSessionResult>("api/acp/resume", {
+      sessionId: params.sessionId,
+      cwd: params.cwd,
+      toolMode: params.toolMode,
+      mcpProfile: params.mcpProfile,
     });
     this._sessionId = params.sessionId;
     this.attachSession(params.sessionId);
@@ -863,5 +885,30 @@ export class BrowserAcpClient {
     }
 
     return data.result as T;
+  }
+
+  private async rest<T>(path: string, body: Record<string, unknown>): Promise<T> {
+    const request = this.baseUrl
+      ? fetch(resolveApiPath(path, this.baseUrl), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+      : desktopAwareFetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+    const response = await request;
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = typeof data?.error === "string"
+        ? data.error
+        : `ACP request failed: ${response.status}`;
+      throw new AcpClientError(message, response.status);
+    }
+
+    return data as T;
   }
 }
