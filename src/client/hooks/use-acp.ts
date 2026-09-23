@@ -223,6 +223,11 @@ export interface UseAcpActions {
     cwd?: string,
     options?: { throwOnError?: boolean },
   ) => Promise<AcpLoadSessionResult | null>;
+  resumeSessionStrict: (
+    sessionId: string,
+    cwd?: string,
+    options?: { throwOnError?: boolean },
+  ) => Promise<AcpLoadSessionResult | null>;
   forkSession: (
     sessionId: string,
     name?: string,
@@ -626,6 +631,42 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
     }
   }, []);
 
+  const resumeSessionStrict = useCallback(async (
+    targetSessionId: string,
+    cwd?: string,
+    options?: { throwOnError?: boolean },
+  ): Promise<AcpLoadSessionResult | null> => {
+    const client = clientRef.current;
+    if (!client || !targetSessionId) return null;
+
+    try {
+      setState((s) => ({ ...s, loading: true, error: null, authError: null, updates: [] }));
+      const result = await client.resumeSessionStrict({
+        sessionId: targetSessionId,
+        cwd,
+      });
+      sessionIdRef.current = targetSessionId;
+      setState((s) => ({
+        ...s,
+        sessionId: targetSessionId,
+        selectedProvider: result.provider ?? s.selectedProvider,
+        loading: false,
+      }));
+      return result;
+    } catch (err) {
+      logRuntime("error", "useAcp.resumeSessionStrict", "Failed to resume ACP session", formatAcpErrorForLog(err));
+      setState((s) => ({
+        ...s,
+        loading: false,
+        error: options?.throwOnError
+          ? null
+          : toErrorMessage(err) || "Session resume failed",
+      }));
+      if (options?.throwOnError) throw err;
+      return null;
+    }
+  }, []);
+
   const forkSession = useCallback(async (
     targetSessionId: string,
     name?: string,
@@ -838,6 +879,7 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
     connect,
     createSession,
     resumeSession,
+    resumeSessionStrict,
     forkSession,
     selectSession,
     setProvider,

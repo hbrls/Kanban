@@ -9,7 +9,7 @@ use regex::Regex;
 use routa_core::trace::{TraceEventType, TraceQuery, TraceReader};
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::path::{Path as FsPath, PathBuf};
 
@@ -22,6 +22,7 @@ use crate::state::AppState;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_sessions))
+        .route("/runtime", get(runtime_debug))
         .route(
             "/{session_id}",
             get(get_session)
@@ -109,6 +110,12 @@ struct ListSessionsQuery {
     limit: Option<usize>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeDebugQuery {
+    session_id: Option<String>,
+}
+
 const TEAM_LEAD_SPECIALIST_ID: &str = "team-agent-lead";
 
 /// GET /api/sessions — List ACP sessions.
@@ -147,6 +154,51 @@ async fn list_sessions(
     }
 
     Json(serde_json::json!({ "sessions": sessions }))
+}
+
+/// GET /api/sessions/runtime — temporary ACP runtime diagnostics for Kanban session debugging.
+async fn runtime_debug(
+    State(state): State<AppState>,
+    Query(query): Query<RuntimeDebugQuery>,
+) -> Json<Value> {
+    let in_memory_sessions = state.acp_manager.runtime_sessions().await;
+    let persisted_provider_session_id = match query.session_id.as_deref() {
+        Some(session_id) => state
+            .acp_session_store
+            .get(session_id)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|session| session.provider_session_id),
+        None => None,
+    };
+    let current_session = query.session_id.as_deref().map(|session_id| {
+        let runtime = in_memory_sessions
+            .iter()
+            .find(|session| session.session_id == session_id);
+
+        json!({
+            "sessionId": session_id,
+            "providerSessionId": runtime
+                .and_then(|session| session.provider_session_id.clone())
+                .or(persisted_provider_session_id),
+            "managedProcessPresent": runtime
+                .map(|session| session.managed_process_present)
+                .unwrap_or(false),
+            "childProcessAlive": runtime
+                .map(|session| session.child_process_alive)
+                .unwrap_or(false),
+            "sessionHeld": runtime
+                .map(|session| session.child_process_alive)
+                .unwrap_or(false),
+        })
+    });
+
+    let payload = json!({
+        "currentSession": current_session,
+        // "inMemorySessions": in_memory_sessions,
+    });
+    Json(payload)
 }
 
 fn session_is_non_empty(session: &Value) -> bool {

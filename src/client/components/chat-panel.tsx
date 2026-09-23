@@ -28,7 +28,9 @@ import {
 import {TracePanel} from "@/client/components/trace-panel";
 import type {WorkspaceData, CodebaseData} from "../hooks/use-workspaces";
 import {getFileChangesSummary} from "../utils/file-changes-tracker";
-import { TriangleAlert, X, KeyRound, Copy, Check, Monitor } from "lucide-react";
+import { resolveApiPath } from "../config/backend";
+import { desktopAwareFetch } from "../utils/diagnostics";
+import { Cable, TriangleAlert, Unplug, X, KeyRound, Copy, Check, Monitor } from "lucide-react";
 import { useTranslation } from "@/i18n";
 
 
@@ -110,8 +112,23 @@ interface ChatPanelProps {
   onDecoratedPromptSent?: () => void;
   /** Optional recovery action for a selected historical session. */
   onResumeActiveSession?: () => Promise<void>;
-  /** Optional action to start a fresh session replacing the selected one. */
-  onNewActiveSession?: () => Promise<void>;
+}
+
+interface AcpRuntimeDebugPayload {
+  currentSession: {
+    sessionId: string;
+    providerSessionId?: string;
+    managedProcessPresent: boolean;
+    childProcessAlive: boolean;
+    sessionHeld: boolean;
+  } | null;
+  inMemorySessions: Array<{
+    sessionId: string;
+    providerSessionId?: string;
+    managedProcessPresent: boolean;
+    childProcessAlive: boolean;
+    sessionHeld: boolean;
+  }>;
 }
 
 // ─── Main Component ────────────────────────────────────────────────────
@@ -145,29 +162,29 @@ export function ChatPanel({
   onDecoratePrompt,
   onDecoratedPromptSent,
   onResumeActiveSession,
-  onNewActiveSession,
 }: ChatPanelProps) {
   const { t } = useTranslation();
-  const { connected, loading, error, authError, updates, promptSession, clearAuthError } = acp;
+  const { connected, error: acpError, authError, updates, promptSession, clearAuthError } = acp;
   const canvasPromptDisabled = !connected;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedRepoPath, setCopiedRepoPath] = useState(false);
   // View mode: 'chat' or 'trace'
   const [viewMode, setViewMode] = useState<"chat" | "trace">("chat");
   const [isResumingActiveSession, setIsResumingActiveSession] = useState(false);
-  const [isStartingNewSession, setIsStartingNewSession] = useState(false);
+  const [acpRuntimeDebug, setAcpRuntimeDebug] = useState<AcpRuntimeDebugPayload | null>(null);
+  const currentSessionRuntime = acpRuntimeDebug?.currentSession;
+  const sessionAlive = currentSessionRuntime?.sessionHeld === true
+    && currentSessionRuntime.childProcessAlive === true;
 
   // Use the extracted chat messages hook
   const {
     visibleMessages,
     sessions,
     sessionModeById,
-    isSessionRunning,
     checklistItems,
     fileChangesState,
     usageInfo,
     setMessagesBySession,
-    setIsSessionRunning,
     fetchSessions,
     resetStreamingRefs,
   } = useChatMessages({
@@ -175,6 +192,43 @@ export function ChatPanel({
     updates,
     onTasksDetected,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRuntimeDebug = async () => {
+      if (!activeSessionId) {
+        setAcpRuntimeDebug(null);
+        return;
+      }
+
+      try {
+        const response = await desktopAwareFetch(
+          resolveApiPath(`/api/sessions/runtime?sessionId=${encodeURIComponent(activeSessionId)}`),
+        );
+        if (!response.ok) {
+          throw new Error(`Runtime debug request failed: ${response.status}`);
+        }
+        const payload = await response.json() as AcpRuntimeDebugPayload;
+        if (cancelled) return;
+        setAcpRuntimeDebug(payload);
+      } catch (error) {
+        if (cancelled) return;
+        console.warn("[ACP runtime debug] request failed", error);
+        setAcpRuntimeDebug(null);
+      }
+    };
+
+    void loadRuntimeDebug();
+    const interval = window.setInterval(() => {
+      void loadRuntimeDebug();
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [activeSessionId]);
 
   // Extract task-type tool calls for TaskProgressBar (existing behavior)
   const delegatedTasks = useMemo<TaskInfo[]>(() => {
@@ -460,16 +514,6 @@ export function ChatPanel({
     }
   }, [isResumingActiveSession, onResumeActiveSession]);
 
-  const handleNewActiveSession = useCallback(async () => {
-    if (!onNewActiveSession || isStartingNewSession) return;
-    setIsStartingNewSession(true);
-    try {
-      await onNewActiveSession();
-    } finally {
-      setIsStartingNewSession(false);
-    }
-  }, [isStartingNewSession, onNewActiveSession]);
-
   // ── Render ───────────────────────────────────────────────────────────
 
   return (
@@ -522,33 +566,9 @@ export function ChatPanel({
         </div>
       )}
 
-      {(error || (activeSessionId && (onResumeActiveSession || onNewActiveSession))) && (
+      {acpError && (
         <div className="flex items-start justify-between gap-3 border-b border-red-100 bg-red-50 px-5 py-2 text-xs text-red-600 dark:border-red-900/20 dark:bg-red-900/10 dark:text-red-400">
-          {error && <div className="min-w-0 flex-1">{error}</div>}
-          <div className="flex shrink-0 items-center gap-2">
-            {activeSessionId && onResumeActiveSession && (
-              <button
-                type="button"
-                onClick={() => void handleResumeActiveSession()}
-                disabled={isResumingActiveSession || isStartingNewSession || loading}
-                className="shrink-0 rounded-md border border-red-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-900/40"
-                title={t.sessions.resumeHint}
-              >
-                {isResumingActiveSession ? t.sessions.resuming : t.sessions.resume}
-              </button>
-            )}
-            {activeSessionId && onNewActiveSession && (
-              <button
-                type="button"
-                onClick={() => void handleNewActiveSession()}
-                disabled={isStartingNewSession || isResumingActiveSession || loading}
-                className="shrink-0 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-700/60"
-                title={t.sessions.newHint}
-              >
-                {isStartingNewSession ? t.sessions.creatingNew : t.sessions.new}
-              </button>
-            )}
-          </div>
+          <div className="min-w-0 flex-1">{acpError}</div>
         </div>
       )}
 
@@ -746,10 +766,18 @@ export function ChatPanel({
                 )}
                 <TiptapInput
                   onSend={handleSend}
-                  onStop={() => {
-                    setIsSessionRunning(false);
-                    acp.cancel();
-                  }}
+                  beforeSendAction={activeSessionId && onResumeActiveSession ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleResumeActiveSession()}
+                      disabled={isResumingActiveSession || sessionAlive}
+                      className="shrink-0 flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-800"
+                      title={sessionAlive ? t.nav.connected : t.sessions.resumeHint}
+                      aria-label={sessionAlive ? t.nav.connected : t.sessions.resume}
+                    >
+                      {sessionAlive ? <Cable className="h-4 w-4" aria-hidden="true" /> : <Unplug className="h-4 w-4" aria-hidden="true" />}
+                    </button>
+                  ) : undefined}
                   placeholder={
                     connected
                       ? activeSessionId
@@ -757,8 +785,8 @@ export function ChatPanel({
                         : t.chat.typeCreateSession
                       : t.chat.connectFirst
                   }
-                  disabled={!connected}
-                  loading={loading || isSessionRunning}
+                  disabled={!sessionAlive}
+                  loading={false}
                   skills={skills}
                   repoSkills={repoSkills}
                   providers={acp.providers.map((provider) => ({
