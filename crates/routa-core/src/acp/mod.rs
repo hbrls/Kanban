@@ -104,6 +104,16 @@ pub struct AcpSessionRecord {
     pub specialist_system_prompt: Option<String>,
 }
 
+/// Runtime-only information about the in-memory process owned by a session.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AcpRuntimeSession {
+    pub session_id: String,
+    pub provider_session_id: Option<String>,
+    pub managed_process_present: bool,
+    pub child_process_alive: bool,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct SessionLaunchOptions {
     pub specialist_id: Option<String>,
@@ -209,6 +219,38 @@ impl AcpManager {
     pub async fn get_session(&self, session_id: &str) -> Option<AcpSessionRecord> {
         let sessions = self.sessions.read().await;
         sessions.get(session_id).cloned()
+    }
+
+    /// Return every in-memory session together with its managed child-process state.
+    pub async fn runtime_sessions(&self) -> Vec<AcpRuntimeSession> {
+        let sessions = self.sessions.read().await;
+        let processes = self.processes.read().await;
+
+        let mut result: Vec<AcpRuntimeSession> = sessions
+            .keys()
+            .map(|session_id| {
+                let managed = processes.get(session_id);
+                let (provider_session_id, child_process_alive) = managed
+                    .map(|managed| {
+                        let alive = match &managed.process {
+                            AgentProcessType::Acp(process) => process.is_alive(),
+                            AgentProcessType::Claude(process) => process.is_alive(),
+                        };
+                        (Some(managed.acp_session_id.clone()), alive)
+                    })
+                    .unwrap_or((None, false));
+
+                AcpRuntimeSession {
+                    session_id: session_id.clone(),
+                    provider_session_id,
+                    managed_process_present: managed.is_some(),
+                    child_process_alive,
+                }
+            })
+            .collect();
+
+        result.sort_by(|left, right| left.session_id.cmp(&right.session_id));
+        result
     }
 
     /// Rename a session.

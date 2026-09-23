@@ -154,6 +154,28 @@ describe("BrowserAcpClient", () => {
     });
   });
 
+  it("uses the explicit REST endpoint for strict resume", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      if (url === "/api/acp/resume") {
+        expect(body).toMatchObject({ sessionId: "persisted-1", cwd: "/repo" });
+        return new Response(JSON.stringify({
+          sessionId: "persisted-1",
+          provider: "kimi",
+          resumeMode: "native",
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      return new Response(null, { status: 204 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new BrowserAcpClient("");
+    await expect(client.resumeSessionStrict({ sessionId: "persisted-1", cwd: "/repo" }))
+      .resolves.toMatchObject({ sessionId: "persisted-1", resumeMode: "native" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/acp/resume", expect.any(Object));
+  });
+
   it("preserves sessionMayContinue on RPC errors", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
       jsonrpc: "2.0",

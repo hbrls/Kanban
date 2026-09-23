@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { Check, Copy } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "@/i18n";
 import type { AcpProviderInfo } from "@/client/acp-client";
 import { resolveEffectiveTaskAutomation } from "@/core/kanban/effective-task-automation";
@@ -142,48 +141,6 @@ function ActivitySection({
   );
 }
 
-function SessionIdChip({
-  sessionId,
-  compact = false,
-}: {
-  sessionId: string;
-  compact?: boolean;
-}) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    navigator.clipboard.writeText(sessionId).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {
-      setCopied(false);
-    });
-  };
-
-  return (
-    <div className={`flex min-w-0 items-center gap-1.5 ${compact ? "max-w-[13rem]" : "max-w-[18rem]"}`}>
-      <span
-        className={`min-w-0 break-all rounded-lg bg-slate-100 font-mono text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-300 ${compact ? "px-1.5 py-0.5" : "px-2 py-1"}`}
-        title={sessionId}
-      >
-        {sessionId}
-      </span>
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="shrink-0 rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-        title={t.common.copyToClipboard}
-        aria-label={t.common.copyToClipboard}
-      >
-        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      </button>
-    </div>
-  );
-}
-
 export function KanbanSessionRunMetadata({
   laneSession,
   run,
@@ -198,7 +155,6 @@ export function KanbanSessionRunMetadata({
   compact?: boolean;
 }) {
   const { t } = useTranslation();
-  const sessionId = laneSession?.sessionId ?? run?.sessionId ?? session?.sessionId ?? "";
   const laneSpecialist = getSpecialistName(
     laneSession?.specialistId,
     run?.specialistName ?? laneSession?.specialistName,
@@ -238,21 +194,17 @@ export function KanbanSessionRunMetadata({
                 "Remote task",
                 laneSession?.role ?? t.kanban.unknownRole,
                 laneSpecialist,
-              ].filter(Boolean).join(" · ")
+              ].filter(Boolean).map((value) => `[${value}]`).join(" ")
               : [
                 laneSession?.provider ?? session?.provider ?? t.kanban.unknownProvider,
                 laneSession?.role ?? session?.role ?? t.kanban.unknownRole,
                 laneSpecialist,
-              ].filter(Boolean).join(" · ")}
+              ].filter(Boolean).map((value) => `[${value}]`).join(" ")}
           </div>
           <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
             {formatSessionTimestamp(run?.startedAt ?? session?.createdAt ?? laneSession?.startedAt)}
           </div>
         </div>
-        <SessionIdChip
-          sessionId={run?.externalTaskId ?? laneSession?.externalTaskId ?? sessionId}
-          compact={compact}
-        />
       </div>
       <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
         <span className="truncate">

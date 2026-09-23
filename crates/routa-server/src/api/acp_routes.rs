@@ -5,7 +5,7 @@ use axum::{
         sse::{Event, Sse},
         IntoResponse, Response,
     },
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use serde::Deserialize;
@@ -24,7 +24,137 @@ use routa_core::storage::{LocalSessionProvider, SessionRecord};
 use routa_core::store::acp_session_store::{AcpSessionRow, CreateAcpSessionParams};
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/", get(acp_sse).post(acp_rpc))
+    Router::new()
+        .route("/", get(acp_sse).post(acp_rpc))
+        .route("/resume", post(acp_resume))
+}
+
+/// POST /api/acp/resume — strict native resume for a persisted ACP session.
+///
+/// Unlike the compatibility `session/load` branch, this route never checks
+/// in-memory liveness and never falls back to creating a new session.
+async fn acp_resume(
+    State(state): State<AppState>,
+    Json(params): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, ServerError> {
+    tracing::warn!("[ACP Route] POST /api/acp/resume");
+
+    let session_id = params
+        .get("sessionId")
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| ServerError::BadRequest("Missing sessionId".to_string()))?;
+
+    let persisted_session = state
+        .acp_session_store
+        .get(&session_id)
+        .await?
+        .ok_or_else(|| {
+            ServerError::NotFound(format!("Persisted session not found: {session_id}"))
+        })?;
+
+    let provider_session_id = persisted_session
+        .provider_session_id
+        .clone()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            let message = format!(
+                "Persisted session row found, but provider_session_id is missing: session_id={session_id}"
+            );
+            tracing::warn!("[ACP Route] Strict resume rejected: {message}");
+            ServerError::BadRequest(message)
+        })?;
+
+    let provider = persisted_session
+        .provider
+        .clone()
+        .unwrap_or_else(|| "claude".to_string());
+    let cwd = params
+        .get("cwd")
+        .and_then(|value| value.as_str())
+        .filter(|value| has_explicit_cwd(Some(value)))
+        .map(str::to_string)
+        .unwrap_or_else(|| persisted_session.cwd.clone());
+    let workspace_id = persisted_session.workspace_id.clone();
+    let role = persisted_session.role.clone();
+    let parent_session_id = persisted_session.parent_session_id.clone();
+    let tool_mode = params
+        .get("toolMode")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let mcp_profile = params
+        .get("mcpProfile")
+        .and_then(|value| value.as_str())
+        .map(str::to_string);
+    let custom_provider_launch = custom_provider_launch_from_row(&persisted_session);
+
+    tracing::warn!(
+        "[ACP Route] Strict resume requested: session_id={}, provider={}, provider_session_id={}",
+        session_id,
+        provider,
+        provider_session_id
+    );
+
+    let load_result = if let Some(custom) = custom_provider_launch {
+        state
+            .acp_manager
+            .load_session_from_inline(
+                session_id.clone(),
+                cwd,
+                workspace_id,
+                provider.clone(),
+                role.clone(),
+                None,
+                parent_session_id,
+                custom.command,
+                custom.args,
+                Some(provider_session_id),
+                SessionLaunchOptions::default(),
+            )
+            .await
+    } else {
+        state
+            .acp_manager
+            .load_session(
+                session_id.clone(),
+                cwd,
+                workspace_id,
+                Some(provider.clone()),
+                role.clone(),
+                None,
+                parent_session_id,
+                tool_mode,
+                mcp_profile,
+                Some(provider_session_id),
+            )
+            .await
+    };
+
+    let (_routa_session_id, agent_session_id) = load_result.map_err(|error| {
+        tracing::warn!(
+            "[ACP Route] Strict resume failed: session_id={}, error={}",
+            session_id,
+            error
+        );
+        ServerError::Internal(format!("Failed to resume session: {error}"))
+    })?;
+
+    tracing::warn!(
+        "[ACP Route] Strict resume succeeded: session_id={}, agent_session_id={}",
+        session_id,
+        agent_session_id
+    );
+
+    Ok(Json(serde_json::json!({
+        "sessionId": session_id,
+        "provider": provider,
+        "role": role.as_deref().unwrap_or("CRAFTER"),
+        "acpStatus": "ready",
+        "resumeMode": "native",
+    })))
 }
 
 fn has_explicit_cwd(value: Option<&str>) -> bool {
@@ -393,6 +523,7 @@ async fn acp_rpc(
         }
 
         "session/new" => {
+            tracing::warn!("[ACP Route] session/new request received");
             let custom_provider_launch = match extract_custom_provider_launch(&params) {
                 Ok(value) => value,
                 Err(message) => {
@@ -1239,6 +1370,7 @@ async fn acp_rpc(
         }
 
         "session/load" => {
+            tracing::warn!("[ACP Route] session/load request received");
             let session_id = match params.get("sessionId").and_then(|v| v.as_str()) {
                 Some(sid) => sid.to_string(),
                 None => {
