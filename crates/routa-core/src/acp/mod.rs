@@ -378,7 +378,10 @@ impl AcpManager {
     ) -> Result<(String, String), String> {
         validate_session_cwd(&cwd)?;
         let provider_name = provider.as_deref().unwrap_or("claude");
-        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp") {
+        // Kimi's ACP server accepts MCP servers directly on session/load, just
+        // like Codex.  Keep the MCP overlay session-scoped; do not rely on a
+        // provider user's persistent config file.
+        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp" | "kimi") {
             options.acp_mcp_servers.clone().unwrap_or_else(|| {
                 mcp_setup::build_acp_http_mcp_servers(
                     &workspace_id,
@@ -770,7 +773,10 @@ impl AcpManager {
     ) -> Result<(String, String), String> {
         validate_session_cwd(&cwd)?;
         let provider_name = provider.as_deref().unwrap_or("claude");
-        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp") {
+        // Kimi's ACP server accepts MCP servers directly on session/new, just
+        // like Codex.  Keep the MCP overlay session-scoped; do not rely on a
+        // provider user's persistent config file.
+        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp" | "kimi") {
             options.acp_mcp_servers.clone().unwrap_or_else(|| {
                 mcp_setup::build_acp_http_mcp_servers(
                     &workspace_id,
