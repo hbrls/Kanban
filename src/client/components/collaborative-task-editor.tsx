@@ -84,13 +84,13 @@ export function CollaborativeTaskEditor({
   );
 
   const hasPending = taskNotes.some(
-    (n) => !n.metadata.taskStatus || n.metadata.taskStatus === "PENDING"
+    (n) => !n.metadata.taskStatus || n.metadata.taskStatus === "backlog"
   );
   const runningCrafterCount = crafterAgents.filter((agent) => agent.status === "running").length;
-  const hasRunning = taskNotes.some((n) => n.metadata.taskStatus === "IN_PROGRESS") || runningCrafterCount > 0;
+  const hasRunning = taskNotes.some((n) => n.metadata.taskStatus === "dev") || runningCrafterCount > 0;
 
   const pendingNotes = taskNotes.filter(
-    (n) => !n.metadata.taskStatus || n.metadata.taskStatus === "PENDING"
+    (n) => !n.metadata.taskStatus || n.metadata.taskStatus === "backlog"
   );
 
   const toggleNoteSelection = (noteId: string) => {
@@ -448,22 +448,32 @@ interface TaskNoteCardProps {
 
 function getStatusLabels(t: TranslationDictionary): Record<string, { label: string; color: string; bg: string }> {
   return {
-    PENDING: {
+    backlog: {
       label: t.collaborativeTasks.status.pending,
       color: "text-slate-600 dark:text-slate-400",
       bg: "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
     },
-    IN_PROGRESS: {
+    todo: {
+      label: t.collaborativeTasks.status.pending,
+      color: "text-slate-600 dark:text-slate-400",
+      bg: "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
+    },
+    dev: {
       label: t.collaborativeTasks.status.inProgress,
       color: "text-amber-600 dark:text-amber-400",
       bg: "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800",
     },
-    COMPLETED: {
+    review: {
+      label: t.collaborativeTasks.status.inProgress,
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800",
+    },
+    done: {
       label: t.collaborativeTasks.status.completed,
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800",
     },
-    FAILED: {
+    blocked: {
       label: t.collaborativeTasks.status.failed,
       color: "text-red-600 dark:text-red-400",
       bg: "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800",
@@ -607,25 +617,25 @@ function TaskNoteCard({
   onExecute,
 }: TaskNoteCardProps) {
   const { t } = useTranslation();
-  const status = note.metadata.taskStatus ?? "PENDING";
+  const status = note.metadata.taskStatus ?? "backlog";
   const statusLabels = getStatusLabels(t);
-  const statusInfo = statusLabels[status] ?? statusLabels.PENDING;
+  const statusInfo = statusLabels[status] ?? statusLabels.backlog;
 
   const statusIcon = {
-    PENDING: (
+    backlog: (
       <div className="w-5 h-5 rounded-md border-2 border-slate-300 dark:border-slate-600 shrink-0" />
     ),
-    IN_PROGRESS: (
+    dev: (
       <div className="w-5 h-5 rounded-md bg-amber-500 flex items-center justify-center shrink-0 animate-pulse">
         <Zap className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
       </div>
     ),
-    COMPLETED: (
+    done: (
       <div className="w-5 h-5 rounded-md bg-emerald-500 flex items-center justify-center shrink-0">
         <Check className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}/>
       </div>
     ),
-    FAILED: (
+    blocked: (
       <div className="w-5 h-5 rounded-md bg-red-500 flex items-center justify-center shrink-0">
         <X className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
       </div>
@@ -639,7 +649,7 @@ function TaskNoteCard({
         className="flex items-start gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-black/2 dark:hover:bg-white/2 transition-colors"
         onClick={onToggleExpand}
       >
-        {onToggleSelect && status === "PENDING" ? (
+        {onToggleSelect && status === "backlog" ? (
           <label
             className="shrink-0 cursor-pointer"
             onClick={(e) => e.stopPropagation()}
@@ -661,7 +671,7 @@ function TaskNoteCard({
             </div>
           </label>
         ) : (
-          statusIcon[status as keyof typeof statusIcon] ?? statusIcon.PENDING
+          statusIcon[status as keyof typeof statusIcon] ?? statusIcon.backlog
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
@@ -724,7 +734,7 @@ function TaskNoteCard({
               <div className="mt-3 border-t border-slate-100 pt-2.5 dark:border-slate-700/50">
                 <div className="flex flex-wrap items-center gap-1.5">
                 {/* Execute button for pending tasks */}
-                {(status === "PENDING") && onExecute && (
+                {(status === "backlog") && onExecute && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -735,12 +745,12 @@ function TaskNoteCard({
                     {t.tasks.execute}
                   </button>
                 )}
-                {status === "IN_PROGRESS" && (
+                {status === "dev" && (
                   <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium animate-pulse px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/20">
                     {t.common.running}...
                   </span>
                 )}
-                {status === "COMPLETED" && (
+                {status === "done" && (
                   <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 dark:bg-emerald-900/20">
                     <Check className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
                     {t.tasks.completed}
@@ -767,10 +777,10 @@ function TaskNoteCard({
                   onClick={(e) => e.stopPropagation()}
                   className="min-w-29.5 text-[11px] px-2 py-1 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                 >
-                  <option value="PENDING">Pending</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="FAILED">Failed</option>
+                  <option value="backlog">{t.collaborativeTasks.status.pending}</option>
+                  <option value="dev">{t.collaborativeTasks.status.inProgress}</option>
+                  <option value="done">{t.collaborativeTasks.status.completed}</option>
+                  <option value="blocked">{t.collaborativeTasks.status.failed}</option>
                 </Select>
 
                 {onDelete && (

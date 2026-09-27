@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createArtifact } from "@/core/models/artifact";
-import { createTask, TaskStatus, VerificationVerdict, type Task } from "@/core/models/task";
+import { createTask, VerificationVerdict, type Task } from "@/core/models/task";
 import { InMemoryArtifactStore } from "@/core/store/artifact-store";
 import type { TaskDeliveryReadiness } from "@/core/kanban/task-delivery-readiness";
 
@@ -126,7 +126,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       triggerSessionId: "session-old",
       assignedProvider: "codex",
       assignedRole: "GATE",
@@ -241,7 +241,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       githubRepo: "acme/platform",
       githubNumber: 42,
       jitContextSnapshot: {
@@ -287,7 +287,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       jitContextSnapshot: {
         generatedAt: "2026-04-21T08:00:00.000Z",
         summary: "Recovered history context for Kanban workflow.",
@@ -371,7 +371,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
 
     const response = await GET(new NextRequest("http://localhost/api/tasks/task-legacy-comments"), {
@@ -396,7 +396,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       jitContextSnapshot: {
         generatedAt: "2026-04-22T07:37:30.509Z",
         summary: "Speculative feature-explorer history memory.",
@@ -429,7 +429,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       triggerSessionId: "session-todo-1",
     });
     task.sessionIds = ["session-todo-1"];
@@ -511,7 +511,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -558,7 +558,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "review",
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -612,7 +612,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "review",
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -665,7 +665,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "review",
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
     });
     task.assignedSpecialistId = "kanban-review-guard";
     task.assignedSpecialistName = "Review Guard";
@@ -715,7 +715,7 @@ describe("/api/tasks/[taskId]", () => {
     const savedTask = taskStore.save.mock.calls.at(-1)?.[0];
     expect(savedTask).toMatchObject({
       columnId: "done",
-      status: TaskStatus.COMPLETED,
+      status: "done",
       verificationVerdict: VerificationVerdict.APPROVED,
     });
   });
@@ -728,7 +728,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -784,7 +784,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       comments: [{
         id: "note-1",
         body: 'Contract gate blocked: Cannot update card description: canonical story YAML is invalid for "Todo".',
@@ -868,7 +868,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "dev",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
       triggerSessionId: "session-dev-old",
       worktreeId: "wt-1",
     });
@@ -919,7 +919,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "dev",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
       triggerSessionId: "session-dev-old",
       worktreeId: "wt-stale",
     });
@@ -961,7 +961,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       triggerSessionId: "session-old",
       assignedRole: "ROUTA",
       assignedSpecialistId: "backlog-refiner",
@@ -1010,7 +1010,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       triggerSessionId: "session-todo-1",
       assignedProvider: "codex",
       assignedRole: "CRAFTER",
@@ -1092,7 +1092,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "dev",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -1161,7 +1161,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "dev",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -1232,7 +1232,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "review",
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -1302,7 +1302,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     });
     taskStore.get.mockResolvedValue(existingTask);
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
@@ -1352,7 +1352,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
     system.codebaseStore.getDefault = vi.fn().mockResolvedValue({
       id: "repo-1",
@@ -1399,7 +1399,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "review",
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
       triggerSessionId: "session-review-1",
       worktreeId: "wt-1",
     });
@@ -1457,7 +1457,7 @@ describe("/api/tasks/[taskId]", () => {
     });
     expect(data.task).toMatchObject({
       columnId: "dev",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
       verificationVerdict: VerificationVerdict.NOT_APPROVED,
       worktreeId: "wt-1",
     });
@@ -1471,7 +1471,7 @@ describe("/api/tasks/[taskId]", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "review",
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
     });
     existingTask.assignedSpecialistId = "kanban-review-guard";
     existingTask.assignedSpecialistName = "Review Guard";
@@ -1520,7 +1520,7 @@ describe("/api/tasks/[taskId]", () => {
     expect(response.status).toBe(200);
     expect(data.task).toMatchObject({
       columnId: "released-stage",
-      status: TaskStatus.COMPLETED,
+      status: "done",
       verificationVerdict: VerificationVerdict.APPROVED,
     });
   });

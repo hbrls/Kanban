@@ -168,10 +168,10 @@ export class PgTaskStore implements TaskStore {
     const taskMap = new Map(allTasks.map((t) => [t.id, t]));
 
     return allTasks.filter((task) => {
-      if (task.status !== "PENDING") return false;
+      if (task.status !== "backlog" && task.status !== "todo") return false;
       return task.dependencies.every((depId) => {
         const dep = taskMap.get(depId);
-        return dep && dep.status === "COMPLETED";
+        return dep && dep.status === "done";
       });
     });
   }

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTask, TaskStatus, VerificationVerdict, type Task } from "@/core/models/task";
+import { createTask, VerificationVerdict, type Task } from "@/core/models/task";
 import type { TaskDeliveryReadiness } from "@/core/kanban/task-delivery-readiness";
 
 const notify = vi.fn();
@@ -96,7 +96,7 @@ describe("/api/tasks/[taskId] verdict convergence gates", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "review",
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
     }));
     system.kanbanBoardStore.get = vi.fn().mockResolvedValue({
       id: "board-1",

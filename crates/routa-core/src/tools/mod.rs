@@ -226,7 +226,7 @@ impl AgentTools {
 
         // Assign and activate
         task.assigned_to = Some(agent_id.to_string());
-        task.status = TaskStatus::InProgress;
+        task.status = TaskStatus::Dev;
         task.updated_at = chrono::Utc::now();
         self.task_store.save(&task).await?;
 
@@ -344,9 +344,9 @@ impl AgentTools {
         if let Some(task_id) = &report.task_id {
             if let Some(mut task) = self.task_store.get(task_id).await? {
                 task.status = if report.success {
-                    TaskStatus::Completed
+                    TaskStatus::Done
                 } else {
-                    TaskStatus::NeedsFix
+                    TaskStatus::Blocked
                 };
                 task.completion_summary = Some(report.summary.clone());
                 task.updated_at = chrono::Utc::now();
@@ -485,7 +485,7 @@ impl AgentTools {
             Some(s) => s,
             None => {
                 return Ok(ToolResult::error(format!(
-                    "Invalid status: {status}. Must be one of: PENDING, IN_PROGRESS, REVIEW_REQUIRED, COMPLETED, NEEDS_FIX, BLOCKED, CANCELLED"
+                    "Invalid status: {status}. Must be one of: backlog, todo, dev, review, blocked, done"
                 )))
             }
         };
@@ -520,7 +520,7 @@ impl AgentTools {
             .await;
 
         // Also emit TASK_COMPLETED if applicable
-        if new_status == TaskStatus::Completed {
+        if new_status == TaskStatus::Done {
             self.event_bus
                 .emit(AgentEvent {
                     event_type: AgentEventType::TaskCompleted,
@@ -686,7 +686,7 @@ impl AgentTools {
                 "timestamp": m.timestamp.to_rfc3339(),
             })),
             "activeTasks": tasks.iter()
-                .filter(|t| t.status == TaskStatus::InProgress)
+                .filter(|t| t.status == TaskStatus::Dev)
                 .map(|t| serde_json::json!({ "id": t.id, "title": t.title }))
                 .collect::<Vec<_>>(),
         })))

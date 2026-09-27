@@ -84,7 +84,7 @@ export const tasks = sqliteTable("tasks", {
   verificationCommands: text("verification_commands", { mode: "json" }).$type<string[]>(),
   testCases: text("test_cases", { mode: "json" }).$type<string[]>(),
   assignedTo: text("assigned_to"),
-  status: text("status").notNull().default("PENDING"),
+  status: text("status").notNull().default("backlog"),
   boardId: text("board_id"),
   columnId: text("column_id"),
   position: integer("position").notNull().default(0),

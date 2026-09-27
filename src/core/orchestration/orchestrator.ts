@@ -19,7 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 import * as fs from "fs";
 import * as path from "path";
 import { AgentRole, AgentStatus } from "../models/agent";
-import { TaskStatus, type Task } from "../models/task";
+import { type Task } from "../models/task";
 import { AgentEventType } from "../events/event-bus";
 import { ToolResult, successResult, errorResult } from "../tools/tool-result";
 import {
@@ -653,7 +653,7 @@ export class RoutaOrchestrator {
 
     // 6. Assign task to agent
     task.assignedTo = agentId;
-    task.status = TaskStatus.IN_PROGRESS;
+    task.status = "dev";
     task.updatedAt = new Date();
     await this.system.taskStore.save(task);
     await this.system.agentStore.updateStatus(agentId, AgentStatus.ACTIVE);
@@ -675,7 +675,7 @@ export class RoutaOrchestrator {
     } catch (err) {
       // Clean up on spawn failure
       await this.system.agentStore.updateStatus(agentId, AgentStatus.ERROR);
-      task.status = TaskStatus.BLOCKED;
+      task.status = "blocked";
       task.updatedAt = new Date();
       await this.system.taskStore.save(task);
       return errorResult(
@@ -1497,7 +1497,7 @@ export class RoutaOrchestrator {
     await this.system.agentStore.updateStatus(agentId, AgentStatus.ERROR);
     const task = await this.system.taskStore.get(record.taskId);
     if (task) {
-      task.status = TaskStatus.NEEDS_FIX;
+      task.status = "blocked";
       task.completionSummary = `Error: ${error instanceof Error ? error.message : String(error)}`;
       task.updatedAt = new Date();
       await this.system.taskStore.save(task);

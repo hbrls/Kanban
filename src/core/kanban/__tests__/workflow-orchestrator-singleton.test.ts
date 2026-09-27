@@ -31,7 +31,7 @@ import { createInMemorySystem } from "../../routa-system";
 import { getHttpSessionStore } from "../../acp/http-session-store";
 import { createCodebase } from "../../models/codebase";
 import { createKanbanBoard } from "../../models/kanban";
-import { createTask, TaskStatus } from "../../models/task";
+import { createTask } from "../../models/task";
 import {
   enqueueKanbanTaskSession,
   getWorkflowOrchestrator,
@@ -198,7 +198,7 @@ describe("workflow orchestrator singleton prompt path", () => {
       workspaceId: "default",
       boardId: board.id,
       columnId: "dev",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
       worktreeId: "wt-stale",
     });
     await system.taskStore.save(task);
@@ -259,7 +259,7 @@ describe("workflow orchestrator singleton prompt path", () => {
       workspaceId: "default",
       boardId: board.id,
       columnId: "todo",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     });
     task.laneSessions = [{
       sessionId: "session-backlog-1",

@@ -608,7 +608,7 @@ async fn api_mcp_kanban_profile_blocks_update_task_workflow_metadata() {
                     "name": "update_task",
                     "arguments": {
                         "taskId": task_id,
-                        "status": "COMPLETED",
+                        "status": "done",
                         "verificationVerdict": "APPROVED"
                     }
                 }
@@ -633,6 +633,6 @@ async fn api_mcp_kanban_profile_blocks_update_task_workflow_metadata() {
         .expect("GET /api/tasks/{id}");
     assert_eq!(get_response.status(), StatusCode::OK);
     let get_body = read_json(get_response, "get task after blocked update_task").await;
-    assert_ne!(get_body["task"]["status"], json!("COMPLETED"));
+    assert_ne!(get_body["task"]["status"], json!("done"));
     assert!(get_body["task"]["verificationVerdict"].is_null());
 }

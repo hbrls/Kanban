@@ -164,10 +164,10 @@ export class SqliteTaskStore implements TaskStore {
     const taskMap = new Map(allTasks.map((task) => [task.id, task]));
 
     return allTasks.filter((task) => {
-      if (task.status !== "PENDING") return false;
+      if (task.status !== "backlog" && task.status !== "todo") return false;
       return task.dependencies.every((depId) => {
         const dependency = taskMap.get(depId);
-        return dependency && dependency.status === "COMPLETED";
+        return dependency && dependency.status === "done";
       });
     });
   }

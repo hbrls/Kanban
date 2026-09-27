@@ -69,7 +69,7 @@ describe("/api/canvas", () => {
       expect(tasks).toHaveLength(1);
       expect(tasks[0]).toMatchObject({
         title: "Canvas artifact: Dynamic Canvas",
-        status: "COMPLETED",
+        status: "done",
         workspaceId: "ws-1",
         labels: ["canvas"],
       });

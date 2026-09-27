@@ -1159,7 +1159,7 @@ export function getMcpToolDefinitions(
           taskId: { type: "string", description: "Task ID" },
           status: {
             type: "string",
-            enum: ["PENDING", "IN_PROGRESS", "REVIEW_REQUIRED", "COMPLETED", "NEEDS_FIX", "BLOCKED", "CANCELLED"],
+            enum: ["backlog", "todo", "dev", "review", "blocked", "done"],
             description: "New status",
           },
           agentId: { type: "string", description: "Agent performing the update" },

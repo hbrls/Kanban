@@ -53,7 +53,7 @@ function createTask(id: string, title: string, overrides: Partial<TaskInfo> = {}
     id,
     title,
     objective: `${title} objective`,
-    status: "PENDING",
+    status: "backlog",
     boardId: board.id,
     columnId: "backlog",
     position: 0,
@@ -75,7 +75,7 @@ describe("kanban session restore prompt", () => {
     const prompt = buildKanbanSessionRestorePrompt(
       createTask("task-restore", "Upgrade dirs", {
         objective: "Update dirs requirement from 5 to 6",
-        status: "IN_PROGRESS",
+        status: "dev",
       }),
       {
         sessionId: "session-old",

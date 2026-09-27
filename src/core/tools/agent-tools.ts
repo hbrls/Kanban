@@ -30,10 +30,11 @@ import {
   createAgent as createAgentModel,
 } from "../models/agent";
 import {
+  isTaskStatus,
   mergeTaskJitContextAnalysis,
   normalizeTaskContextSearchSpec,
   Task,
-  TaskStatus,
+  TASK_STAGES,
   createTask as createTaskModel,
 } from "../models/task";
 import type { KanbanBoardStore } from "../store/kanban-board-store";
@@ -425,7 +426,7 @@ export class AgentTools {
 
     // Assign and activate
     task.assignedTo = agentId;
-    task.status = TaskStatus.IN_PROGRESS;
+    task.status = "dev";
     task.updatedAt = new Date();
     await this.taskStore.save(task);
 
@@ -515,7 +516,7 @@ export class AgentTools {
     if (report.taskId) {
       const task = await this.taskStore.get(report.taskId);
       if (task) {
-        task.status = report.success ? TaskStatus.COMPLETED : TaskStatus.NEEDS_FIX;
+        task.status = report.success ? "done" : "blocked";
         task.completionSummary = report.summary;
         task.updatedAt = new Date();
         await this.taskStore.save(task);
@@ -717,7 +718,7 @@ export class AgentTools {
           }
         : null,
       activeTasks: tasks
-        .filter((t) => t.status === TaskStatus.IN_PROGRESS)
+        .filter((t) => t.status === "dev")
         .map((t) => ({ id: t.id, title: t.title })),
     });
   }
@@ -795,11 +796,10 @@ export class AgentTools {
   }): Promise<ToolResult> {
     const { taskId, status: newStatus, agentId, summary } = params;
 
-    const validStatuses = Object.values(TaskStatus);
-    const statusUpper = newStatus.toUpperCase() as TaskStatus;
-    if (!validStatuses.includes(statusUpper)) {
+    const normalizedStatus = newStatus.toLowerCase();
+    if (!isTaskStatus(normalizedStatus)) {
       return errorResult(
-        `Invalid status: ${newStatus}. Must be one of: ${validStatuses.join(", ")}`
+        `Invalid status: ${newStatus}. Must be one of: ${TASK_STAGES.join(", ")}`
       );
     }
 
@@ -809,7 +809,7 @@ export class AgentTools {
     }
 
     const oldStatus = task.status;
-    task.status = statusUpper;
+    task.status = normalizedStatus;
     if (summary) {
       task.completionSummary = summary;
     }
@@ -821,12 +821,12 @@ export class AgentTools {
       type: AgentEventType.TASK_STATUS_CHANGED,
       agentId,
       workspaceId: task.workspaceId,
-      data: { taskId, oldStatus, newStatus: statusUpper, summary },
+      data: { taskId, oldStatus, newStatus: normalizedStatus, summary },
       timestamp: new Date(),
     });
 
     // Also emit TASK_COMPLETED if applicable
-    if (statusUpper === TaskStatus.COMPLETED) {
+    if (normalizedStatus === "done") {
       this.eventBus.emit({
         type: AgentEventType.TASK_COMPLETED,
         agentId,
@@ -839,7 +839,7 @@ export class AgentTools {
     return successResult({
       taskId,
       oldStatus,
-      newStatus: statusUpper,
+      newStatus: normalizedStatus,
       updatedAt: task.updatedAt.toISOString(),
     });
   }
@@ -891,8 +891,13 @@ export class AgentTools {
     if (updates.objective) task.objective = updates.objective;
     if (updates.scope !== undefined) task.scope = updates.scope;
     if (updates.status) {
-      const statusUpper = updates.status.toUpperCase() as TaskStatus;
-      task.status = statusUpper;
+      const normalizedStatus = updates.status.toLowerCase();
+      if (!isTaskStatus(normalizedStatus)) {
+        return errorResult(
+          `Invalid status: ${updates.status}. Must be one of: ${TASK_STAGES.join(", ")}`
+        );
+      }
+      task.status = normalizedStatus;
     }
     if (updates.completionSummary !== undefined) task.completionSummary = updates.completionSummary;
     if (updates.verificationVerdict !== undefined) {

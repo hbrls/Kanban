@@ -227,11 +227,6 @@ pub async fn start_server(config: ServerConfig) -> Result<SocketAddr, String> {
         config.port
     );
 
-    std::env::set_var(
-        "ROUTA_SERVER_URL",
-        format!("http://{}:{}", config.host, config.port),
-    );
-
     let state = create_app_state(&config.db_path).await?;
 
     start_server_with_state(config, state).await
@@ -248,11 +243,6 @@ pub async fn start_server_with_state(
     // Tauri starts through this shared-state path, so tracing must be initialized
     // here as well as in the standalone server entry point.
     init_tracing();
-
-    std::env::set_var(
-        "ROUTA_SERVER_URL",
-        format!("http://{}:{}", config.host, config.port),
-    );
 
     // Build router
     let cors = CorsLayer::new()
@@ -382,6 +372,12 @@ pub async fn start_server_with_state(
         .map_err(|e| format!("Failed to get local address: {e}"))?;
 
     tracing::info!("Routa backend server listening on {}", local_addr);
+
+    // Publish the *bound* address, not the requested port. When the caller asks
+    // for port 0 the OS assigns an ephemeral port; spawned agent CLIs read this
+    // env var to reach the coordination MCP endpoint, so it must reflect the
+    // real port rather than the requested 0.
+    std::env::set_var("ROUTA_SERVER_URL", format!("http://{local_addr}"));
 
     // Spawn the server in a background task
     tokio::spawn(async move {

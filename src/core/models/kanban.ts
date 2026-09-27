@@ -1,4 +1,4 @@
-import { TaskStatus } from "./task";
+import type { TaskStatus } from "./task";
 import {
   DEFAULT_DEV_REQUIRED_TASK_FIELDS,
   KANBAN_REQUIRED_TASK_FIELDS,
@@ -8,7 +8,7 @@ import {
 export { DEFAULT_DEV_REQUIRED_TASK_FIELDS, KANBAN_REQUIRED_TASK_FIELDS };
 export type { KanbanRequiredTaskField } from "./task-requirements";
 
-export type KanbanColumnStage = "backlog" | "todo" | "dev" | "review" | "blocked" | "done";
+export type KanbanColumnStage = TaskStatus;
 export type KanbanDevSessionSupervisionMode = "disabled" | "watchdog_retry" | "ralph_loop";
 export type KanbanDevSessionCompletionRequirement =
   | "turn_complete"
@@ -316,58 +316,27 @@ export function createKanbanBoard(params: {
   };
 }
 
-export function columnIdToTaskStatus(columnId?: string): TaskStatus {
-  switch ((columnId ?? "backlog").toLowerCase()) {
-    case "dev":
-      return TaskStatus.IN_PROGRESS;
-    case "review":
-      return TaskStatus.REVIEW_REQUIRED;
-    case "blocked":
-      return TaskStatus.BLOCKED;
-    case "done":
-      return TaskStatus.COMPLETED;
-    default:
-      return TaskStatus.PENDING;
-  }
-}
-
-export function columnStageToTaskStatus(stage?: KanbanColumnStage): TaskStatus {
-  switch (stage ?? "backlog") {
-    case "dev":
-      return TaskStatus.IN_PROGRESS;
-    case "review":
-      return TaskStatus.REVIEW_REQUIRED;
-    case "blocked":
-      return TaskStatus.BLOCKED;
-    case "done":
-      return TaskStatus.COMPLETED;
-    default:
-      return TaskStatus.PENDING;
-  }
-}
-
+/**
+ * Resolve the task status for a board column via the column's `stage`.
+ * Status is never derived from the column ID string; unknown columns fall
+ * back to the default `backlog` stage.
+ */
 export function resolveTaskStatusForBoardColumn(
   columns: Pick<KanbanColumn, "id" | "stage">[] = [],
   columnId?: string,
 ): TaskStatus {
   const column = columns.find((entry) => entry.id === columnId);
-  if (column) {
-    return columnStageToTaskStatus(column.stage);
-  }
-  return columnIdToTaskStatus(columnId);
+  return column?.stage ?? "backlog";
 }
 
-export function taskStatusToColumnId(status: TaskStatus | string | undefined): string {
-  switch ((status ?? TaskStatus.PENDING).toString().toUpperCase()) {
-    case TaskStatus.IN_PROGRESS:
-      return "dev";
-    case TaskStatus.REVIEW_REQUIRED:
-      return "review";
-    case TaskStatus.BLOCKED:
-      return "blocked";
-    case TaskStatus.COMPLETED:
-      return "done";
-    default:
-      return "backlog";
-  }
+/**
+ * Find the ID of the board column whose `stage` matches the given status.
+ * Used only to backfill a missing `Task.columnId`; never to compute status.
+ */
+export function columnIdForTaskStatus(
+  columns: Pick<KanbanColumn, "id" | "stage">[] = [],
+  status: TaskStatus | string | undefined,
+): string | undefined {
+  const stage = (status ?? "backlog").toString().toLowerCase();
+  return columns.find((entry) => entry.stage === stage)?.id;
 }

@@ -18,7 +18,7 @@ import {
   createKanbanBoard,
   KanbanColumn,
   KanbanColumnStage,
-  columnIdToTaskStatus,
+  resolveTaskStatusForBoardColumn,
 } from "../models/kanban";
 import type { RoutaSystem } from "../routa-system";
 import {
@@ -267,7 +267,7 @@ export class KanbanTools {
       boardId: board.id,
       columnId: targetColumnId,
       position,
-      status: columnIdToTaskStatus(targetColumnId),
+      status: resolveTaskStatusForBoardColumn(board.columns, targetColumnId),
       priority: params.priority as TaskPriority | undefined,
       labels: params.labels,
       assignedProvider: params.assignedProvider,
@@ -306,6 +306,14 @@ export class KanbanTools {
     const targetColumn = board.columns.find((c) => c.id === params.targetColumnId);
     if (!targetColumn) {
       return errorResult(`Column not found: ${params.targetColumnId}`);
+    }
+
+    if (params.targetColumnId === "blocked") {
+      task.status = "blocked";
+      task.updatedAt = new Date();
+      await this.taskStore.save(task);
+      this.notifyWorkspaceChanged(task.workspaceId, "task", "updated", task.id);
+      return successResult(this.taskToCard(task));
     }
 
     const fromColumnId = task.columnId ?? "backlog";
@@ -415,7 +423,7 @@ export class KanbanTools {
     finalizeActiveTaskSession(task);
 
     task.columnId = params.targetColumnId;
-    task.status = columnIdToTaskStatus(params.targetColumnId);
+    task.status = resolveTaskStatusForBoardColumn(board.columns, params.targetColumnId);
     task.position = params.position ?? task.position;
     task.updatedAt = new Date();
 
@@ -560,7 +568,7 @@ export class KanbanTools {
     if (shouldReturnToPreviousLane && previousLaneSession.columnId) {
       finalizeActiveTaskSession(task);
       task.columnId = previousLaneSession.columnId;
-      task.status = columnIdToTaskStatus(previousLaneSession.columnId);
+      task.status = resolveTaskStatusForBoardColumn(board.columns, previousLaneSession.columnId);
       task.updatedAt = new Date();
     }
     await this.taskStore.save(task);
@@ -881,7 +889,7 @@ export class KanbanTools {
         boardId: board.id,
         columnId: targetColumnId,
         position: position++,
-        status: columnIdToTaskStatus(targetColumnId),
+        status: resolveTaskStatusForBoardColumn(board.columns, targetColumnId),
         priority: item.priority as TaskPriority | undefined,
         labels: item.labels,
         assignedProvider: item.assignedProvider,

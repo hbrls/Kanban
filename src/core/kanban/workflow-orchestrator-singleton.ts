@@ -15,7 +15,6 @@ import type {
   KanbanColumnAutomation,
   KanbanColumnStage,
 } from "../models/kanban";
-import { TaskStatus } from "../models/task";
 import { GitWorktreeService } from "../git/git-worktree-service";
 import {
   getDefaultWorkspaceWorktreeRoot,
@@ -191,8 +190,7 @@ async function startKanbanTaskSession(
       nextTask.worktreeId = worktree.id;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      nextTask.status = TaskStatus.BLOCKED;
-      nextTask.columnId = "blocked";
+      nextTask.status = "blocked";
       nextTask.lastSyncError = `Worktree creation failed: ${message}`;
       await system.taskStore.save(nextTask);
       return { error: nextTask.lastSyncError };

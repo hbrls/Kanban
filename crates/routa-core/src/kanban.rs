@@ -2,10 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 
 use crate::error::ServerError;
-use crate::models::kanban::{
-    column_id_to_task_status, task_status_to_column_id, KanbanAutomationStep, KanbanBoard,
-};
-use crate::models::task::{Task, TaskLaneSessionStatus, VerificationVerdict};
+use crate::models::kanban::{column_id_for_task_status, KanbanAutomationStep, KanbanBoard, KanbanColumn};
+use crate::models::task::{Task, TaskLaneSessionStatus, TaskStatus, VerificationVerdict};
 use crate::state::AppState;
 
 #[derive(Debug, Clone, Serialize)]
@@ -41,23 +39,32 @@ pub async fn ensure_task_board_context(
     }
 
     if task.column_id.is_none() {
-        task.column_id = Some(task_status_to_column_id(&task.status).to_string());
+        let board = state
+            .kanban_store
+            .get(task.board_id.as_deref().unwrap_or_default())
+            .await?;
+        task.column_id = Some(
+            board
+                .and_then(|board| column_id_for_task_status(&board.columns, &task.status))
+                .unwrap_or_else(|| "backlog".to_string()),
+        );
     }
 
     Ok(())
 }
 
-pub fn sync_task_status_from_column(task: &mut Task) {
-    task.status = column_id_to_task_status(task.column_id.as_deref());
+pub fn sync_task_status_from_column(task: &mut Task, columns: &[KanbanColumn]) {
+    task.status = task
+        .column_id
+        .as_deref()
+        .and_then(|column_id| columns.iter().find(|column| column.id == column_id))
+        .and_then(|column| TaskStatus::from_str(&column.stage))
+        .unwrap_or_default();
 }
 
-pub fn sync_task_column_from_status(task: &mut Task) {
-    task.column_id = Some(task_status_to_column_id(&task.status).to_string());
-}
-
-pub fn set_task_column(task: &mut Task, column_id: impl Into<String>) {
+pub fn set_task_column(task: &mut Task, columns: &[KanbanColumn], column_id: impl Into<String>) {
     task.column_id = Some(column_id.into());
-    sync_task_status_from_column(task);
+    sync_task_status_from_column(task, columns);
 }
 
 fn resolve_board_column_id_for_stage(board: &KanbanBoard, stage: &str) -> Option<String> {
@@ -256,7 +263,7 @@ mod tests {
             None,
             None,
         );
-        task.status = TaskStatus::Pending;
+        task.status = TaskStatus::Backlog;
         task.board_id = None;
         task.column_id = None;
 

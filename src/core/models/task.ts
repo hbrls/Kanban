@@ -8,14 +8,18 @@ import type { ArtifactType } from "./artifact";
 import type { KanbanRequiredTaskField } from "./task-requirements";
 import type { TaskCreationSource } from "../kanban/task-creation-policy";
 
-export enum TaskStatus {
-  PENDING = "PENDING",
-  IN_PROGRESS = "IN_PROGRESS",
-  REVIEW_REQUIRED = "REVIEW_REQUIRED",
-  COMPLETED = "COMPLETED",
-  NEEDS_FIX = "NEEDS_FIX",
-  BLOCKED = "BLOCKED",
-  CANCELLED = "CANCELLED",
+export const TASK_STAGES = ["backlog", "todo", "dev", "review", "blocked", "done"] as const;
+
+/**
+ * Canonical task status. `Task.status` and `Column.stage` share this exact
+ * value set; the wire format is the lowercase stage string.
+ */
+export type TaskStatus = (typeof TASK_STAGES)[number];
+
+export const DEFAULT_TASK_STATUS: TaskStatus = "backlog";
+
+export function isTaskStatus(value: unknown): value is TaskStatus {
+  return typeof value === "string" && (TASK_STAGES as readonly string[]).includes(value);
 }
 
 export enum TaskPriority {
@@ -953,7 +957,7 @@ export function createTask(params: {
     acceptanceCriteria: params.acceptanceCriteria,
     verificationCommands: params.verificationCommands,
     testCases: params.testCases,
-    status: params.status ?? TaskStatus.PENDING,
+    status: params.status ?? DEFAULT_TASK_STATUS,
     boardId: params.boardId,
     columnId: params.columnId,
     position: params.position ?? 0,

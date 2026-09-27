@@ -347,7 +347,7 @@ describe("sqlite stores", () => {
       sessionId: "session-1",
       metadata: {
         type: "task",
-        taskStatus: "IN_PROGRESS" as import("@/core/models/task").TaskStatus,
+        taskStatus: "dev" as import("@/core/models/task").TaskStatus,
         assignedAgentIds: ["agent-parent", "agent-child"],
         parentNoteId: "spec",
         linkedTaskId: "task-1",
@@ -374,7 +374,7 @@ describe("sqlite stores", () => {
       sessionId: "session-1",
       metadata: {
         type: "task",
-        taskStatus: "IN_PROGRESS",
+        taskStatus: "dev",
         assignedAgentIds: ["agent-child"],
         parentNoteId: "spec",
         linkedTaskId: "task-1",

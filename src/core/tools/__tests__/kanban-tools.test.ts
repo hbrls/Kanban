@@ -493,7 +493,7 @@ describe("KanbanTools", () => {
     const savedTask = await taskStore.get(task.id);
     expect(savedTask).toMatchObject({
       columnId: "dev",
-      status: "IN_PROGRESS",
+      status: "dev",
       worktreeId: "wt-1",
       triggerSessionId: undefined,
     });
