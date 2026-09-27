@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { KanbanTab } from "../kanban-tab";
@@ -60,6 +60,12 @@ vi.mock("../use-runtime-fitness-status", async () => {
   };
 });
 
+vi.mock("../kanban-fitness-workbench-modal", () => ({
+  KanbanFitnessWorkbenchModal: ({ open }: { open: boolean }) => (
+    open ? <div data-testid="kanban-fitness-workbench-modal" /> : null
+  ),
+}));
+
 const board: KanbanBoardInfo = {
   id: "board-1",
   workspaceId: "workspace-1",
@@ -113,7 +119,7 @@ afterEach(() => {
 });
 
 describe("KanbanTab fitness navigation", () => {
-  it("opens the fitness workbench modal from the status bar", async () => {
+  it("does not expose a fitness entry in the status bar and keeps the workbench modal closed", async () => {
     render(
       <KanbanTab
         workspaceId="workspace-1"
@@ -136,10 +142,9 @@ describe("KanbanTab fitness navigation", () => {
       />,
     );
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId("kanban-runtime-fitness-status"));
-    });
+    await act(async () => {});
 
-    expect(screen.getByTestId("kanban-fitness-workbench-modal")).not.toBeNull();
+    expect(screen.queryByTestId("kanban-runtime-fitness-status")).toBeNull();
+    expect(screen.queryByTestId("kanban-fitness-workbench-modal")).toBeNull();
   });
 });
