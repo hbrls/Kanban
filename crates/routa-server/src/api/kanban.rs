@@ -385,7 +385,7 @@ fn task_has_running_lane_session(task: &Task) -> bool {
     task.trigger_session_id.is_some()
         && matches!(
             task.status,
-            TaskStatus::InProgress | TaskStatus::ReviewRequired
+            TaskStatus::Dev | TaskStatus::Review
         )
 }
 
@@ -1056,7 +1056,7 @@ mod tests {
         );
         task.board_id = Some("board-1".to_string());
         task.column_id = Some("review".to_string());
-        task.status = TaskStatus::ReviewRequired;
+        task.status = TaskStatus::Review;
         task
     }
 
@@ -1152,7 +1152,7 @@ mod tests {
             workspace_id: "ws-1".to_string(),
             data: json!({
                 "taskId": "task-42",
-                "status": "COMPLETED",
+                "status": "done",
             }),
             timestamp: Utc::now(),
         };

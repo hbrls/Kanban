@@ -73,8 +73,8 @@ export interface DashboardData {
 
 function buildStatsSurface(data: DashboardData): A2UIMessage[] {
   const activeAgents = data.agents.filter((a) => a.status === "ACTIVE").length;
-  const inProgressTasks = data.tasks.filter((t) => t.status === "IN_PROGRESS").length;
-  const completedTasks = data.tasks.filter((t) => t.status === "COMPLETED").length;
+  const inProgressTasks = data.tasks.filter((t) => t.status === "dev").length;
+  const completedTasks = data.tasks.filter((t) => t.status === "done").length;
   const runningBg = data.bgTasks.filter((t) => t.status === "RUNNING").length;
   const completedBg = data.bgTasks.filter((t) => t.status === "COMPLETED").length;
   const failedBg = data.bgTasks.filter((t) => t.status === "FAILED").length;
@@ -213,10 +213,10 @@ function buildAgentRosterSurface(data: DashboardData): A2UIMessage[] {
 function buildTasksSurface(data: DashboardData): A2UIMessage[] {
   if (data.tasks.length === 0) return [];
 
-  const pending = data.tasks.filter((t) => t.status === "PENDING");
-  const inProgress = data.tasks.filter((t) => t.status === "IN_PROGRESS");
-  const review = data.tasks.filter((t) => t.status === "REVIEW_REQUIRED" || t.status === "NEEDS_FIX");
-  const completed = data.tasks.filter((t) => t.status === "COMPLETED");
+  const pending = data.tasks.filter((t) => t.status === "backlog" || t.status === "todo");
+  const inProgress = data.tasks.filter((t) => t.status === "dev");
+  const review = data.tasks.filter((t) => t.status === "review" || t.status === "blocked");
+  const completed = data.tasks.filter((t) => t.status === "done");
 
   const components: A2UIComponent[] = [
     {
@@ -243,7 +243,7 @@ function buildTasksSurface(data: DashboardData): A2UIMessage[] {
     { id: "tasks_pending_list", component: "List", children: { componentId: "task_pending_row", path: "/pendingTasks" }, direction: "vertical" },
     { id: "task_pending_row", component: "Row", children: ["task_pending_title", "task_pending_status"], align: "center", justify: "spaceBetween" },
     { id: "task_pending_title", component: "Text", text: { path: "title" }, variant: "h5", weight: 1 },
-    { id: "task_pending_status", component: "Text", text: "PENDING", variant: "caption", pill: true, accent: "warning" },
+    { id: "task_pending_status", component: "Text", text: "backlog", variant: "caption", pill: true, accent: "warning" },
     // Done tab
     { id: "tasks_done", component: "Column", children: ["tasks_done_list"], align: "stretch" },
     { id: "tasks_done_list", component: "List", children: { componentId: "task_done_row", path: "/doneTasks" }, direction: "vertical" },
@@ -597,7 +597,7 @@ export function generateWorkspaceSummarySurface(data: DashboardData): A2UIMessag
       counts: {
         sessions: `${data.sessions.length}`,
         agents: `${data.agents.length} (${activeAgents} active)`,
-        tasks: `${data.tasks.length} (${data.tasks.filter((t) => t.status === "IN_PROGRESS").length} active)`,
+        tasks: `${data.tasks.length} (${data.tasks.filter((t) => t.status === "dev").length} active)`,
         bgTasks: `${data.bgTasks.length} (${runningBg} running)`,
       },
     } } },
@@ -623,10 +623,10 @@ function formatRelative(dateStr: string | undefined | null): string {
 
 function statusAccent(status: string): TextAccent {
   const s = status.toUpperCase();
-  if (s === "ACTIVE" || s === "COMPLETED") return "success";
-  if (s === "RUNNING" || s === "IN_PROGRESS") return "info";
+  if (s === "ACTIVE" || s === "COMPLETED" || s === "DONE") return "success";
+  if (s === "RUNNING" || s === "IN_PROGRESS" || s === "DEV") return "info";
   if (s === "FAILED" || s === "ERROR" || s === "BLOCKED") return "error";
-  if (s === "PENDING" || s === "REVIEW_REQUIRED" || s === "NEEDS_FIX") return "warning";
+  if (s === "PENDING" || s === "REVIEW" || s === "BACKLOG" || s === "TODO") return "warning";
   if (s === "CANCELLED") return "muted";
   return "muted";
 }

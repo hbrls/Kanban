@@ -2,7 +2,7 @@ import BetterSqlite3 from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createCodebase } from "@/core/models/codebase";
-import { TaskStatus, VerificationVerdict, createTask } from "@/core/models/task";
+import { VerificationVerdict, createTask } from "@/core/models/task";
 import { createWorkspace } from "@/core/models/workspace";
 import * as sqliteSchema from "../sqlite-schema";
 import { SqliteCodebaseStore } from "../sqlite-codebase-store";
@@ -52,7 +52,7 @@ describe("sqlite foundation stores", () => {
         verification_commands TEXT,
         test_cases TEXT,
         assigned_to TEXT,
-        status TEXT NOT NULL DEFAULT 'PENDING',
+        status TEXT NOT NULL DEFAULT 'backlog',
         board_id TEXT,
         column_id TEXT,
         position INTEGER NOT NULL DEFAULT 0,
@@ -202,7 +202,7 @@ describe("sqlite foundation stores", () => {
       title: "Prepare baseline",
       objective: "Set up project",
       workspaceId: "workspace-1",
-      status: TaskStatus.COMPLETED,
+      status: "done",
       assignee: "agent-1",
       labels: ["infra"],
     });
@@ -231,10 +231,10 @@ describe("sqlite foundation stores", () => {
     await taskStore.save(readyTask);
     await taskStore.save(blockedTask);
 
-    await taskStore.updateStatus("task-ready", TaskStatus.IN_PROGRESS);
+    await taskStore.updateStatus("task-ready", "dev");
     await taskStore.save({
       ...readyTask,
-      status: TaskStatus.PENDING,
+      status: "backlog",
       assignedTo: "agent-3",
       completionSummary: "Implemented and ready for review",
       verificationVerdict: VerificationVerdict.APPROVED,
@@ -246,7 +246,7 @@ describe("sqlite foundation stores", () => {
 
     const savedTask = await taskStore.get("task-ready");
     expect(savedTask).toMatchObject({
-      status: TaskStatus.PENDING,
+      status: "backlog",
       assignedTo: "agent-3",
       creationSource: "session",
       completionSummary: "Implemented and ready for review",
@@ -262,19 +262,19 @@ describe("sqlite foundation stores", () => {
     });
 
     expect(await taskStore.listByWorkspace("workspace-1")).toHaveLength(3);
-    expect(await taskStore.listByStatus("workspace-1", TaskStatus.COMPLETED)).toHaveLength(1);
+    expect(await taskStore.listByStatus("workspace-1", "done")).toHaveLength(1);
     expect(await taskStore.listByAssignee("agent-3")).toHaveLength(1);
     expect((await taskStore.findReadyTasks("workspace-1")).map((task) => task.id)).toEqual(["task-ready"]);
 
-    expect(await taskStore.atomicUpdate("task-ready", 99, { status: TaskStatus.REVIEW_REQUIRED })).toBe(false);
+    expect(await taskStore.atomicUpdate("task-ready", 99, { status: "review" })).toBe(false);
     expect(
       await taskStore.atomicUpdate("task-ready", 3, {
-        status: TaskStatus.REVIEW_REQUIRED,
+        status: "review",
         assignedTo: "agent-review",
       }),
     ).toBe(true);
     expect(await taskStore.get("task-ready")).toMatchObject({
-      status: TaskStatus.REVIEW_REQUIRED,
+      status: "review",
       assignedTo: "agent-review",
     });
 

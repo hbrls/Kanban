@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AgentRole, AgentStatus, ModelTier, createAgent } from "@/core/models/agent";
-import { TaskStatus, VerificationVerdict, createTask } from "@/core/models/task";
+import { VerificationVerdict, createTask } from "@/core/models/task";
 
 const specialistByRoleMock = vi.hoisted(() => vi.fn());
 const specialistByIdMock = vi.hoisted(() => vi.fn());
@@ -367,7 +367,7 @@ describe("RoutaOrchestrator", () => {
     expect(system.taskStore.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: task.id,
-        status: TaskStatus.IN_PROGRESS,
+        status: "dev",
         assignedTo: "child-agent-1",
       }),
     );
@@ -455,7 +455,7 @@ describe("RoutaOrchestrator", () => {
       specialist: "crafter",
     });
 
-    task.status = TaskStatus.COMPLETED;
+    task.status = "done";
     recordChildCompletionMock.mockClear();
 
     let releaseWrite: (() => void) | undefined;
@@ -515,7 +515,7 @@ describe("RoutaOrchestrator", () => {
       specialist: "gate",
     });
 
-    task.status = TaskStatus.COMPLETED;
+    task.status = "done";
     recordChildCompletionMock.mockClear();
     const record = orchestrator.getChildAgents("caller-agent")[0];
 
@@ -552,14 +552,14 @@ describe("RoutaOrchestrator", () => {
       1,
       expect.objectContaining({
         snapshotSource: "session_end",
-        status: TaskStatus.COMPLETED,
+        status: "done",
       }),
     );
     expect(recordChildCompletionMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         snapshotSource: "reported",
-        status: TaskStatus.COMPLETED,
+        status: "done",
         summary: "Implemented and verified",
         verificationVerdict: VerificationVerdict.APPROVED,
         verificationReport: "Smoke checks passed",
@@ -751,7 +751,7 @@ describe("RoutaOrchestrator", () => {
     expect(system.taskStore.save).toHaveBeenLastCalledWith(
       expect.objectContaining({
         id: task.id,
-        status: TaskStatus.BLOCKED,
+        status: "blocked",
       }),
     );
   });

@@ -8,7 +8,7 @@
  * - General Notes: free-form documents for context sharing
  */
 
-import { TaskStatus } from "./task";
+import type { TaskStatus } from "./task";
 
 export type NoteType = "spec" | "task" | "general";
 

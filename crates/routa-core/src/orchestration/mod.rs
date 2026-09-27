@@ -509,7 +509,7 @@ impl RoutaOrchestrator {
         // 6. Assign task to agent and update status
         let mut task = task;
         task.assigned_to = Some(agent_id.clone());
-        task.status = TaskStatus::InProgress;
+        task.status = TaskStatus::Dev;
         task.updated_at = Utc::now();
         self.task_store.save(&task).await?;
         self.agent_store
@@ -710,9 +710,9 @@ impl RoutaOrchestrator {
         if let Some(task_id) = &report.task_id {
             if let Some(mut task) = self.task_store.get(task_id).await? {
                 task.status = if report.success {
-                    TaskStatus::Completed
+                    TaskStatus::Done
                 } else {
-                    TaskStatus::NeedsFix
+                    TaskStatus::Blocked
                 };
                 task.completion_summary = Some(report.summary.clone());
                 task.updated_at = Utc::now();

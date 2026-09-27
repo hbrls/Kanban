@@ -107,22 +107,22 @@ export function DashboardCard({
 // ─── Task Status Icon ──────────────────────────────────────────────
 
 export function TaskStatusIcon({ status }: { status: string }) {
-  const s = status.toUpperCase();
-  if (s === "COMPLETED") {
+  const s = status.toLowerCase();
+  if (s === "done") {
     return (
       <div className="w-7 h-7 rounded-md bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
         <Check className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}/>
       </div>
     );
   }
-  if (s === "IN_PROGRESS") {
+  if (s === "dev") {
     return (
       <div className="w-7 h-7 rounded-md bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
         <div className="w-3 h-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
       </div>
     );
   }
-  if (s === "BLOCKED" || s === "CANCELLED") {
+  if (s === "blocked") {
     return (
       <div className="w-7 h-7 rounded-md bg-red-50 dark:bg-red-900/20 flex items-center justify-center shrink-0">
         <CircleOff className="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
@@ -139,19 +139,18 @@ export function TaskStatusIcon({ status }: { status: string }) {
 // ─── Task Status Badge ─────────────────────────────────────────────
 
 export function TaskStatusBadge({ status }: { status: string }) {
-  const s = status.toUpperCase();
+  const s = status.toLowerCase();
   const map: Record<string, string> = {
-    PENDING: "bg-slate-100 dark:bg-slate-800 text-slate-500",
-    IN_PROGRESS: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-    REVIEW_REQUIRED: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
-    COMPLETED: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
-    NEEDS_FIX: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
-    BLOCKED: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
-    CANCELLED: "bg-slate-100 dark:bg-slate-800 text-slate-400",
+    backlog: "bg-slate-100 dark:bg-slate-800 text-slate-500",
+    todo: "bg-slate-100 dark:bg-slate-800 text-slate-500",
+    dev: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+    review: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
+    done: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+    blocked: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
   };
 
   return (
-    <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${map[s] || map.PENDING}`}>
+    <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${map[s] || map.backlog}`}>
       {status.replace(/_/g, " ")}
     </span>
   );

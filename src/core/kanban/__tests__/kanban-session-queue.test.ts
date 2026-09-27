@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus, AgentEventType } from "../../events/event-bus";
-import { createTask, TaskStatus } from "../../models/task";
+import { createTask } from "../../models/task";
 import { InMemoryTaskStore } from "../../store/task-store";
 import { KanbanSessionQueue } from "../kanban-session-queue";
 
@@ -21,7 +21,7 @@ describe("KanbanSessionQueue", () => {
       workspaceId: "default",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
     await taskStore.save(createTask({
       id: "task-2",
@@ -30,7 +30,7 @@ describe("KanbanSessionQueue", () => {
       workspaceId: "default",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
 
     const startFirst = vi.fn().mockResolvedValue({ sessionId: "session-1" });
@@ -101,7 +101,7 @@ describe("KanbanSessionQueue", () => {
       workspaceId: "default",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
     await taskStore.save(createTask({
       id: "task-2",
@@ -110,7 +110,7 @@ describe("KanbanSessionQueue", () => {
       workspaceId: "default",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
 
     const startFirst = vi.fn().mockResolvedValue({ sessionId: "session-1" });
@@ -175,7 +175,7 @@ describe("KanbanSessionQueue", () => {
       workspaceId: "default",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
       triggerSessionId: "session-1",
     }));
     await taskStore.save(createTask({
@@ -185,7 +185,7 @@ describe("KanbanSessionQueue", () => {
       workspaceId: "default",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
 
     const startFirst = vi.fn().mockResolvedValue({ sessionId: "session-existing" });
@@ -238,7 +238,7 @@ describe("KanbanSessionQueue", () => {
       workspaceId: "default",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }));
 
     const startGhost = vi.fn().mockResolvedValue({ sessionId: "session-ghost" });
