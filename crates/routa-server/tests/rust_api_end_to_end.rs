@@ -349,33 +349,39 @@ async fn api_task_flow_with_validation() {
         "Rust API Task v2"
     );
 
-    let conflict = fixture
+    let divergent = fixture
         .client
         .patch(fixture.endpoint(&format!("/api/tasks/{task_id}")))
         .json(&json!({
-            "status":"COMPLETED",
+            "status":"blocked",
             "columnId":"dev",
             "scope":"Drive API validation coverage through the Dev lane.",
-            "acceptanceCriteria":["The workflow state must remain internally consistent."],
+            "acceptanceCriteria":["Status and column may diverge."],
             "verificationCommands":["cargo test -p routa-server --test rust_api_end_to_end -- api_task_flow_with_validation"]
         }))
         .send()
         .await
-        .expect("invalid task transition");
-    assert_eq!(conflict.status(), StatusCode::BAD_REQUEST);
-    let conflict_json: Value = conflict.json().await.expect("decode conflict response");
-    assert!(json_has_error(
-        &conflict_json,
-        "must describe the same workflow state"
-    ));
+        .expect("divergent task update");
+    assert_eq!(divergent.status(), StatusCode::OK);
+    let divergent_json: Value = divergent.json().await.expect("decode divergent response");
+    assert_eq!(
+        divergent_json["task"]["status"].as_str().expect("status"),
+        "blocked"
+    );
+    assert_eq!(
+        divergent_json["task"]["columnId"]
+            .as_str()
+            .expect("columnId"),
+        "dev"
+    );
 
     let complete_task = fixture
         .client
         .patch(fixture.endpoint(&format!("/api/tasks/{task_id}")))
-        .json(&json!({"status":"COMPLETED"}))
+        .json(&json!({"status":"done"}))
         .send()
         .await
-        .expect("mark task completed");
+        .expect("mark task done");
     assert_eq!(complete_task.status(), StatusCode::OK);
 
     let complete_json: Value = complete_task
@@ -386,12 +392,12 @@ async fn api_task_flow_with_validation() {
         complete_json["task"]["status"]
             .as_str()
             .expect("task status"),
-        "COMPLETED"
+        "done"
     );
 
     let by_status = fixture
         .client
-        .get(fixture.endpoint("/api/tasks?workspaceId=default&status=COMPLETED"))
+        .get(fixture.endpoint("/api/tasks?workspaceId=default&status=done"))
         .send()
         .await
         .expect("list completed tasks");
@@ -417,7 +423,7 @@ async fn api_task_flow_with_validation() {
     let status_update = fixture
         .client
         .post(fixture.endpoint(&format!("/api/tasks/{task_id}/status")))
-        .json(&json!({"status":"IN_PROGRESS"}))
+        .json(&json!({"status":"dev"}))
         .send()
         .await
         .expect("task status update");

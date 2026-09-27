@@ -233,7 +233,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
           case "task_completion": {
             const taskStatus = update.taskStatus as string | undefined;
             const summary = update.completionSummary as string | undefined;
-            if (taskStatus === "NEEDS_FIX" || taskStatus === "BLOCKED" || taskStatus === "FAILED") {
+            if (taskStatus === "blocked") {
               agent.status = "error";
               if (summary) {
                 messages.push({
@@ -307,7 +307,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
           content: taskContent,
           type: "task",
           sessionId,
-          metadata: { taskStatus: "PENDING" },
+          metadata: { taskStatus: "backlog" },
         });
       } catch {
         await notesHook.updateNote(`task-${task.id}`, {
@@ -524,11 +524,11 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
       if (!note) continue;
 
       const nextTaskStatus = agent.status === "completed"
-        ? "COMPLETED"
+        ? "done"
         : agent.status === "error"
-          ? "FAILED"
+          ? "blocked"
           : agent.status === "running"
-            ? "IN_PROGRESS"
+            ? "dev"
             : note.metadata.taskStatus;
 
       const assignedAgentIds = note.metadata.assignedAgentIds ?? [];
@@ -551,7 +551,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
 
   useEffect(() => {
     const staleTasks = notesHook.notes.filter((note) => {
-      if (note.metadata.type !== "task" || note.metadata.taskStatus !== "IN_PROGRESS") {
+      if (note.metadata.type !== "task" || note.metadata.taskStatus !== "dev") {
         return false;
       }
 
@@ -573,10 +573,10 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
     void Promise.allSettled(staleTasks.map((note) => {
       const matchedAgent = findCrafterForNote(note);
       const nextStatus = matchedAgent?.status === "completed"
-        ? "COMPLETED"
+        ? "done"
         : matchedAgent?.status === "error"
-          ? "FAILED"
-          : "PENDING";
+          ? "blocked"
+          : "backlog";
 
       if (note.metadata.taskStatus === nextStatus) {
         return Promise.resolve(null);
@@ -603,7 +603,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
     runningCrafterCountRef.current++;
 
     await notesHook.updateNote(noteId, {
-      metadata: { ...note.metadata, taskStatus: "IN_PROGRESS" },
+      metadata: { ...note.metadata, taskStatus: "dev" },
     });
 
     try {
@@ -657,7 +657,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
 
       if (delegationError) {
         await notesHook.updateNote(noteId, {
-          metadata: { ...note.metadata, taskStatus: "FAILED" },
+          metadata: { ...note.metadata, taskStatus: "blocked" },
         });
         runningCrafterCountRef.current = Math.max(0, runningCrafterCountRef.current - 1);
       }
@@ -666,7 +666,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
         await notesHook.updateNote(noteId, {
           metadata: {
             ...note.metadata,
-            taskStatus: "IN_PROGRESS",
+            taskStatus: "dev",
             ...(childSessionId ? { childSessionId } : {}),
             ...(mcpTaskId ? { linkedTaskId: mcpTaskId } : {}),
             ...(agentId ? { assignedAgentIds: [agentId] } : {}),
@@ -685,7 +685,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
     } catch {
       runningCrafterCountRef.current = Math.max(0, runningCrafterCountRef.current - 1);
       await notesHook.updateNote(noteId, {
-        metadata: { ...note.metadata, taskStatus: "PENDING" },
+        metadata: { ...note.metadata, taskStatus: "backlog" },
       });
       return null;
     }
@@ -709,7 +709,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
     const promptText = [note.title.trim(), note.content?.trim()].filter(Boolean).join("\n\n");
 
     await notesHook.updateNote(noteId, {
-      metadata: { ...existingMetadata, taskStatus: "IN_PROGRESS" },
+      metadata: { ...existingMetadata, taskStatus: "dev" },
     });
 
     const providerClient = new BrowserAcpClient(getDesktopApiBaseUrl());
@@ -815,7 +815,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
       await notesHook.updateNote(noteId, {
         metadata: {
           ...existingMetadata,
-          taskStatus: "IN_PROGRESS",
+          taskStatus: "dev",
           childSessionId,
           provider,
           assignedAgentIds: [crafterAgent.id],
@@ -846,7 +846,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
       await notesHook.updateNote(noteId, {
         metadata: {
           ...existingMetadata,
-          taskStatus: "COMPLETED",
+          taskStatus: "done",
           childSessionId,
           provider,
         },
@@ -895,7 +895,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
       await notesHook.updateNote(noteId, {
         metadata: {
           ...existingMetadata,
-          taskStatus: "FAILED",
+          taskStatus: "blocked",
           ...(childSessionId ? { childSessionId } : {}),
           provider,
         },
@@ -940,7 +940,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
   const handleExecuteSelectedNoteTasks = useCallback(async (noteIds: string[], requestedConcurrency: number) => {
     const pendingNoteIds = noteIds.filter((noteId) => {
       const note = notesHook.notes.find((item) => item.id === noteId);
-      return Boolean(note && (!note.metadata.taskStatus || note.metadata.taskStatus === "PENDING"));
+      return Boolean(note && (!note.metadata.taskStatus || note.metadata.taskStatus === "backlog"));
     });
     if (!pendingNoteIds.length) return;
 
@@ -954,7 +954,7 @@ export function useSessionCrafters(params: UseSessionCraftersParams): UseSession
 
   const handleExecuteAllNoteTasks = useCallback(async (requestedConcurrency: number) => {
     const pendingNoteIds = notesHook.notes
-      .filter((note) => note.metadata.type === "task" && (!note.metadata.taskStatus || note.metadata.taskStatus === "PENDING"))
+      .filter((note) => note.metadata.type === "task" && (!note.metadata.taskStatus || note.metadata.taskStatus === "backlog"))
       .map((note) => note.id);
     await handleExecuteSelectedNoteTasks(pendingNoteIds, requestedConcurrency);
   }, [handleExecuteSelectedNoteTasks, notesHook.notes]);

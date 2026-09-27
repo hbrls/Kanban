@@ -42,24 +42,23 @@ export function NoteTasksTab({
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [clearingAll, setClearingAll] = useState(false);
 
-  const TASK_STATUSES = ["PENDING", "IN_PROGRESS", "REVIEW_REQUIRED", "NEEDS_FIX", "COMPLETED", "BLOCKED", "CANCELLED"];
+  const TASK_STATUSES = ["backlog", "todo", "dev", "review", "blocked", "done"];
 
   const filteredTaskNotes = statusFilter === "all"
     ? taskNotes
-    : taskNotes.filter(n => (n.metadata?.taskStatus ?? "PENDING").toUpperCase() === statusFilter);
+    : taskNotes.filter(n => (n.metadata?.taskStatus ?? "backlog") === statusFilter);
 
   const statusColor = (status: string) => {
-    const s = (status ?? "PENDING").toUpperCase();
+    const s = status ?? "backlog";
     const map: Record<string, string> = {
-      PENDING: "bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400",
-      IN_PROGRESS: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-      REVIEW_REQUIRED: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
-      NEEDS_FIX: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
-      COMPLETED: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
-      BLOCKED: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
-      CANCELLED: "bg-slate-100 dark:bg-slate-700/30 text-slate-400",
+      backlog: "bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400",
+      todo: "bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400",
+      dev: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+      review: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
+      done: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+      blocked: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
     };
-    return map[s] ?? map.PENDING;
+    return map[s] ?? map.backlog;
   };
 
   const handleStatusChange = async (noteId: string, newStatus: string) => {
@@ -108,7 +107,7 @@ export function NoteTasksTab({
             {specNotes.map((spec) => {
               const childTasks = tasksByParent.get(spec.id) ?? [];
               const isExpanded = expandedSpec === spec.id;
-              const doneCount = childTasks.filter(t => (t.metadata?.taskStatus ?? "").toUpperCase() === "COMPLETED").length;
+              const doneCount = childTasks.filter(t => (t.metadata?.taskStatus ?? "") === "done").length;
               return (
                 <div key={spec.id} className="bg-white dark:bg-[#12141c] rounded-xl border border-blue-200/60 dark:border-blue-800/30 overflow-hidden">
                   <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors"
@@ -155,7 +154,7 @@ export function NoteTasksTab({
         {taskNotes.length > 0 && (
           <div className="flex gap-1.5 flex-wrap mb-4">
             {(["all", ...TASK_STATUSES] as const).map((s) => {
-              const cnt = s === "all" ? taskNotes.length : taskNotes.filter(n => (n.metadata?.taskStatus ?? "PENDING").toUpperCase() === s).length;
+              const cnt = s === "all" ? taskNotes.length : taskNotes.filter(n => (n.metadata?.taskStatus ?? "backlog") === s).length;
               if (s !== "all" && cnt === 0) return null;
               const active = statusFilter === s;
               return (
@@ -187,7 +186,7 @@ export function NoteTasksTab({
             {filteredTaskNotes.map((task) => {
               const isExpanded = expandedTask === task.id;
               const parentSpec = specNotes.find(s => s.id === task.metadata?.parentNoteId);
-              const status = task.metadata?.taskStatus ?? "PENDING";
+              const status = task.metadata?.taskStatus ?? "backlog";
               return (
                 <div key={task.id} className="bg-white dark:bg-[#12141c] rounded-xl border border-slate-200/60 dark:border-[#1c1f2e] overflow-hidden hover:shadow-sm transition-shadow">
                   <div className="flex items-center gap-3 px-4 py-3">

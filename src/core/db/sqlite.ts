@@ -196,7 +196,7 @@ function initializeSqliteTables(db: SqliteDatabase): void {
       verification_commands TEXT,
       test_cases TEXT,
       assigned_to TEXT,
-      status TEXT NOT NULL DEFAULT 'PENDING',
+      status TEXT NOT NULL DEFAULT 'backlog',
       board_id TEXT,
       column_id TEXT,
       position INTEGER NOT NULL DEFAULT 0,

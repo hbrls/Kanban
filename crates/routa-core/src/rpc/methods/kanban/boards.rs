@@ -370,7 +370,7 @@ pub async fn delete_column(
             state.task_store.delete(&task.id).await?;
             cards_deleted += 1;
         } else {
-            set_task_column(&mut task, "backlog");
+            set_task_column(&mut task, &board.columns, "backlog");
             task.position =
                 next_position_in_column(state, &board.workspace_id, &board.id, "backlog").await?;
             task.updated_at = Utc::now();

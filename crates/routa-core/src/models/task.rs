@@ -200,47 +200,46 @@ impl TaskPriority {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// Canonical task status. `Task.status` and `Column.stage` share this exact
+/// value set; the wire format is the lowercase stage string.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum TaskStatus {
-    #[serde(rename = "PENDING")]
-    Pending,
-    #[serde(rename = "IN_PROGRESS")]
-    InProgress,
-    #[serde(rename = "REVIEW_REQUIRED")]
-    ReviewRequired,
-    #[serde(rename = "COMPLETED")]
-    Completed,
-    #[serde(rename = "NEEDS_FIX")]
-    NeedsFix,
-    #[serde(rename = "BLOCKED")]
+    #[serde(rename = "backlog")]
+    #[default]
+    Backlog,
+    #[serde(rename = "todo")]
+    Todo,
+    #[serde(rename = "dev")]
+    Dev,
+    #[serde(rename = "review")]
+    Review,
+    #[serde(rename = "blocked")]
     Blocked,
-    #[serde(rename = "CANCELLED")]
-    Cancelled,
+    #[serde(rename = "done")]
+    Done,
 }
 
 impl TaskStatus {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Pending => "PENDING",
-            Self::InProgress => "IN_PROGRESS",
-            Self::ReviewRequired => "REVIEW_REQUIRED",
-            Self::Completed => "COMPLETED",
-            Self::NeedsFix => "NEEDS_FIX",
-            Self::Blocked => "BLOCKED",
-            Self::Cancelled => "CANCELLED",
+            Self::Backlog => "backlog",
+            Self::Todo => "todo",
+            Self::Dev => "dev",
+            Self::Review => "review",
+            Self::Blocked => "blocked",
+            Self::Done => "done",
         }
     }
 
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
-            "PENDING" => Some(Self::Pending),
-            "IN_PROGRESS" => Some(Self::InProgress),
-            "REVIEW_REQUIRED" => Some(Self::ReviewRequired),
-            "COMPLETED" => Some(Self::Completed),
-            "NEEDS_FIX" => Some(Self::NeedsFix),
-            "BLOCKED" => Some(Self::Blocked),
-            "CANCELLED" => Some(Self::Cancelled),
+            "backlog" => Some(Self::Backlog),
+            "todo" => Some(Self::Todo),
+            "dev" => Some(Self::Dev),
+            "review" => Some(Self::Review),
+            "blocked" => Some(Self::Blocked),
+            "done" => Some(Self::Done),
             _ => None,
         }
     }
@@ -545,7 +544,7 @@ impl Task {
             verification_commands,
             test_cases,
             assigned_to: None,
-            status: TaskStatus::Pending,
+            status: TaskStatus::Backlog,
             board_id: None,
             column_id: Some("backlog".to_string()),
             position: 0,

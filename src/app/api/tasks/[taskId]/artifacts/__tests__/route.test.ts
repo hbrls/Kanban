@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createArtifact } from "@/core/models/artifact";
-import { createTask, TaskStatus, type Task } from "@/core/models/task";
+import { createTask, type Task } from "@/core/models/task";
 import { InMemoryArtifactStore } from "@/core/store/artifact-store";
 import type { ArtifactType } from "@/core/models/artifact";
 
@@ -69,7 +69,7 @@ describe("/api/tasks/[taskId]/artifacts", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "dev",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
     }));
     await artifactStore.deleteByTask("task-1");
   });

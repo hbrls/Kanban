@@ -45,7 +45,7 @@ function createTask(id: string, title: string, overrides: Partial<TaskInfo> = {}
     id,
     title,
     objective: `${title} objective`,
-    status: "PENDING",
+    status: "backlog",
     boardId: "board-1",
     columnId: "backlog",
     position: 0,

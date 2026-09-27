@@ -225,7 +225,7 @@ function SessionsSplitPane({
     ? sessionNotes.filter((n) => n.metadata.type === "task").length
     : routaTasks.length;
   const runningCount = hasCollabNotes
-    ? sessionNotes.filter((n) => n.metadata.taskStatus === "IN_PROGRESS").length
+    ? sessionNotes.filter((n) => n.metadata.taskStatus === "dev").length
     : routaTasks.filter((task) => task.status === "running").length;
   const specPreviewLines = useMemo(() => {
     if (!specNote?.content) return [];
@@ -375,8 +375,8 @@ function MiniTaskList({
         .map((n) => ({
           id: n.id,
           title: n.title,
-          status: (n.metadata.taskStatus as string) || "PENDING",
-          actionLabel: ["COMPLETED", "IN_PROGRESS"].includes((n.metadata.taskStatus as string) || "PENDING")
+          status: (n.metadata.taskStatus as string) || "backlog",
+          actionLabel: ["done", "dev"].includes((n.metadata.taskStatus as string) || "backlog")
             ? "Open"
             : "Run",
           run: () => onExecuteNoteTask(n.id),
@@ -393,8 +393,8 @@ function MiniTaskList({
 
   if (items.length === 0) return null;
 
-  const runningCount = items.filter((item) => ["running", "IN_PROGRESS"].includes(item.status)).length;
-  const completedCount = items.filter((item) => ["completed", "COMPLETED"].includes(item.status)).length;
+  const runningCount = items.filter((item) => ["running", "dev"].includes(item.status)).length;
+  const completedCount = items.filter((item) => ["completed", "done"].includes(item.status)).length;
 
   return (
     <div className="px-3 py-2 space-y-2" data-testid="session-task-snapshot">
@@ -553,7 +553,7 @@ export function LeftSidebar({
   );
 
   const hasRunningTasks = hasCollabNotes
-    ? sessionNotes.some((n) => n.metadata.taskStatus === "IN_PROGRESS")
+    ? sessionNotes.some((n) => n.metadata.taskStatus === "dev")
     : routaTasks.some((t) => t.status === "running");
 
   return (

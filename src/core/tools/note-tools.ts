@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 import { NoteStore } from "../store/note-store";
 import { TaskStore } from "../store/task-store";
 import { createNote, Note, SPEC_NOTE_ID } from "../models/note";
-import { createTask as createTaskModel, TaskStatus } from "../models/task";
+import { createTask as createTaskModel } from "../models/task";
 import { extractTaskBlocks, hasTaskBlocks } from "../orchestration/task-block-parser";
 import { ToolResult, successResult, errorResult } from "./tool-result";
 import { NoteEventBroadcaster } from "../notes/note-event-broadcaster";
@@ -150,7 +150,7 @@ export class NoteTools {
     }
     note.updatedAt = new Date();
 
-    // When spec note content is replaced, remove old PENDING task notes derived from it
+    // When spec note content is replaced, remove old backlog task notes derived from it
     // so the left panel resets to reflect the new spec content.
     if (params.noteId === SPEC_NOTE_ID) {
       const effectiveSessionId = params.sessionId ?? note.sessionId;
@@ -159,7 +159,7 @@ export class NoteTools {
         (n) =>
           n.metadata.parentNoteId === params.noteId &&
           n.sessionId === effectiveSessionId &&
-          (!n.metadata.taskStatus || n.metadata.taskStatus === TaskStatus.PENDING)
+          (!n.metadata.taskStatus || n.metadata.taskStatus === "backlog")
       );
       for (const staleNote of staleTasks) {
         await this.noteStore.delete(staleNote.id, params.workspaceId);
@@ -341,7 +341,7 @@ export class NoteTools {
         sessionId: effectiveSessionId,
         metadata: {
           type: "task",
-          taskStatus: TaskStatus.PENDING,
+          taskStatus: "backlog",
           parentNoteId: params.noteId,
           linkedTaskId: taskId,
         },
