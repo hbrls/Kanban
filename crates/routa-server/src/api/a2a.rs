@@ -224,7 +224,7 @@ async fn rpc_handler(
                 tokio::time::sleep(Duration::from_millis(200)).await;
                 let _ = state_clone
                     .task_store
-                    .update_status(&task_id_clone, &TaskStatus::Completed)
+                    .update_status(&task_id_clone, &TaskStatus::Done)
                     .await;
             });
 
@@ -271,7 +271,7 @@ async fn rpc_handler(
             get_task_in_workspace(&state, task_id, workspace_id).await?;
             state
                 .task_store
-                .update_status(task_id, &TaskStatus::Cancelled)
+                .update_status(task_id, &TaskStatus::Blocked)
                 .await?;
             let task = get_task_in_workspace(&state, task_id, workspace_id).await?;
             build_a2a_task_payload(&task, "canceled", Some(task.updated_at.to_rfc3339()))
@@ -556,11 +556,10 @@ fn truncate_text(text: &str, max_len: usize) -> String {
 
 fn map_task_status_to_a2a_state(status: &TaskStatus) -> &'static str {
     match status {
-        TaskStatus::Completed => "completed",
-        TaskStatus::Cancelled => "canceled",
-        TaskStatus::Blocked | TaskStatus::NeedsFix => "failed",
-        TaskStatus::Pending => "submitted",
-        TaskStatus::InProgress | TaskStatus::ReviewRequired => "working",
+        TaskStatus::Done => "completed",
+        TaskStatus::Blocked => "failed",
+        TaskStatus::Dev | TaskStatus::Review => "working",
+        TaskStatus::Backlog | TaskStatus::Todo => "submitted",
     }
 }
 
@@ -706,7 +705,7 @@ mod tests {
             .await
             .expect("read task")
             .expect("Alice task exists");
-        assert_eq!(persisted.status, TaskStatus::Pending);
+        assert_eq!(persisted.status, TaskStatus::Backlog);
     }
 
     #[tokio::test]

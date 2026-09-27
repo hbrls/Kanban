@@ -2,7 +2,7 @@
 
 import type { AcpTaskAdaptiveHarnessOptions } from "@/client/acp-client";
 import type { McpServerProfile } from "@/core/mcp/mcp-server-profiles";
-import type { KanbanHistoryMemoryPolicy, KanbanRequiredTaskField } from "@/core/models/kanban";
+import type { KanbanColumnStage, KanbanHistoryMemoryPolicy, KanbanRequiredTaskField } from "@/core/models/kanban";
 import type {
   TaskAnalysisStatus,
   TaskContextSearchSpec,
@@ -330,7 +330,7 @@ export interface KanbanColumnInfo {
   name: string;
   color?: string;
   position: number;
-  stage: string;
+  stage: KanbanColumnStage;
   visible?: boolean;
   width?: "compact" | "standard" | "wide";
   automation?: KanbanColumnAutomationInfo;

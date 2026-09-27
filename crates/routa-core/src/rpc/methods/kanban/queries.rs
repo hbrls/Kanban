@@ -118,7 +118,7 @@ pub struct ListCardsParams {
     pub board_id: Option<String>,
     /// Filter by column id
     pub column_id: Option<String>,
-    /// Filter by task status (e.g. "PENDING", "IN_PROGRESS")
+    /// Filter by task status (e.g. "backlog", "dev")
     pub status: Option<String>,
     /// Filter by priority (e.g. "low", "medium", "high", "urgent")
     pub priority: Option<String>,
@@ -149,7 +149,7 @@ pub async fn list_cards(
         .map(|s| {
             TaskStatus::from_str(s).ok_or_else(|| {
                 RpcError::BadRequest(format!(
-                    "Invalid status: {s}. Valid values are: PENDING, IN_PROGRESS, REVIEW_REQUIRED, COMPLETED, NEEDS_FIX, BLOCKED, CANCELLED"
+                    "Invalid status: {s}. Valid values are: backlog, todo, dev, review, blocked, done"
                 ))
             })
         })
@@ -371,7 +371,7 @@ mod tests {
             None,
         );
         high_task.board_id = Some(board.id.clone());
-        set_task_column(&mut high_task, "dev");
+        set_task_column(&mut high_task, &board.columns, "dev");
         high_task.priority = Some(TaskPriority::High);
         high_task.labels = vec!["feature".to_string(), "kanban".to_string()];
         state.task_store.save(&high_task).await.expect("save");
@@ -390,7 +390,7 @@ mod tests {
             None,
         );
         low_task.board_id = Some(board.id.clone());
-        set_task_column(&mut low_task, "todo");
+        set_task_column(&mut low_task, &board.columns, "todo");
         low_task.priority = Some(TaskPriority::Low);
         low_task.labels = vec!["feature".to_string()];
         state.task_store.save(&low_task).await.expect("save");
@@ -456,7 +456,7 @@ mod tests {
             None,
         );
         backlog_task.board_id = Some(board.id.clone());
-        set_task_column(&mut backlog_task, "backlog");
+        set_task_column(&mut backlog_task, &board.columns, "backlog");
         state.task_store.save(&backlog_task).await.expect("save");
 
         let mut dev_task = Task::new(
@@ -473,7 +473,7 @@ mod tests {
             None,
         );
         dev_task.board_id = Some(board.id.clone());
-        set_task_column(&mut dev_task, "dev");
+        set_task_column(&mut dev_task, &board.columns, "dev");
         dev_task.updated_at = Utc::now();
         state.task_store.save(&dev_task).await.expect("save");
 
@@ -489,7 +489,7 @@ mod tests {
 
         assert_eq!(status.total_cards, 2);
         assert_eq!(status.totals.total, 2);
-        assert_eq!(status.totals.by_status.get("IN_PROGRESS").copied(), Some(1));
+        assert_eq!(status.totals.by_status.get("dev").copied(), Some(1));
 
         let dev = status
             .columns

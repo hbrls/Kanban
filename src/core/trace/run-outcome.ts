@@ -3,7 +3,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { AgentRole } from "../models/agent";
 import {
-  TaskStatus,
   type Task,
   type TaskLaneSession,
   VerificationVerdict,
@@ -133,31 +132,27 @@ export function determineOutcome(task?: Task): OutcomeStatus {
     return "unknown";
   }
 
-  if (task.status === TaskStatus.CANCELLED) {
-    return "cancelled";
-  }
-
   const approved =
     task.verificationVerdict === undefined
     || task.verificationVerdict === null
     || task.verificationVerdict === VerificationVerdict.APPROVED;
 
-  if (task.status === TaskStatus.COMPLETED && approved) {
+  if (task.status === "done" && approved) {
     return "success";
   }
 
   if (
-    task.status === TaskStatus.NEEDS_FIX
-    || task.status === TaskStatus.BLOCKED
+    task.status === "blocked"
     || task.verificationVerdict === VerificationVerdict.NOT_APPROVED
   ) {
     return "failure";
   }
 
   if (
-    task.status === TaskStatus.IN_PROGRESS
-    || task.status === TaskStatus.PENDING
-    || task.status === TaskStatus.REVIEW_REQUIRED
+    task.status === "backlog"
+    || task.status === "todo"
+    || task.status === "dev"
+    || task.status === "review"
   ) {
     return "partial";
   }
@@ -255,7 +250,7 @@ function inferTaskType(task: Task | undefined, role: AgentRole): TaskType {
     return "kanban_card";
   }
 
-  if (task?.verificationVerdict && task.status === TaskStatus.REVIEW_REQUIRED) {
+  if (task?.verificationVerdict && task.status === "review") {
     return "review_flow";
   }
 
@@ -406,7 +401,7 @@ function deriveFailureMode(
     return "lane_loop";
   }
 
-  if (task?.status === TaskStatus.BLOCKED) {
+  if (task?.status === "blocked") {
     return "task_blocked";
   }
 

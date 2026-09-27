@@ -64,7 +64,8 @@ pub use queries::{
 #[cfg(test)]
 mod tests {
     use super::automation::{
-        absolutize_url, apply_trigger_result, build_task_prompt, AgentTriggerResult,
+        absolutize_url, apply_trigger_result, build_task_prompt, resolve_next_execution_column_id,
+        AgentTriggerResult,
     };
     use super::boards::build_board_result;
     use super::*;
@@ -77,7 +78,7 @@ mod tests {
     };
     use crate::models::task::{
         Task, TaskLaneHandoff, TaskLaneHandoffRequestType, TaskLaneHandoffStatus, TaskLaneSession,
-        TaskLaneSessionStatus, VerificationVerdict,
+        TaskLaneSessionStatus, TaskStatus, VerificationVerdict,
     };
     use crate::models::workspace::Workspace;
     use crate::rpc::error::RpcError;
@@ -280,6 +281,85 @@ mod tests {
     }
 
     #[test]
+    fn execution_sequence_stops_at_done_and_excludes_blocked() {
+        let board = KanbanBoard {
+            id: "board-1".to_string(),
+            workspace_id: "default".to_string(),
+            name: "Board".to_string(),
+            is_default: true,
+            github_token: None,
+            columns: vec![
+                KanbanColumn {
+                    id: "done".to_string(),
+                    name: "Done".to_string(),
+                    color: None,
+                    position: 4,
+                    stage: "done".to_string(),
+                    automation: None,
+                    visible: Some(true),
+                    width: None,
+                },
+                KanbanColumn {
+                    id: "blocked".to_string(),
+                    name: "Blocked".to_string(),
+                    color: None,
+                    position: 5,
+                    stage: "blocked".to_string(),
+                    automation: None,
+                    visible: Some(true),
+                    width: None,
+                },
+            ],
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        assert_eq!(
+            resolve_next_execution_column_id(Some(&board), Some("review")),
+            Some("done".to_string())
+        );
+        assert_eq!(
+            resolve_next_execution_column_id(Some(&board), Some("done")),
+            None
+        );
+        assert_eq!(
+            resolve_next_execution_column_id(Some(&board), Some("blocked")),
+            None
+        );
+    }
+
+    #[test]
+    fn terminal_prompt_does_not_instruct_a_further_move() {
+        let mut task = Task::new(
+            "task-terminal".to_string(),
+            "Report completion".to_string(),
+            "Finish the task".to_string(),
+            "default".to_string(),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        task.column_id = Some("done".to_string());
+
+        let prompt = build_task_prompt(
+            &task,
+            Some("board-1"),
+            None,
+            "- done (Done) stage=done position=4\n- blocked (Blocked) stage=blocked position=5",
+            None,
+            None,
+            None,
+        );
+
+        assert!(prompt.contains("terminal lane; do not move"));
+        assert!(!prompt.contains("targetColumnId"));
+    }
+
+    #[test]
     fn absolutize_url_resolves_relative_urls_against_agent_card() {
         let resolved = absolutize_url("https://example.com/.well-known/agent-card.json", "/rpc")
             .expect("relative URLs should resolve");
@@ -477,7 +557,7 @@ mod tests {
         .await
         .expect("move card should succeed");
         assert_eq!(moved.card.column_id, "dev");
-        assert_eq!(moved.card.status, "IN_PROGRESS");
+        assert_eq!(moved.card.status, "dev");
 
         let err = move_card(
             &state,
@@ -594,6 +674,13 @@ mod tests {
         .await
         .expect("create card should succeed");
 
+        let before = state
+            .task_store
+            .get(&created.card.id)
+            .await
+            .expect("task lookup should succeed")
+            .expect("task should exist");
+
         move_card(
             &state,
             MoveCardParams {
@@ -611,8 +698,10 @@ mod tests {
             .await
             .expect("task lookup should succeed")
             .expect("task should exist");
-        assert_eq!(updated.column_id.as_deref(), Some("blocked"));
-        assert!(updated.trigger_session_id.is_none());
+        assert_eq!(updated.column_id.as_deref(), Some("backlog"));
+        assert_eq!(updated.status, TaskStatus::Blocked);
+        assert_eq!(updated.trigger_session_id, before.trigger_session_id);
+        assert_eq!(updated.lane_sessions.len(), before.lane_sessions.len());
         assert!(!updated.lane_sessions.iter().any(|session| {
             session.column_id.as_deref() == Some("blocked")
                 && session.status == TaskLaneSessionStatus::Running

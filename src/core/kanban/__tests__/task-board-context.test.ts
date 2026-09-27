@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TaskStatus, createTask } from "@/core/models/task";
+import { createTask } from "@/core/models/task";
 import { ensureTaskBoardContext } from "../task-board-context";
 import { ensureDefaultBoard } from "../boards";
 
@@ -23,7 +23,7 @@ describe("ensureTaskBoardContext", () => {
       title: "Legacy card",
       objective: "Repair missing board context",
       workspaceId: "workspace-1",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     });
 
     const nextTask = await ensureTaskBoardContext({} as never, task);
@@ -38,7 +38,7 @@ describe("ensureTaskBoardContext", () => {
       title: "Assigned card",
       objective: "Keep existing context",
       workspaceId: "workspace-1",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
       boardId: "board-1",
       columnId: "dev",
     });

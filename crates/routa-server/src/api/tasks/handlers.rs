@@ -53,6 +53,26 @@ pub fn router() -> Router<AppState> {
         .route("/ready", get(find_ready_tasks))
 }
 
+async fn move_task_to_column(
+    state: &AppState,
+    task: &mut routa_core::models::task::Task,
+    column_id: &str,
+) -> Result<(), ServerError> {
+    let board = if let Some(board_id) = task.board_id.as_deref() {
+        state.kanban_store.get(board_id).await?
+    } else {
+        None
+    };
+    match board {
+        Some(board) => set_task_column(task, &board.columns, column_id),
+        None => {
+            task.column_id = Some(column_id.to_string());
+            task.status = TaskStatus::from_str(column_id).unwrap_or_default();
+        }
+    }
+    Ok(())
+}
+
 async fn emit_kanban_workspace_event(
     state: &AppState,
     workspace_id: &str,
@@ -315,7 +335,7 @@ async fn create_task(
                         task.worktree_id = Some(worktree_id);
                     }
                     Err(err) => {
-                        set_task_column(&mut task, "blocked");
+                        move_task_to_column(&state, &mut task, "blocked").await?;
                         task.last_sync_error = Some(format!("Worktree creation failed: {err}"));
                     }
                 }
@@ -464,7 +484,7 @@ async fn update_task(
                     task.test_cases.as_ref(),
                 )),
                 &task.labels,
-                if task.status == TaskStatus::Completed {
+                if task.status == TaskStatus::Done {
                     "closed"
                 } else {
                     "open"
@@ -474,7 +494,7 @@ async fn update_task(
             .await
             {
                 Ok(()) => {
-                    task.github_state = Some(if task.status == TaskStatus::Completed {
+                    task.github_state = Some(if task.status == TaskStatus::Done {
                         "closed".to_string()
                     } else {
                         "open".to_string()
@@ -512,7 +532,7 @@ async fn update_task(
                         task.worktree_id = Some(worktree_id);
                     }
                     Err(err) => {
-                        set_task_column(&mut task, "blocked");
+                        move_task_to_column(&state, &mut task, "blocked").await?;
                         task.last_sync_error = Some(format!("Worktree creation failed: {err}"));
                         state.task_store.save(&task).await?;
                         emit_kanban_workspace_event(

@@ -18,7 +18,7 @@ function buildTask(overrides?: Partial<TaskInfo>): TaskInfo {
     id: "task-1",
     title: "Artifact status",
     objective: "Show artifact gate state on the card.",
-    status: "IN_PROGRESS",
+    status: "dev",
     boardId: "board-1",
     columnId: "dev",
     position: 0,
@@ -79,6 +79,36 @@ describe("getLatestCardLaneSession", () => {
 });
 
 describe("KanbanCard cover", () => {
+  it("uses red only for blocked task status and gray for other task statuses", () => {
+    const { rerender } = render(
+      <KanbanCard
+        task={buildTask({ status: "blocked" })}
+        codebases={[]}
+        allCodebaseIds={[]}
+        worktreeCache={{}}
+        onOpenDetail={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("kanban-card-task-status").className).toContain("bg-rose-100");
+
+    for (const status of ["backlog", "todo", "dev", "review", "done"] as const) {
+      rerender(
+        <KanbanCard
+          task={buildTask({ status })}
+          codebases={[]}
+          allCodebaseIds={[]}
+          worktreeCache={{}}
+          onOpenDetail={vi.fn()}
+        />,
+      );
+
+      const badge = screen.getByTestId("kanban-card-task-status");
+      expect(badge.className).toContain("bg-slate-100");
+      expect(badge.className).not.toContain("bg-rose-100");
+    }
+  });
+
   it("does not render artifact gate or count badges on the card cover", () => {
     render(
       <KanbanCard

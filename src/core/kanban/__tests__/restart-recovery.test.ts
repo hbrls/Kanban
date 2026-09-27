@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTask, TaskStatus, VerificationVerdict, type Task } from "@/core/models/task";
+import { createTask, VerificationVerdict, type Task } from "@/core/models/task";
 import { reviveMissingEntryAutomations } from "../restart-recovery";
 
 const notify = vi.fn();
@@ -24,7 +24,7 @@ function createTaskWithRunningSession(overrides?: Partial<Task>): Task {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }),
     triggerSessionId: "session-1",
     laneSessions: [{
@@ -133,7 +133,7 @@ describe("kanban restart recovery", () => {
         title: "Approved review story",
         objective: "Review story",
         columnId: "review",
-        status: TaskStatus.REVIEW_REQUIRED,
+        status: "review",
         verificationVerdict: VerificationVerdict.APPROVED,
         verificationReport: "looks good",
       }),
@@ -197,7 +197,7 @@ describe("kanban restart recovery", () => {
         workspaceId: "workspace-1",
         boardId: "board-1",
         columnId: "review",
-        status: TaskStatus.REVIEW_REQUIRED,
+        status: "review",
       }),
       verificationVerdict: VerificationVerdict.APPROVED,
       laneSessions: [{
@@ -219,7 +219,7 @@ describe("kanban restart recovery", () => {
     expect(taskStore.save).toHaveBeenCalledWith(expect.objectContaining({
       id: "task-1",
       columnId: "stage-7",
-      status: TaskStatus.COMPLETED,
+      status: "done",
     }));
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({
       action: "moved",
@@ -273,7 +273,7 @@ describe("kanban restart recovery", () => {
         workspaceId: "workspace-1",
         boardId: "board-1",
         columnId: "review",
-        status: TaskStatus.REVIEW_REQUIRED,
+        status: "review",
       }),
       verificationVerdict: VerificationVerdict.NOT_APPROVED,
       laneSessions: [{
@@ -295,7 +295,7 @@ describe("kanban restart recovery", () => {
     expect(taskStore.save).toHaveBeenCalledWith(expect.objectContaining({
       id: "task-1",
       columnId: "implementation",
-      status: TaskStatus.IN_PROGRESS,
+      status: "dev",
     }));
     expect(processKanbanColumnTransition).toHaveBeenCalledWith(system, expect.objectContaining({
       cardId: "task-1",
@@ -327,7 +327,7 @@ describe("kanban restart recovery", () => {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "blocked",
-      status: TaskStatus.BLOCKED,
+      status: "blocked",
     })]);
 
     await reviveMissingEntryAutomations(system as never, "workspace-1", "board-1", {

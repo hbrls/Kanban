@@ -320,7 +320,7 @@ describe("executeMcpTool", () => {
       {
         workspaceId: "workspace-1",
         taskId: "task-1",
-        status: "COMPLETED",
+        status: "done",
         verificationVerdict: "APPROVED",
       },
       undefined,

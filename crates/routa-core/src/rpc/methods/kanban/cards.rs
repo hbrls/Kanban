@@ -2,7 +2,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::kanban::{set_task_column, sync_task_status_from_column, task_to_card, KanbanCard};
-use crate::models::task::{Task, TaskLaneSessionStatus};
+use crate::models::task::{Task, TaskLaneSessionStatus, TaskStatus};
 use crate::rpc::error::RpcError;
 use crate::state::AppState;
 
@@ -90,7 +90,7 @@ pub async fn create_card(
     task.board_id = Some(board.id.clone());
     task.column_id = Some(target_column_id.clone());
     task.position = position;
-    set_task_column(&mut task, target_column_id);
+    set_task_column(&mut task, &board.columns, target_column_id);
     task.priority = parse_priority(params.priority.as_deref())?;
     task.labels = params.labels.unwrap_or_default();
     maybe_apply_lane_automation_defaults(&mut task, target_column.as_ref());
@@ -155,6 +155,23 @@ pub async fn move_card(
         .ok_or_else(|| {
             RpcError::NotFound(format!("Column {} not found", params.target_column_id))
         })?;
+    if params.target_column_id == "blocked" {
+        task.status = TaskStatus::Blocked;
+        task.updated_at = Utc::now();
+        state.task_store.save(&task).await?;
+        emit_kanban_workspace_event(
+            state,
+            &board.workspace_id,
+            "task",
+            "updated",
+            Some(&task.id),
+            "system",
+        )
+        .await;
+        return Ok(MoveCardResult {
+            card: task_to_card(&task),
+        });
+    }
     let previous_column_id = task.column_id.clone();
     let source_column = previous_column_id
         .as_deref()
@@ -186,7 +203,7 @@ pub async fn move_card(
             .await?
         }
     };
-    sync_task_status_from_column(&mut task);
+    sync_task_status_from_column(&mut task, &board.columns);
     if previous_column_id.as_deref() != Some(params.target_column_id.as_str()) {
         let transition_column =
             resolve_transition_automation_column(source_column.as_ref(), Some(&target_column));
@@ -443,7 +460,7 @@ pub async fn decompose_tasks(
         task.board_id = Some(board.id.clone());
         task.column_id = Some(target_column_id.clone());
         task.position = position;
-        set_task_column(&mut task, target_column_id.clone());
+        set_task_column(&mut task, &board.columns, target_column_id.clone());
         task.priority = parse_priority(item.priority.as_deref())?;
         task.labels = item.labels.unwrap_or_default();
         task.updated_at = Utc::now();
