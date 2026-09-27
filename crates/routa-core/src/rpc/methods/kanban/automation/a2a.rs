@@ -13,8 +13,8 @@ use crate::models::task::{
 use crate::state::AppState;
 
 use super::{
-    apply_trigger_result, build_task_prompt, resolve_next_required_artifacts,
-    resolve_next_required_task_fields, AgentTriggerResult,
+    apply_trigger_result, build_task_prompt, resolve_next_execution_column_id,
+    resolve_next_required_artifacts, resolve_next_required_task_fields, AgentTriggerResult,
 };
 
 const A2A_POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -42,11 +42,7 @@ pub(super) async fn trigger_assigned_task_a2a_agent(
 
     let mut ordered_columns = board.map(|value| value.columns.clone()).unwrap_or_default();
     ordered_columns.sort_by_key(|column| column.position);
-    let next_column_id = ordered_columns
-        .iter()
-        .position(|column| Some(column.id.as_str()) == task.column_id.as_deref())
-        .and_then(|index| ordered_columns.get(index + 1))
-        .map(|column| column.id.clone());
+    let next_column_id = resolve_next_execution_column_id(board, task.column_id.as_deref());
     let available_columns = if ordered_columns.is_empty() {
         "- unavailable".to_string()
     } else {

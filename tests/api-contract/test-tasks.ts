@@ -15,8 +15,7 @@ import {
 } from "./helpers";
 
 const TASK_STATUSES = [
-  "PENDING", "IN_PROGRESS", "REVIEW_REQUIRED", "COMPLETED",
-  "NEEDS_FIX", "BLOCKED", "CANCELLED",
+  "backlog", "todo", "dev", "review", "blocked", "done",
 ];
 
 export async function testTasks(): Promise<TestResult[]> {
@@ -83,7 +82,7 @@ export async function testTasks(): Promise<TestResult[]> {
       const { status, data } = await api(
         "POST",
         `/api/tasks/${createdTaskId}/status`,
-        { status: "IN_PROGRESS" }
+        { status: "dev" }
       );
       assertStatus(status, 200);
       const d = data as Record<string, unknown>;

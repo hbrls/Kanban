@@ -354,10 +354,10 @@ export class RoutaMcpToolManager {
       "Atomically update a task's status. Emits TASK_STATUS_CHANGED event.",
       {
         taskId: z.string().describe("ID of the task to update"),
-        status: z.enum(["PENDING", "IN_PROGRESS", "REVIEW_REQUIRED", "COMPLETED", "NEEDS_FIX", "BLOCKED", "CANCELLED"])
+        status: z.enum(["backlog", "todo", "dev", "review", "blocked", "done"])
           .describe("New task status"),
         agentId: z.string().describe("ID of the agent performing the update"),
-        summary: z.string().optional().describe("Completion summary (for COMPLETED/NEEDS_FIX)"),
+        summary: z.string().optional().describe("Completion summary (for done/blocked)"),
       },
       async (params) => {
         const result = await this.tools.updateTaskStatus(params);

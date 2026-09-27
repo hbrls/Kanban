@@ -82,7 +82,7 @@ export const tasks = pgTable("tasks", {
   verificationCommands: jsonb("verification_commands").$type<string[]>(),
   testCases: jsonb("test_cases").$type<string[]>(),
   assignedTo: text("assigned_to"),
-  status: text("status").notNull().default("PENDING"),
+  status: text("status").notNull().default("backlog"),
   boardId: text("board_id"),
   columnId: text("column_id"),
   position: integer("position").notNull().default(0),

@@ -544,7 +544,7 @@ export function HomeTodoPreview({
         const nextTasks = Array.isArray(data?.tasks) ? (data.tasks as HomeTaskInfo[]) : [];
         setTasks(
           nextTasks
-            .filter((task) => !["COMPLETED", "CANCELLED"].includes(task.status))
+            .filter((task) => task.status !== "done")
             .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
             .slice(0, 4),
         );

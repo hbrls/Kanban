@@ -14,6 +14,28 @@ use routa_core::store::acp_session_store::CreateAcpSessionParams;
 const A2A_POLL_INTERVAL: Duration = Duration::from_secs(1);
 const A2A_MAX_WAIT: Duration = Duration::from_secs(300);
 const A2A_AUTH_CONFIGS_ENV: &str = "ROUTA_A2A_AUTH_CONFIGS";
+const KANBAN_EXECUTION_COLUMN_ORDER: [&str; 5] = ["backlog", "todo", "dev", "review", "done"];
+
+fn resolve_next_execution_column_id(
+    board: Option<&KanbanBoard>,
+    current_column_id: Option<&str>,
+) -> Option<String> {
+    let current_column_id = current_column_id.unwrap_or("backlog").to_ascii_lowercase();
+    let next_column_id = KANBAN_EXECUTION_COLUMN_ORDER
+        .iter()
+        .position(|column_id| *column_id == current_column_id)
+        .and_then(|index| KANBAN_EXECUTION_COLUMN_ORDER.get(index + 1))
+        .copied()?;
+
+    board
+        .and_then(|value| {
+            value
+                .columns
+                .iter()
+                .find(|column| column.id == next_column_id)
+        })
+        .map(|column| column.id.clone())
+}
 
 pub async fn resolve_codebase(
     state: &AppState,
@@ -27,6 +49,61 @@ pub async fn resolve_codebase(
             .await
     } else {
         state.codebase_store.get_default(workspace_id).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_next_execution_column_id;
+    use chrono::Utc;
+    use routa_core::models::kanban::{KanbanBoard, KanbanColumn};
+
+    fn board() -> KanbanBoard {
+        KanbanBoard {
+            id: "board-1".to_string(),
+            workspace_id: "workspace-1".to_string(),
+            name: "Board".to_string(),
+            is_default: true,
+            github_token: None,
+            columns: vec![
+                KanbanColumn {
+                    id: "done".to_string(),
+                    name: "Done".to_string(),
+                    color: None,
+                    position: 4,
+                    stage: "done".to_string(),
+                    automation: None,
+                    visible: Some(true),
+                    width: None,
+                },
+                KanbanColumn {
+                    id: "blocked".to_string(),
+                    name: "Blocked".to_string(),
+                    color: None,
+                    position: 5,
+                    stage: "blocked".to_string(),
+                    automation: None,
+                    visible: Some(true),
+                    width: None,
+                },
+            ],
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn execution_sequence_does_not_use_blocked_after_done() {
+        let board = board();
+
+        assert_eq!(
+            resolve_next_execution_column_id(Some(&board), Some("done")),
+            None
+        );
+        assert_eq!(
+            resolve_next_execution_column_id(Some(&board), Some("blocked")),
+            None
+        );
     }
 }
 
@@ -215,20 +292,22 @@ fn build_task_prompt(
             task.id
         ),
         "- **routa-coordination_update_card is not a story-readiness tool**: card description or comment text does not satisfy move gates for scope, acceptance criteria, verification commands, or test cases.".to_string(),
-        format!(
-            "- **routa-coordination_move_card**: Move this same card to targetColumnId \"{}\" when the current lane is complete.",
-            next_column_id.unwrap_or("the exact next column id listed above")
-        ),
+        next_column_id
+            .map(|value| format!(
+                "- **routa-coordination_move_card**: Move this same card to targetColumnId \"{value}\" when the current lane is complete."
+            ))
+            .unwrap_or_else(|| "- **routa-coordination_move_card**: This is the terminal lane; do not move this card to another column.".to_string()),
         String::new(),
         "## Instructions".to_string(),
         String::new(),
         "1. Start work for the current lane immediately.".to_string(),
         "2. Keep changes focused on this card only.".to_string(),
         "3. Use `routa-coordination_update_task` to fix missing structured story fields, and `routa-coordination_update_card` only for card text or progress notes.".to_string(),
-        format!(
-            "4. Use the exact tool name `routa-coordination_move_card` with targetColumnId `{}` only when the current lane is complete.",
-            next_column_id.unwrap_or("the exact next column id listed above")
-        ),
+        next_column_id
+            .map(|value| format!(
+                "4. Use the exact tool name `routa-coordination_move_card` with targetColumnId `{value}` only when the current lane is complete."
+            ))
+            .unwrap_or_else(|| "4. This is the terminal lane; do not move the card to another column.".to_string()),
         "5. Do not guess board ids or column ids. Use the Board ID and Board Columns listed above.".to_string(),
         "6. If blocked, update this same card with the blocking reason instead of exploring side quests.".to_string(),
         "7. Treat lane guidance as stricter than the general card objective when they conflict.".to_string(),
@@ -308,11 +387,7 @@ async fn trigger_assigned_task_acp_agent(
 
     let mut ordered_columns = board.map(|value| value.columns.clone()).unwrap_or_default();
     ordered_columns.sort_by_key(|column| column.position);
-    let next_column_id = ordered_columns
-        .iter()
-        .position(|column| Some(column.id.as_str()) == task.column_id.as_deref())
-        .and_then(|index| ordered_columns.get(index + 1))
-        .map(|column| column.id.clone());
+    let next_column_id = resolve_next_execution_column_id(board, task.column_id.as_deref());
     let available_columns = if ordered_columns.is_empty() {
         "- unavailable".to_string()
     } else {
@@ -464,11 +539,7 @@ async fn trigger_assigned_task_a2a_agent(
 
     let mut ordered_columns = board.map(|value| value.columns.clone()).unwrap_or_default();
     ordered_columns.sort_by_key(|column| column.position);
-    let next_column_id = ordered_columns
-        .iter()
-        .position(|column| Some(column.id.as_str()) == task.column_id.as_deref())
-        .and_then(|index| ordered_columns.get(index + 1))
-        .map(|column| column.id.clone());
+    let next_column_id = resolve_next_execution_column_id(board, task.column_id.as_deref());
     let available_columns = if ordered_columns.is_empty() {
         "- unavailable".to_string()
     } else {
