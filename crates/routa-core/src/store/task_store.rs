@@ -262,14 +262,14 @@ impl TaskStore {
         let all_tasks = self.list_by_workspace(workspace_id).await?;
         let completed_ids: std::collections::HashSet<String> = all_tasks
             .iter()
-            .filter(|t| t.status == TaskStatus::Completed)
+            .filter(|t| t.status == TaskStatus::Done)
             .map(|t| t.id.clone())
             .collect();
 
         Ok(all_tasks
             .into_iter()
             .filter(|t| {
-                t.status == TaskStatus::Pending
+                matches!(t.status, TaskStatus::Backlog | TaskStatus::Todo)
                     && t.dependencies.iter().all(|dep| completed_ids.contains(dep))
             })
             .collect())
@@ -355,7 +355,7 @@ fn row_to_task(row: &Row<'_>) -> Task {
         test_cases,
         assigned_to: row.get(8).unwrap_or(None),
         status: TaskStatus::from_str(&row.get::<_, String>(9).unwrap_or_default())
-            .unwrap_or(TaskStatus::Pending),
+            .unwrap_or_default(),
         board_id: row.get(10).unwrap_or(None),
         column_id: row.get(11).unwrap_or(None),
         position: row.get(12).unwrap_or(0),

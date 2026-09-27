@@ -693,22 +693,12 @@ pub fn default_kanban_board(workspace_id: String) -> KanbanBoard {
     }
 }
 
-pub fn column_id_to_task_status(column_id: Option<&str>) -> TaskStatus {
-    match column_id.unwrap_or("backlog").to_ascii_lowercase().as_str() {
-        "dev" => TaskStatus::InProgress,
-        "review" => TaskStatus::ReviewRequired,
-        "blocked" => TaskStatus::Blocked,
-        "done" => TaskStatus::Completed,
-        _ => TaskStatus::Pending,
-    }
-}
-
-pub fn task_status_to_column_id(status: &TaskStatus) -> &'static str {
-    match status {
-        TaskStatus::InProgress => "dev",
-        TaskStatus::ReviewRequired => "review",
-        TaskStatus::Blocked => "blocked",
-        TaskStatus::Completed => "done",
-        _ => "backlog",
-    }
+/// Find the ID of the board column whose `stage` matches the given status.
+/// Used only to backfill a missing `Task.column_id`; never to compute status.
+pub fn column_id_for_task_status(columns: &[KanbanColumn], status: &TaskStatus) -> Option<String> {
+    let stage = status.as_str();
+    columns
+        .iter()
+        .find(|column| column.stage == stage)
+        .map(|column| column.id.clone())
 }

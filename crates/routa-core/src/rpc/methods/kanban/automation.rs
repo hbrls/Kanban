@@ -16,6 +16,29 @@ use crate::store::acp_session_store::CreateAcpSessionParams;
 
 use self::a2a::{is_a2a_step, trigger_assigned_task_a2a_agent};
 
+const KANBAN_EXECUTION_COLUMN_ORDER: [&str; 5] = ["backlog", "todo", "dev", "review", "done"];
+
+pub(super) fn resolve_next_execution_column_id(
+    board: Option<&KanbanBoard>,
+    current_column_id: Option<&str>,
+) -> Option<String> {
+    let current_column_id = current_column_id.unwrap_or("backlog").to_ascii_lowercase();
+    let next_column_id = KANBAN_EXECUTION_COLUMN_ORDER
+        .iter()
+        .position(|column_id| *column_id == current_column_id)
+        .and_then(|index| KANBAN_EXECUTION_COLUMN_ORDER.get(index + 1))
+        .copied()?;
+
+    board
+        .and_then(|value| {
+            value
+                .columns
+                .iter()
+                .find(|column| column.id == next_column_id)
+        })
+        .map(|column| column.id.clone())
+}
+
 #[derive(Debug)]
 pub(super) struct AgentTriggerResult {
     pub session_id: String,
@@ -662,10 +685,11 @@ pub(super) fn build_task_prompt(
             "1. Update progress on this card with `routa-coordination_update_card` for card `{}`.",
             task.id
         ),
-        format!(
-            "2. When the current lane is complete, advance the same card with `routa-coordination_move_card` to column `{}`.",
-            next_column_id.unwrap_or("the exact next column id listed above")
-        ),
+        next_column_id
+            .map(|value| format!(
+                "2. When the current lane is complete, advance the same card with `routa-coordination_move_card` to column `{value}`."
+            ))
+            .unwrap_or_else(|| "2. This is the terminal lane; do not move the card to another column.".to_string()),
         "3. If you are blocked, update this same card with the blocking reason instead of exploring side quests.".to_string(),
         String::new(),
         "## Instructions".to_string(),
@@ -673,10 +697,11 @@ pub(super) fn build_task_prompt(
         "1. Start work for this lane immediately.".to_string(),
         "2. Keep work scoped to this card only.".to_string(),
         "3. Record progress with the exact tool name `routa-coordination_update_card`.".to_string(),
-        format!(
-            "4. Move the same card forward with the exact tool name `routa-coordination_move_card` and targetColumnId `{}` when this lane is complete.",
-            next_column_id.unwrap_or("the exact next column id listed above")
-        ),
+        next_column_id
+            .map(|value| format!(
+                "4. Move the same card forward with the exact tool name `routa-coordination_move_card` and targetColumnId `{value}` when this lane is complete."
+            ))
+            .unwrap_or_else(|| "4. This is the terminal lane; do not move the card to another column.".to_string()),
         "5. Do not guess board ids or column ids. Use the Board ID and Board Columns listed above.".to_string(),
         "6. Treat lane guidance as stricter than the general card objective when they conflict.".to_string(),
         "7. Do not run browser tests or environment diagnostics unless the card explicitly asks for them.".to_string(),
@@ -752,11 +777,7 @@ async fn trigger_assigned_task_acp_agent(
 
     let mut ordered_columns = board.map(|value| value.columns.clone()).unwrap_or_default();
     ordered_columns.sort_by_key(|column| column.position);
-    let next_column_id = ordered_columns
-        .iter()
-        .position(|column| Some(column.id.as_str()) == task.column_id.as_deref())
-        .and_then(|index| ordered_columns.get(index + 1))
-        .map(|column| column.id.clone());
+    let next_column_id = resolve_next_execution_column_id(board, task.column_id.as_deref());
     let available_columns = if ordered_columns.is_empty() {
         "- unavailable".to_string()
     } else {

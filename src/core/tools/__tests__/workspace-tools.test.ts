@@ -120,10 +120,10 @@ describe("WorkspaceTools", () => {
       { role: "DEVELOPER", status: "PENDING" },
     ]);
     taskStore.listByWorkspace.mockResolvedValue([
-      { status: "PENDING" },
-      { status: "IN_PROGRESS" },
-      { status: "COMPLETED" },
-      { status: "NEEDS_FIX" },
+      { status: "backlog" },
+      { status: "dev" },
+      { status: "done" },
+      { status: "blocked" },
     ]);
     noteStore.listByWorkspace.mockResolvedValue([
       { metadata: { type: "spec" } },
@@ -153,7 +153,7 @@ describe("WorkspaceTools", () => {
     expect(info.data).toMatchObject({
       workspaceId: "workspace-1",
       agents: { total: 3, byRole: { ROUTA: 1, CRAFTER: 1, GATE: 0, DEVELOPER: 1 } },
-      tasks: { total: 4, byStatus: { PENDING: 1, IN_PROGRESS: 1, COMPLETED: 1, NEEDS_FIX: 1, BLOCKED: 0 } },
+      tasks: { total: 4, byStatus: { backlog: 1, todo: 0, dev: 1, review: 0, blocked: 1, done: 1 } },
       notes: { total: 3, byType: { spec: 1, task: 1, general: 1 } },
     });
     expect(details.success).toBe(true);
@@ -165,7 +165,7 @@ describe("WorkspaceTools", () => {
         metadata: { region: "cn" },
       },
       agents: { total: 3, active: 1, completed: 1 },
-      tasks: { total: 4, pending: 1, inProgress: 1, completed: 1, needsFix: 1 },
+      tasks: { total: 4, backlog: 1, todo: 0, dev: 1, review: 0, blocked: 1, done: 1 },
       notes: { total: 3, spec: 1, task: 1, general: 1 },
     });
   });

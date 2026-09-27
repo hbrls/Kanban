@@ -966,7 +966,7 @@ async fn test_rust_backend_api() {
                 "name": "update_task_status",
                 "arguments": {
                     "taskId": report_task_id,
-                    "status": "IN_PROGRESS",
+                    "status": "dev",
                     "agentId": agent_id,
                     "reason": "Starting work on task"
                 }

@@ -186,7 +186,7 @@ fn build_tool_list_inner() -> Vec<serde_json::Value> {
             "type": "object",
             "properties": {
                 "taskId": { "type": "string", "description": "Task ID" },
-                "status": { "type": "string", "enum": ["PENDING","IN_PROGRESS","REVIEW_REQUIRED","COMPLETED","NEEDS_FIX","BLOCKED","CANCELLED"] },
+                "status": { "type": "string", "enum": ["backlog","todo","dev","review","blocked","done"] },
                 "agentId": { "type": "string", "description": "Agent making the update" },
                 "reason": { "type": "string", "description": "Reason for status change" }
             },
@@ -203,7 +203,7 @@ fn build_tool_list_inner() -> Vec<serde_json::Value> {
                 "acceptanceCriteria": { "type": "array", "items": { "type": "string" }, "description": "Structured acceptance criteria" },
                 "verificationCommands": { "type": "array", "items": { "type": "string" }, "description": "Runnable verification commands" },
                 "testCases": { "type": "array", "items": { "type": "string" }, "description": "Human-readable test cases" },
-                "status": { "type": "string", "enum": ["PENDING","IN_PROGRESS","REVIEW_REQUIRED","COMPLETED","NEEDS_FIX","BLOCKED","CANCELLED"] }
+                "status": { "type": "string", "enum": ["backlog","todo","dev","review","blocked","done"] }
             },
             "required": ["taskId"]
         })),

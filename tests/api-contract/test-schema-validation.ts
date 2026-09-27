@@ -339,15 +339,14 @@ async function testTaskSchema(): Promise<TestResult[]> {
   results.push(
     await runTest("Schema: TaskStatus enum validation", async () => {
       const validStatuses = [
-        "PENDING", "IN_PROGRESS", "REVIEW_REQUIRED", "COMPLETED",
-        "NEEDS_FIX", "BLOCKED", "CANCELLED",
+        "backlog", "todo", "dev", "review", "blocked", "done",
       ];
       for (const status of validStatuses) {
         const result = validateSchema("TaskStatus", status);
         assert(result.valid, `TaskStatus "${status}" should be valid`);
       }
-      const invalidResult = validateSchema("TaskStatus", "DONE");
-      assert(!invalidResult.valid, "TaskStatus 'DONE' should be invalid");
+      const invalidResult = validateSchema("TaskStatus", "PENDING");
+      assert(!invalidResult.valid, "TaskStatus 'PENDING' should be invalid");
     })
   );
 
@@ -541,7 +540,7 @@ async function testResponseConsistency(): Promise<TestResult[]> {
         id: "task-123",
         title: "Test Task",
         objective: "Do something",
-        status: "PENDING",
+        status: "backlog",
         dependencies: [],
         workspaceId: "default",
         createdAt: new Date().toISOString(),

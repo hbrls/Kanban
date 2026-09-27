@@ -22,7 +22,7 @@ function createTask(overrides: Partial<TaskInfo> = {}): TaskInfo {
     id: "task-1",
     title: "Fix drag overlay",
     objective: "Keep the card visible during drag",
-    status: "IN_PROGRESS",
+    status: "dev",
     boardId: "board-1",
     columnId: "dev",
     createdAt: "2025-01-01T00:00:00.000Z",
@@ -46,7 +46,7 @@ describe("buildKanbanSessionRestorePrompt", () => {
     expect(prompt).toContain("Card: Fix drag overlay");
     expect(prompt).toContain("Objective: Keep the card visible during drag");
     expect(prompt).toContain("Column: dev");
-    expect(prompt).toContain("Status: IN_PROGRESS");
+    expect(prompt).toContain("Status: dev");
     expect(prompt).toContain("Previous session: session-restore-1");
     expect(prompt).toContain("Working directory: /tmp/repo");
     expect(prompt).toContain("Branch: feature/drag-overlay");

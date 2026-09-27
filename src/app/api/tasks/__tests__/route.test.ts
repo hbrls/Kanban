@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createArtifact } from "@/core/models/artifact";
-import { createTask, TaskStatus, type Task } from "@/core/models/task";
+import { createTask, type Task, type TaskStatus } from "@/core/models/task";
 import { InMemoryArtifactStore } from "@/core/store/artifact-store";
 
 const notify = vi.fn();
@@ -80,7 +80,7 @@ describe("/api/tasks GET", () => {
         workspaceId: "workspace-1",
         boardId: "board-1",
         columnId: "dev",
-        status: TaskStatus.IN_PROGRESS,
+        status: "dev",
       }),
     ]);
     taskStore.listByAssignee.mockResolvedValue([]);
@@ -206,7 +206,7 @@ describe("/api/tasks GET", () => {
         workspaceId: "workspace-1",
         boardId: "board-1",
         columnId: "backlog",
-        status: TaskStatus.PENDING,
+        status: "backlog",
         jitContextSnapshot: {
           generatedAt: "2026-04-22T07:37:30.509Z",
           summary: "Speculative feature-explorer history memory.",

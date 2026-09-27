@@ -150,9 +150,9 @@ pub(super) async fn execute(
                 .unwrap_or(true);
 
             let new_status = if success {
-                crate::models::task::TaskStatus::Completed
+                crate::models::task::TaskStatus::Done
             } else {
-                crate::models::task::TaskStatus::NeedsFix
+                crate::models::task::TaskStatus::Blocked
             };
 
             if let Err(e) = state.task_store.update_status(task_id, &new_status).await {

@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../events/event-bus";
 import { AgentRole, AgentStatus, ModelTier, createAgent } from "../../models/agent";
 import { MessageRole, createMessage } from "../../models/message";
-import { TaskStatus, createTask } from "../../models/task";
+import { createTask } from "../../models/task";
 import { InMemoryAgentStore } from "../../store/agent-store";
 import { InMemoryKanbanBoardStore } from "../../store/kanban-board-store";
 import { InMemoryConversationStore } from "../../store/conversation-store";
@@ -90,7 +90,7 @@ describe("AgentTools extended coverage", () => {
       labels: [],
     });
     task.assignedTo = "agent-1";
-    task.status = TaskStatus.PENDING;
+    task.status = "backlog";
     await taskStore.save(task);
 
     const woken = await tools.wakeOrCreateTaskAgent({
@@ -141,7 +141,7 @@ describe("AgentTools extended coverage", () => {
       labels: [],
     });
     task.assignedTo = "child-1";
-    task.status = TaskStatus.IN_PROGRESS;
+    task.status = "dev";
     await taskStore.save(task);
 
     await conversationStore.append(
@@ -174,7 +174,7 @@ describe("AgentTools extended coverage", () => {
     });
 
     expect(report.success).toBe(true);
-    expect((await taskStore.get("task-2"))?.status).toBe(TaskStatus.COMPLETED);
+    expect((await taskStore.get("task-2"))?.status).toBe("done");
 
     const status = await tools.getAgentStatus("child-1");
     expect(status.success).toBe(true);
@@ -182,7 +182,7 @@ describe("AgentTools extended coverage", () => {
       expect.objectContaining({
         agentId: "child-1",
         messageCount: 2,
-        tasks: [expect.objectContaining({ id: "task-2", status: TaskStatus.COMPLETED })],
+        tasks: [expect.objectContaining({ id: "task-2", status: "done" })],
       }),
     );
 
@@ -260,7 +260,7 @@ describe("AgentTools extended coverage", () => {
     expect(result.success).toBe(true);
     const updated = await taskStore.get("task-review-1");
     expect(updated?.columnId).toBe("done");
-    expect(updated?.status).toBe(TaskStatus.COMPLETED);
+    expect(updated?.status).toBe("done");
   });
 
   it("maps converged review verdicts from board stage when done uses a custom id", async () => {
@@ -323,7 +323,7 @@ describe("AgentTools extended coverage", () => {
     expect(result.success).toBe(true);
     const updated = await taskStore.get("task-review-2");
     expect(updated?.columnId).toBe("released-stage");
-    expect(updated?.status).toBe(TaskStatus.COMPLETED);
+    expect(updated?.status).toBe("done");
   });
 
   it("persists structured jit context analysis through updateTask", async () => {

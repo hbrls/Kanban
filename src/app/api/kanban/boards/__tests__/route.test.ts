@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTask, TaskStatus, VerificationVerdict, type Task } from "@/core/models/task";
+import { createTask, VerificationVerdict, type Task } from "@/core/models/task";
 
 const notify = vi.fn();
 const ensureDefaultBoard = vi.fn();
@@ -74,7 +74,7 @@ function createTaskWithRunningSession(overrides?: Partial<Task>): Task {
       workspaceId: "workspace-1",
       boardId: "board-1",
       columnId: "backlog",
-      status: TaskStatus.PENDING,
+      status: "backlog",
     }),
     triggerSessionId: "session-1",
     laneSessions: [{
@@ -166,7 +166,7 @@ describe("/api/kanban/boards GET", () => {
         workspaceId: "workspace-1",
         boardId: "board-1",
         columnId: "backlog",
-        status: TaskStatus.PENDING,
+        status: "backlog",
         assignedProvider: "codex",
       }),
     ]);
@@ -203,7 +203,7 @@ describe("/api/kanban/boards GET", () => {
           workspaceId: "workspace-1",
           boardId: "board-1",
           columnId: "backlog",
-          status: TaskStatus.PENDING,
+          status: "backlog",
         }),
         laneSessions: [{
           sessionId: "session-1",
@@ -224,7 +224,7 @@ describe("/api/kanban/boards GET", () => {
       createTaskWithRunningSession({
         title: "Stale review story",
         objective: "Review story",
-        status: TaskStatus.REVIEW_REQUIRED,
+        status: "review",
         verificationVerdict: undefined,
       }),
     ]);
@@ -252,7 +252,7 @@ describe("/api/kanban/boards GET", () => {
       createTaskWithRunningSession({
         title: "Approved review story",
         objective: "Review story",
-        status: TaskStatus.REVIEW_REQUIRED,
+        status: "review",
         verificationVerdict: VerificationVerdict.APPROVED,
         verificationReport: "looks good",
       }),
@@ -301,7 +301,7 @@ describe("/api/kanban/boards GET", () => {
           title: "Approved review story",
           objective: "Review story",
           columnId: "review",
-          status: TaskStatus.REVIEW_REQUIRED,
+          status: "review",
           verificationVerdict: VerificationVerdict.APPROVED,
           verificationReport: "looks good",
         }),
@@ -382,7 +382,7 @@ describe("/api/kanban/boards GET", () => {
           workspaceId: "workspace-1",
           boardId: "board-1",
           columnId: "review",
-          status: TaskStatus.REVIEW_REQUIRED,
+          status: "review",
         }),
         verificationVerdict: VerificationVerdict.APPROVED,
         triggerSessionId: undefined,
@@ -405,7 +405,7 @@ describe("/api/kanban/boards GET", () => {
     expect(taskStore.save).toHaveBeenCalledWith(expect.objectContaining({
       id: "task-1",
       columnId: "done",
-      status: TaskStatus.COMPLETED,
+      status: "done",
     }));
     expect(enqueueKanbanTaskSession).not.toHaveBeenCalled();
     expect(processKanbanColumnTransition).toHaveBeenCalledWith(system, expect.objectContaining({

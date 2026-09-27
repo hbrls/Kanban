@@ -1,16 +1,16 @@
 use chrono::Utc;
 
 use crate::error::ServerError;
-use crate::models::kanban::{column_id_to_task_status, task_status_to_column_id};
 use crate::models::task::{
     Task, TaskContextSearchSpec, TaskCreationSource, TaskLaneSessionStatus, TaskPriority,
     TaskStatus,
 };
 use crate::state::AppState;
 use routa_core::kanban::{
-    ensure_task_board_context, resolve_review_lane_convergence_column, set_task_column,
-    sync_task_column_from_status, sync_task_status_from_column,
+    ensure_task_board_context, resolve_review_lane_convergence_column,
+    sync_task_status_from_column,
 };
+use routa_core::models::kanban::KanbanColumn;
 use routa_core::models::task::VerificationVerdict;
 
 #[derive(Clone)]
@@ -79,10 +79,20 @@ impl TaskApplicationService {
         }
         task.board_id = board_id;
         if let Some(column_id) = column_id {
-            set_task_column(&mut task, column_id);
+            task.column_id = Some(column_id);
         }
         ensure_task_board_context(&self.state, &mut task).await?;
-        sync_task_status_from_column(&mut task);
+        let board_columns: Vec<KanbanColumn> = if let Some(board_id) = &task.board_id {
+            self.state
+                .kanban_store
+                .get(board_id)
+                .await?
+                .map(|board| board.columns)
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        sync_task_status_from_column(&mut task, &board_columns);
         task.position = position.unwrap_or(0);
         task.priority = parse_priority(priority)?;
         task.labels = sanitize_labels(labels.unwrap_or_default());
@@ -291,35 +301,25 @@ impl TaskApplicationService {
             task.last_sync_error = None;
         }
 
-        if has_column_update && has_status_update {
-            let expected_status = column_id_to_task_status(task.column_id.as_deref());
-            let expected_column_id = task_status_to_column_id(&task.status);
-            if expected_status != task.status
-                || task.column_id.as_deref() != Some(expected_column_id)
-            {
-                return Err(ServerError::BadRequest(
-                    "columnId and status must describe the same workflow state".to_string(),
-                ));
-            }
-        }
-
-        if has_column_update && !has_status_update {
-            sync_task_status_from_column(&mut task);
-        }
-        if has_status_update && !has_column_update {
-            sync_task_column_from_status(&mut task);
-        }
         ensure_task_board_context(&self.state, &mut task).await?;
         let board = if let Some(board_id) = &task.board_id {
             self.state.kanban_store.get(board_id).await?
         } else {
             None
         };
+        let board_columns: &[KanbanColumn] = board
+            .as_ref()
+            .map(|board| board.columns.as_slice())
+            .unwrap_or(&[]);
+
+        if has_column_update && !has_status_update {
+            sync_task_status_from_column(&mut task, board_columns);
+        }
         if !has_status_update && !has_column_update {
             if let Some(column_id) = resolve_review_lane_convergence_column(&task, board.as_ref()) {
                 if task.column_id.as_deref() != Some(column_id.as_str()) {
                     task.column_id = Some(column_id);
-                    sync_task_status_from_column(&mut task);
+                    sync_task_status_from_column(&mut task, board_columns);
                 }
             }
         }
@@ -655,7 +655,7 @@ mod tests {
         assert_eq!(plan.task.workspace_id, "default");
         assert!(plan.task.board_id.is_some());
         assert_eq!(plan.task.column_id.as_deref(), Some("review"));
-        assert_eq!(plan.task.status, TaskStatus::ReviewRequired);
+        assert_eq!(plan.task.status, TaskStatus::Review);
         assert_eq!(
             plan.task.labels,
             vec!["bug".to_string(), "backend".to_string()]
@@ -757,23 +757,47 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_task_rejects_mismatched_column_and_status() {
+    async fn update_task_allows_divergent_column_and_status() {
         let (service, db_path) = setup_service().await;
         let task = seed_task(&service, Some("backlog")).await;
 
-        let error = service
+        let plan = service
             .update_task(
                 &task.id,
                 UpdateTaskCommand {
                     column_id: Some("done".to_string()),
-                    status: Some("IN_PROGRESS".to_string()),
+                    status: Some("dev".to_string()),
+                    sync_to_github: Some(false),
                     ..UpdateTaskCommand::default()
                 },
             )
             .await
-            .expect_err("mismatched workflow state should fail");
+            .expect("divergent workflow state should be accepted");
 
-        assert!(error.to_string().contains("columnId and status"));
+        assert_eq!(plan.task.column_id.as_deref(), Some("done"));
+        assert_eq!(plan.task.status, TaskStatus::Dev);
+        let _ = fs::remove_file(db_path);
+    }
+
+    #[tokio::test]
+    async fn update_task_status_only_does_not_move_column() {
+        let (service, db_path) = setup_service().await;
+        let task = seed_task(&service, Some("backlog")).await;
+
+        let plan = service
+            .update_task(
+                &task.id,
+                UpdateTaskCommand {
+                    status: Some("blocked".to_string()),
+                    sync_to_github: Some(false),
+                    ..UpdateTaskCommand::default()
+                },
+            )
+            .await
+            .expect("status-only update should succeed");
+
+        assert_eq!(plan.task.status, TaskStatus::Blocked);
+        assert_eq!(plan.task.column_id.as_deref(), Some("backlog"));
         let _ = fs::remove_file(db_path);
     }
 
@@ -821,7 +845,7 @@ mod tests {
             .update_task(
                 &task.id,
                 UpdateTaskCommand {
-                    status: Some("IN_PROGRESS".to_string()),
+                    column_id: Some("dev".to_string()),
                     retry_trigger: Some(true),
                     sync_to_github: Some(false),
                     ..UpdateTaskCommand::default()
@@ -831,7 +855,7 @@ mod tests {
             .expect("update task plan");
 
         assert_eq!(plan.task.column_id.as_deref(), Some("dev"));
-        assert_eq!(plan.task.status, TaskStatus::InProgress);
+        assert_eq!(plan.task.status, TaskStatus::Dev);
         assert_eq!(plan.task.trigger_session_id, None);
         assert_eq!(plan.task.last_sync_error, None);
         assert_eq!(
@@ -1040,7 +1064,7 @@ mod tests {
     async fn update_task_converges_final_review_verdict_into_done() {
         let (service, db_path) = setup_service().await;
         let mut task = seed_task(&service, Some("review")).await;
-        task.status = TaskStatus::ReviewRequired;
+        task.status = TaskStatus::Review;
         task.assigned_specialist_id = Some("kanban-review-guard".to_string());
         task.assigned_specialist_name = Some("Review Guard".to_string());
         service
@@ -1063,7 +1087,7 @@ mod tests {
             .expect("update task plan");
 
         assert_eq!(plan.task.column_id.as_deref(), Some("done"));
-        assert_eq!(plan.task.status, TaskStatus::Completed);
+        assert_eq!(plan.task.status, TaskStatus::Done);
         assert_eq!(
             plan.task.verification_verdict,
             Some(VerificationVerdict::Approved)
@@ -1076,7 +1100,7 @@ mod tests {
     async fn update_task_keeps_review_lane_when_follow_up_step_is_pending() {
         let (service, db_path) = setup_service().await;
         let mut task = seed_task(&service, Some("review")).await;
-        task.status = TaskStatus::ReviewRequired;
+        task.status = TaskStatus::Review;
         task.assigned_specialist_id = Some("kanban-qa-frontend".to_string());
         task.assigned_specialist_name = Some("QA Frontend".to_string());
         service
@@ -1099,7 +1123,7 @@ mod tests {
             .expect("update task plan");
 
         assert_eq!(plan.task.column_id.as_deref(), Some("review"));
-        assert_eq!(plan.task.status, TaskStatus::ReviewRequired);
+        assert_eq!(plan.task.status, TaskStatus::Review);
 
         let _ = fs::remove_file(db_path);
     }

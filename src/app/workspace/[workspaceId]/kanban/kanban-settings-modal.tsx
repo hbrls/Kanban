@@ -15,6 +15,7 @@ import type {
   KanbanHistoryMemoryPolicyInfo,
 } from "../types";
 import { useTranslation } from "@/i18n";
+import type { KanbanColumnStage } from "@/core/models/kanban";
 import {
   ColumnAutomationWorkspace,
   DEFAULT_DEV_SESSION_SUPERVISION,
@@ -334,7 +335,7 @@ export function KanbanSettingsModal({
     setSelectedViewId(id);
   };
 
-  const handleStageTypeChange = (columnId: string, stage: string) => {
+  const handleStageTypeChange = (columnId: string, stage: KanbanColumnStage) => {
     updateColumn(columnId, (column) => ({ ...column, stage }));
     if (stage === "blocked") {
       setColumnAutomation((current) => ({
@@ -892,7 +893,7 @@ export function KanbanSettingsModal({
                         ariaLabel="Stage type"
                         value={selectedColumn.stage}
                         options={stageTypeOptions.map((option) => ({ value: option.value, label: option.label }))}
-                        onChange={(value) => handleStageTypeChange(selectedColumn.id, value)}
+                        onChange={(value) => handleStageTypeChange(selectedColumn.id, value as KanbanColumnStage)}
                         className="h-10"
                         containerClassName="w-40 shrink-0"
                       />

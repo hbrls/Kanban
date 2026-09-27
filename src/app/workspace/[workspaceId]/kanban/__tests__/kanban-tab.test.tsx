@@ -107,7 +107,7 @@ function createTask(id: string, title: string, overrides: Partial<TaskInfo> = {}
     id,
     title,
     objective: `${title} objective`,
-    status: "PENDING",
+    status: "backlog",
     boardId: board.id,
     columnId: "backlog",
     position: 0,
@@ -452,7 +452,7 @@ describe("KanbanTab drag and drop", () => {
             ...currentTask,
             columnId: "dev",
             position: 0,
-            status: "IN_PROGRESS",
+            status: "dev",
           };
           return {
             ok: true,
@@ -1665,7 +1665,7 @@ describe.skip("KanbanTab card detail manual runs", () => {
         tasks={[{
           ...createTask("task-1", "Story One"),
           columnId: "dev",
-          status: "IN_PROGRESS",
+          status: "dev",
         }]}
         sessions={[]}
         providers={[{ id: "claude", name: "Claude Code", description: "Claude Code provider", command: "claude" }]}
@@ -1729,7 +1729,7 @@ describe.skip("KanbanTab card detail manual runs", () => {
         tasks={[{
           ...createTask("task-1", "Story One"),
           columnId: "dev",
-          status: "IN_PROGRESS",
+          status: "dev",
         }]}
         sessions={[]}
         providers={[]}
@@ -1792,7 +1792,7 @@ describe.skip("KanbanTab card detail manual runs", () => {
         tasks={[{
           ...createTask("task-1", "feat(kanban): Add Story Readiness gate for Todo → Dev transitions"),
           columnId: "review",
-          status: "REVIEW_REQUIRED",
+          status: "review",
           triggerSessionId: "session-review-1",
         }]}
         sessions={[]}

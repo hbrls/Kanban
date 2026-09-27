@@ -112,7 +112,7 @@ pub(super) async fn execute(
                         .unwrap_or_default();
                     let active_tasks: Vec<_> = tasks
                         .iter()
-                        .filter(|t| t.status == crate::models::task::TaskStatus::InProgress)
+                        .filter(|t| t.status == crate::models::task::TaskStatus::Dev)
                         .collect();
                     tool_result_json(&serde_json::json!({
                         "agentId": agent.id,

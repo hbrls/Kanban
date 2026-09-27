@@ -19,8 +19,8 @@ describe("A2UI Dashboard Generator", () => {
       { id: "a2", name: "Crafter", role: "CRAFTER", status: "PENDING" },
     ],
     tasks: [
-      { id: "t1", title: "Fix bug", status: "IN_PROGRESS", createdAt: new Date().toISOString() },
-      { id: "t2", title: "Write tests", status: "COMPLETED", createdAt: new Date().toISOString() },
+      { id: "t1", title: "Fix bug", status: "dev", createdAt: new Date().toISOString() },
+      { id: "t2", title: "Write tests", status: "done", createdAt: new Date().toISOString() },
     ],
     bgTasks: [
       { id: "bg1", title: "Run CI", status: "RUNNING", agentId: "a1", triggerSource: "webhook", createdAt: new Date().toISOString() },
@@ -289,7 +289,7 @@ describe("processA2UIMessages", () => {
       workspace: { id: "w1", title: "My WS", status: "active" },
       sessions: [{ sessionId: "s1", createdAt: new Date().toISOString() }],
       agents: [{ id: "a1", name: "Bot", role: "DEV", status: "ACTIVE" }],
-      tasks: [{ id: "t1", title: "Task 1", status: "PENDING", createdAt: new Date().toISOString() }],
+      tasks: [{ id: "t1", title: "Task 1", status: "backlog", createdAt: new Date().toISOString() }],
       bgTasks: [],
       codebases: [],
       notes: [],

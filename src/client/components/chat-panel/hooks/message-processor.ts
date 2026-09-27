@@ -602,7 +602,7 @@ function processTaskCompletion(
       const existing = arr[idx];
       arr[idx] = {
         ...existing,
-        toolStatus: taskStatus === "COMPLETED" || taskStatus === "completed" ? "completed" : "failed",
+        toolStatus: taskStatus === "done" || taskStatus === "completed" ? "completed" : "failed",
         completionSummary,
         content: completionSummary
           ? `${existing.toolName ?? "Task"}\n\n**Completed:**\n${completionSummary}`

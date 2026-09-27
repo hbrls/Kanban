@@ -85,7 +85,7 @@ async fn api_canvas_roundtrip_creates_backing_task_and_renders_payload() {
         task_json["task"]["title"],
         json!("Canvas artifact: Rust Canvas")
     );
-    assert_eq!(task_json["task"]["status"], json!("COMPLETED"));
+    assert_eq!(task_json["task"]["status"], json!("done"));
     assert_eq!(task_json["task"]["labels"], json!(["canvas"]));
 }
 

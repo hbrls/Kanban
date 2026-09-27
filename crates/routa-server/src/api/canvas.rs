@@ -1106,7 +1106,7 @@ async fn resolve_canvas_task_id(
         None,
         None,
     );
-    task.status = TaskStatus::Completed;
+    task.status = TaskStatus::Done;
     task.column_id = None;
     task.labels = vec!["canvas".to_string()];
     if let Some(codebase_id) = codebase_id.map(str::trim).filter(|value| !value.is_empty()) {

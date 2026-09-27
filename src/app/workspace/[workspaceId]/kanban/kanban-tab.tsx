@@ -24,7 +24,7 @@ import { type KanbanSpecialistLanguage } from "./kanban-specialist-language";
 import { buildKanbanMoveBlockedRemediationPrompt, buildKanbanTaskAgentPrompt, getKanbanTaskAgentCopy } from "./i18n/kanban-task-agent";
 import { createKanbanSpecialistResolver } from "./kanban-card-session-utils";
 import { useTranslation } from "@/i18n";
-import { normalizeKanbanAutomation } from "@/core/models/kanban";
+import { normalizeKanbanAutomation, resolveTaskStatusForBoardColumn } from "@/core/models/kanban";
 import type { RepoSelection } from "@/client/components/repo-picker";
 import type { RepoSyncState } from "./kanban-repo-sync-status";
 import type { KanbanRepoChanges } from "./kanban-file-changes-types";
@@ -1545,17 +1545,14 @@ export function KanbanTab({
     }
 
     const nextPosition = boardTasks.filter((task) => task.columnId === targetColumnId).length;
+    const targetStage = resolveTaskStatusForBoardColumn(board?.columns ?? [], targetColumnId);
     const optimistic = localTasks.map((task) =>
       task.id === taskId
         ? {
             ...task,
             columnId: targetColumnId,
             position: nextPosition,
-            status: targetColumnId === "dev" ? "IN_PROGRESS"
-              : targetColumnId === "review" ? "REVIEW_REQUIRED"
-              : targetColumnId === "blocked" ? "BLOCKED"
-              : targetColumnId === "done" ? "COMPLETED"
-              : "PENDING",
+            status: targetStage,
           }
         : task,
     );
@@ -1601,6 +1598,7 @@ export function KanbanTab({
       setLocalTasks(tasks);
     }
   }, [
+    board?.columns,
     boardTasks,
     ensureBoardAutoProviderPersisted,
     localTasks,

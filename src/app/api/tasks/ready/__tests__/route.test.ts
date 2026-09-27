@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createArtifact } from "@/core/models/artifact";
-import { createTask, TaskStatus, type Task } from "@/core/models/task";
+import { createTask, type Task } from "@/core/models/task";
 import { InMemoryArtifactStore } from "@/core/store/artifact-store";
 import type { TaskDeliveryReadiness } from "@/core/kanban/task-delivery-readiness";
 
@@ -55,7 +55,7 @@ describe("/api/tasks/ready GET", () => {
         workspaceId: "workspace-1",
         boardId: "board-1",
         columnId: "todo",
-        status: TaskStatus.PENDING,
+        status: "backlog",
       }),
     ]);
     system.kanbanBoardStore.get.mockResolvedValue({

@@ -84,6 +84,14 @@ function getPrioritySizeLabel(priority?: string) {
   }
 }
 
+function getTaskStatusTone(status?: string) {
+  if ((status ?? "").toLowerCase() === "blocked") {
+    return "bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:ring-rose-900/40";
+  }
+
+  return "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-[#181c28] dark:text-slate-300 dark:ring-white/5";
+}
+
 function getCardStatusTone(cardStatus: string) {
   switch (cardStatus) {
     case "queued":
@@ -217,6 +225,12 @@ function KanbanCardSurface({
           <div className="flex flex-wrap items-center gap-1">
             <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] ${sessionTone}`}>
               {resolvedStatusLabel}
+            </span>
+            <span
+              className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] ${getTaskStatusTone(task.status)}`}
+              data-testid="kanban-card-task-status"
+            >
+              {task.status}
             </span>
           </div>
         </div>

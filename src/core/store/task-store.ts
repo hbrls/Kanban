@@ -55,11 +55,11 @@ export class InMemoryTaskStore implements TaskStore {
   async findReadyTasks(workspaceId: string): Promise<Task[]> {
     const allTasks = await this.listByWorkspace(workspaceId);
     return allTasks.filter((task) => {
-      if (task.status !== TaskStatus.PENDING) return false;
-      // Check all dependencies are completed
+      if (task.status !== "backlog" && task.status !== "todo") return false;
+      // Check all dependencies are done
       return task.dependencies.every((depId) => {
         const dep = this.tasks.get(depId);
-        return dep && dep.status === TaskStatus.COMPLETED;
+        return dep && dep.status === "done";
       });
     });
   }

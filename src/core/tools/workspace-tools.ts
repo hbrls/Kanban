@@ -267,11 +267,12 @@ export class WorkspaceTools {
       tasks: {
         total: tasks.length,
         byStatus: {
-          PENDING: tasks.filter((t) => t.status === "PENDING").length,
-          IN_PROGRESS: tasks.filter((t) => t.status === "IN_PROGRESS").length,
-          COMPLETED: tasks.filter((t) => t.status === "COMPLETED").length,
-          NEEDS_FIX: tasks.filter((t) => t.status === "NEEDS_FIX").length,
-          BLOCKED: tasks.filter((t) => t.status === "BLOCKED").length,
+          backlog: tasks.filter((t) => t.status === "backlog").length,
+          todo: tasks.filter((t) => t.status === "todo").length,
+          dev: tasks.filter((t) => t.status === "dev").length,
+          review: tasks.filter((t) => t.status === "review").length,
+          blocked: tasks.filter((t) => t.status === "blocked").length,
+          done: tasks.filter((t) => t.status === "done").length,
         },
       },
       notes: {
@@ -378,10 +379,12 @@ export class WorkspaceTools {
       },
       tasks: {
         total: tasks.length,
-        pending: tasks.filter((t) => t.status === "PENDING").length,
-        inProgress: tasks.filter((t) => t.status === "IN_PROGRESS").length,
-        completed: tasks.filter((t) => t.status === "COMPLETED").length,
-        needsFix: tasks.filter((t) => t.status === "NEEDS_FIX").length,
+        backlog: tasks.filter((t) => t.status === "backlog").length,
+        todo: tasks.filter((t) => t.status === "todo").length,
+        dev: tasks.filter((t) => t.status === "dev").length,
+        review: tasks.filter((t) => t.status === "review").length,
+        blocked: tasks.filter((t) => t.status === "blocked").length,
+        done: tasks.filter((t) => t.status === "done").length,
       },
       notes: {
         total: notes.length,
