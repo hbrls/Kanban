@@ -446,10 +446,7 @@ fn recommended_automation_for_stage(stage: &str) -> Option<KanbanColumnAutomatio
             false,
         )),
         "review" => Some(build_recommended_automation(
-            vec![
-                recommended_step("qa-frontend", "GATE", "QA Frontend"),
-                recommended_step("review-guard", "GATE", "Review Guard"),
-            ],
+            vec![recommended_step("review-guard", "GATE", "Review Guard")],
             false,
         ))
         .map(|mut automation| {
