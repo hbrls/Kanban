@@ -13,7 +13,7 @@ describe("applyRecommendedAutomationToColumns", () => {
       "kanban-backlog-refiner",
       "kanban-todo-orchestrator",
       "kanban-dev-executor",
-      "kanban-qa-frontend",
+      "kanban-review-guard",
       "kanban-done-reporter",
       undefined,
     ]);
@@ -43,7 +43,6 @@ describe("applyRecommendedAutomationToColumns", () => {
       requirePullRequestReady: true,
     });
     expect(columns[3]?.automation?.steps?.map((step) => step.specialistId)).toEqual([
-      "kanban-qa-frontend",
       "kanban-review-guard",
     ]);
   });
@@ -206,7 +205,7 @@ describe("applyRecommendedAutomationToColumns", () => {
     expect(columns[0].automation?.steps?.map((step) => step.specialistId)).toEqual([
       "kanban-review-guard",
     ]);
-    expect(columns[0].automation?.requiredArtifacts).toEqual(["screenshot"]);
+    expect(columns[0].automation?.requiredArtifacts).toEqual(["screenshot", "test_results"]);
   });
 
   it("preserves a review lane whose first step was changed from qa to review guard", () => {

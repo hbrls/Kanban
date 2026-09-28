@@ -55,20 +55,12 @@ const RECOMMENDED_AUTOMATION_BY_STAGE: Partial<Record<KanbanColumnStage, KanbanC
   },
   review: {
     enabled: true,
-    steps: [
-      {
-        id: "qa-frontend",
-        role: "GATE",
-        specialistId: "kanban-qa-frontend",
-        specialistName: "QA Frontend",
-      },
-      {
-        id: "review-guard",
-        role: "GATE",
-        specialistId: "kanban-review-guard",
-        specialistName: "Review Guard",
-      },
-    ],
+    steps: [{
+      id: "review-guard",
+      role: "GATE",
+      specialistId: "kanban-review-guard",
+      specialistName: "Review Guard",
+    }],
     transitionType: "entry",
     requiredArtifacts: ["screenshot", "test_results"],
     deliveryRules: {
