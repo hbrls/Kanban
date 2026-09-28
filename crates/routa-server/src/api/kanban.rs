@@ -221,6 +221,7 @@ fn mark_lane_session_terminal(
     lane_session.completed_at = Some(chrono::Utc::now().to_rfc3339());
 }
 
+#[allow(dead_code)]
 fn apply_lane_automation_defaults(
     task: &mut Task,
     automation: &routa_core::models::kanban::KanbanColumnAutomation,
@@ -298,6 +299,7 @@ async fn sanitize_stale_current_lane_automation(
     Ok(task)
 }
 
+#[allow(dead_code)]
 async fn has_active_current_lane_session(
     state: &AppState,
     task: &Task,
@@ -319,6 +321,7 @@ async fn has_active_current_lane_session(
     false
 }
 
+#[allow(dead_code)]
 async fn revive_missing_entry_automations(
     state: &AppState,
     workspace_id: &str,
@@ -429,10 +432,6 @@ async fn list_boards(
                 .map(|id| id.to_string())
         })
         .collect::<Vec<_>>();
-
-    for board_id in &board_ids {
-        revive_missing_entry_automations(&state, &workspace_id, board_id).await?;
-    }
 
     let mut boards = Vec::with_capacity(board_ids.len());
     for board_id in board_ids {
@@ -1025,11 +1024,14 @@ fn strip_board_cards(board: &serde_json::Value) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::{
-        persisted_session_is_explicitly_terminal, sanitize_stale_current_lane_automation,
-        translate_agent_event_to_kanban_payload, UpdateBoardRequest,
+        list_boards, persisted_session_is_explicitly_terminal,
+        sanitize_stale_current_lane_automation, translate_agent_event_to_kanban_payload,
+        BoardsQuery, UpdateBoardRequest,
     };
+    use axum::extract::{Query, State};
     use chrono::Utc;
     use routa_core::events::{AgentEvent, AgentEventType};
+    use routa_core::models::kanban::{KanbanBoard, KanbanColumn, KanbanColumnAutomation};
     use routa_core::models::task::{Task, TaskLaneSession, TaskLaneSessionStatus, TaskStatus};
     use routa_core::store::acp_session_store::CreateAcpSessionParams;
     use routa_core::{AppState, AppStateInner, Database};
@@ -1176,6 +1178,96 @@ mod tests {
         assert_eq!(payload["action"].as_str(), Some("updated"));
         assert_eq!(payload["resourceId"].as_str(), Some("task-42"));
         assert_eq!(payload["source"].as_str(), Some("agent"));
+    }
+
+    #[tokio::test]
+    async fn list_boards_does_not_revive_entry_automations() {
+        let state = setup_state().await;
+
+        let automation_column = KanbanColumn {
+            id: "dev".to_string(),
+            name: "Dev".to_string(),
+            color: None,
+            position: 0,
+            stage: "dev".to_string(),
+            visible: Some(true),
+            width: None,
+            automation: Some(KanbanColumnAutomation {
+                enabled: true,
+                provider_id: Some("codex-acp".to_string()),
+                role: Some("DEVELOPER".to_string()),
+                transition_type: Some("entry".to_string()),
+                ..Default::default()
+            }),
+        };
+        let board = KanbanBoard {
+            id: "board-1".to_string(),
+            workspace_id: "default".to_string(),
+            name: "Automation board".to_string(),
+            is_default: false,
+            github_token: None,
+            columns: vec![automation_column],
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        state
+            .kanban_store
+            .create(&board)
+            .await
+            .expect("board should persist");
+
+        let mut task = build_task("task-no-revive");
+        task.column_id = Some("dev".to_string());
+        task.status = TaskStatus::Dev;
+        task.trigger_session_id = None;
+        state
+            .task_store
+            .save(&task)
+            .await
+            .expect("task should persist");
+        let before = state
+            .task_store
+            .get("task-no-revive")
+            .await
+            .expect("task lookup should succeed")
+            .expect("task should exist");
+
+        let response = list_boards(
+            State(state.clone()),
+            Query(BoardsQuery {
+                workspace_id: Some("default".to_string()),
+            }),
+        )
+        .await
+        .expect("list boards should succeed");
+        let boards = response
+            .0
+            .get("boards")
+            .and_then(|value| value.as_array())
+            .expect("boards payload should exist");
+        assert!(boards
+            .iter()
+            .any(|board| board.get("id").and_then(|id| id.as_str()) == Some("board-1")));
+
+        let after = state
+            .task_store
+            .get("task-no-revive")
+            .await
+            .expect("task lookup should succeed")
+            .expect("task should exist");
+        assert_eq!(after.trigger_session_id, None);
+        assert!(after.lane_sessions.is_empty());
+        assert_eq!(after.updated_at, before.updated_at);
+
+        let sessions = state
+            .acp_session_store
+            .list(Some("default"), None)
+            .await
+            .expect("session list should succeed");
+        assert!(
+            sessions.is_empty(),
+            "listing boards must not create ACP sessions"
+        );
     }
 
     #[test]

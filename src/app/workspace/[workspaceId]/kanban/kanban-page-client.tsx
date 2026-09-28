@@ -23,7 +23,6 @@ import type {
   TaskInfo,
   SessionInfo,
 } from "../types";
-import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import { resolveKanbanAutomationStep } from "@/core/kanban/effective-task-automation";
 import { createKanbanSpecialistResolver } from "./kanban-card-session-utils";
 import type { KanbanRepoChanges } from "./kanban-file-changes-types";
@@ -66,7 +65,6 @@ export function KanbanPageClient() {
   });
   const refreshBurstCleanupRef = useRef<(() => void) | null>(null);
   const warmedupProvidersRef = useRef<Set<string>>(new Set());
-  const autoSyncedWorkspaceRef = useRef<string | null>(null);
 
   // Auto-connect ACP
   useEffect(() => {
@@ -240,130 +238,6 @@ export function KanbanPageClient() {
     void fetchCodebases();
   }, [fetchCodebases]);
 
-  const syncCodebaseToLatest = useCallback(async (codebase: CodebaseData): Promise<void> => {
-    // Check if this is a bare repository - skip sync for bare repos
-    // Bare repos don't have a working directory and can't be checked out or pulled
-    // They should only be used as worktree sources
-    const bareCheckRes = await desktopAwareFetch(
-      `/api/clone/branches?repoPath=${encodeURIComponent(codebase.repoPath)}`,
-      { cache: "no-store" },
-    );
-    const bareCheckData = await bareCheckRes.json().catch(() => ({}));
-
-    // If the error mentions bare repo, skip sync
-    if (!bareCheckRes.ok && bareCheckData.error?.includes("bare git repo")) {
-      console.log(`[sync] Skipping bare repo: ${codebase.label ?? codebase.repoPath}`);
-      return; // Bare repos can't be synced, only used as worktree sources
-    }
-
-    if (!bareCheckRes.ok) {
-      throw new Error(bareCheckData.error ?? `Failed to load branch info for ${codebase.label ?? codebase.repoPath}`);
-    }
-
-    let targetBranch = codebase.branch?.trim();
-    if (!targetBranch) {
-      targetBranch = typeof bareCheckData.current === "string" && bareCheckData.current.trim().length > 0
-        ? bareCheckData.current.trim()
-        : "main";
-    }
-
-    const syncRes = await desktopAwareFetch("/api/clone/branches", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        repoPath: codebase.repoPath,
-        branch: targetBranch,
-        pull: true,
-      }),
-    });
-    const syncData = await syncRes.json().catch(() => ({}));
-
-    // Skip if it's a bare repo (in case the check above didn't catch it)
-    if (!syncRes.ok && syncData.error?.includes("bare git repo")) {
-      console.log(`[sync] Skipping bare repo: ${codebase.label ?? codebase.repoPath}`);
-      return;
-    }
-
-    if (!syncRes.ok) {
-      throw new Error(syncData.error ?? `Failed to sync ${codebase.label ?? codebase.repoPath}`);
-    }
-
-    if (typeof syncData.branch === "string" && syncData.branch !== codebase.branch) {
-      await desktopAwareFetch(`/api/codebases/${encodeURIComponent(codebase.id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch: syncData.branch }),
-      }).catch(() => {
-        // Best-effort metadata sync; repo content is already up to date.
-      });
-    }
-  }, []);
-
-  const syncWorkspaceRepos = useCallback(async (nextCodebases: CodebaseData[]) => {
-    if (nextCodebases.length === 0) return;
-
-    setRepoSync({
-      status: "syncing",
-      total: nextCodebases.length,
-      completed: 0,
-      currentRepoLabel: nextCodebases[0]?.label ?? nextCodebases[0]?.sourceUrl ?? nextCodebases[0]?.repoPath ?? null,
-      message: "Syncing repositories to latest code...",
-      error: null,
-    });
-
-    const failures: string[] = [];
-
-    for (const [index, codebase] of nextCodebases.entries()) {
-      const repoLabel = codebase.label ?? codebase.sourceUrl ?? codebase.repoPath;
-      setRepoSync({
-        status: "syncing",
-        total: nextCodebases.length,
-        completed: index,
-        currentRepoLabel: repoLabel,
-        message: `Syncing ${repoLabel}...`,
-        error: null,
-      });
-
-      try {
-        await syncCodebaseToLatest(codebase);
-      } catch (error) {
-        failures.push(`${repoLabel}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-
-      setRepoSync({
-        status: "syncing",
-        total: nextCodebases.length,
-        completed: index + 1,
-        currentRepoLabel: repoLabel,
-        message: `Synced ${index + 1}/${nextCodebases.length} repositories`,
-        error: null,
-      });
-    }
-
-    void fetchCodebases();
-
-    if (failures.length > 0) {
-      setRepoSync({
-        status: "error",
-        total: nextCodebases.length,
-        completed: nextCodebases.length,
-        currentRepoLabel: null,
-        message: `Repository sync finished with ${failures.length} error${failures.length > 1 ? "s" : ""}.`,
-        error: failures.join(" | "),
-      });
-      return;
-    }
-
-    setRepoSync({
-      status: "done",
-      total: nextCodebases.length,
-      completed: nextCodebases.length,
-      currentRepoLabel: null,
-      message: `Repository sync complete. ${nextCodebases.length} repo${nextCodebases.length > 1 ? "s" : ""} updated.`,
-      error: null,
-    });
-  }, [fetchCodebases, syncCodebaseToLatest]);
-
   const handleKanbanInvalidate = useCallback(() => {
     handleRefresh();
   }, [handleRefresh]);
@@ -372,15 +246,6 @@ export function KanbanPageClient() {
     workspaceId,
     onInvalidate: handleKanbanInvalidate,
   });
-
-  useEffect(() => {
-    if (!workspaceId || workspaceId === "__placeholder__") return;
-    if (codebases.length === 0) return;
-    if (autoSyncedWorkspaceRef.current === workspaceId) return;
-
-    autoSyncedWorkspaceRef.current = workspaceId;
-    void syncWorkspaceRepos(codebases);
-  }, [workspaceId, codebases, syncWorkspaceRepos]);
 
   useEffect(() => {
     if (repoSync.status !== "done") return;

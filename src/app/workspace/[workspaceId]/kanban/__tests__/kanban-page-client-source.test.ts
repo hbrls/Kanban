@@ -25,4 +25,12 @@ describe("kanban page desktop fetch wiring", () => {
   it("forwards Kanban task-adaptive harness options into ACP session creation", () => {
     expect(source).toContain("options?.taskAdaptiveHarness,");
   });
+
+  it("does not sync repositories to latest code when the page loads", () => {
+    expect(source).not.toContain("syncWorkspaceRepos");
+    expect(source).not.toContain("syncCodebaseToLatest");
+    expect(source).not.toContain("autoSyncedWorkspaceRef");
+    expect(source).not.toContain("/api/clone/branches");
+    expect(source).not.toContain("pull: true");
+  });
 });
