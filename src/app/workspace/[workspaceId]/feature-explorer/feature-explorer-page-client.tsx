@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -15,15 +15,12 @@ import { useCodebases, useWorkspaces } from "@/client/hooks/use-workspaces";
 import { saveRepoSelection } from "@/client/utils/repo-selection-storage";
 import { useTranslation } from "@/i18n";
 
-import type { FeatureDetail } from "./types";
 import {
-  type FeatureExplorerUrlState,
+  formatShortDate,
   loadInitialRepoSelection,
   readFeatureExplorerUrlState,
   replaceFeatureExplorerUrlState,
 } from "./feature-explorer-client-helpers";
-import { FileIcon, flattenFiles, formatShortDate, TreeNodeRow } from "./feature-explorer-file-tree";
-import { FeatureApiRow, FeatureRouteRow, FeatureStructureSection, InlineStatPill, SimpleSourceFileRow } from "./feature-explorer-structure-sections";
 import {
   type ExplorerSurfaceItem,
   type SurfaceNavigationView,
@@ -87,64 +84,33 @@ export function FeatureExplorerPageClient({
     capabilityGroups,
     features,
     surfaceIndex,
-    featureDetail,
-    featureDetailLoading,
-    initialFeatureId,
-    fetchFeatureDetail,
   } = useFeatureExplorerData({
     workspaceId,
     repoPath: effectiveRepoSelection?.path,
     refreshKey: repoRefreshKey,
   });
 
-  const [middleView, setMiddleView] = useState<"list" | "tree">("tree");
   const [surfaceNavigationView, setSurfaceNavigationView] = useState<SurfaceNavigationView>("capabilities");
-  const [initialUrlState, setInitialUrlState] = useState<FeatureExplorerUrlState>({ featureId: "", filePath: "" });
   const [featureId, setFeatureId] = useState<string>("");
   const [selectedSurfaceKey, setSelectedSurfaceKey] = useState<string>("");
   const [query, setQuery] = useState("");
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [surfaceSectionCollapsed, setSurfaceSectionCollapsed] = useState<Record<string, boolean>>({});
   const [surfaceTreeExpandedIds, setSurfaceTreeExpandedIds] = useState<Record<string, boolean>>({});
-  const [structureSectionCollapsed, setStructureSectionCollapsed] = useState<Record<string, boolean>>({});
-  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
-  const [activeFileId, setActiveFileId] = useState<string>("");
-  const [desiredFilePath, setDesiredFilePath] = useState<string>("");
-  const [hasResolvedInitialUrlSelection, setHasResolvedInitialUrlSelection] = useState(false);
   const [hasHydratedClientState, setHasHydratedClientState] = useState(false);
-  const [isWideLayout, setIsWideLayout] = useState(false);
-  const [leftPanelWidth, setLeftPanelWidth] = useState(320);
-  const resizeContainerRef = useRef<HTMLElement | null>(null);
 
-  const effectiveFeatureId = featureId || initialFeatureId;
+  const effectiveFeatureId = featureId;
   const {
-    activeFeature,
-    activeFile,
     activeSurfaceKey,
     capabilityTreeNodes,
     curatedFeatureCount,
-    featureApiDetails,
-    featurePageDetails,
     featureSidebarGroups,
-    featureSourceFiles,
-    fileStats,
-    fileTree,
-    flatMap,
     inferredFeatureCount,
-    middleHeadingDetail,
     repositoryStatusTone,
-    resolvedFeatureDetail,
-    selectedSurface,
-    selectableFileIdsByNode,
-    sessionSortedFiles,
     surfaceNavigationOptions,
     surfaceTreeSection,
-    treeNodeStats,
   } = useFeatureExplorerViewModel({
-    activeFileId,
     capabilityGroups,
     effectiveFeatureId,
-    featureDetail,
     features,
     inferredGroupId,
     messages: t.featureExplorer,
@@ -170,39 +136,19 @@ export function FeatureExplorerPageClient({
 
   useEffect(() => {
     const urlState = readFeatureExplorerUrlState();
-    setInitialUrlState(urlState);
     setFeatureId(urlState.featureId);
-    setDesiredFilePath(urlState.filePath);
-    setHasResolvedInitialUrlSelection(urlState.featureId === "");
     setHasHydratedClientState(true);
   }, [workspaceId]);
 
   useEffect(() => {
-    const syncWideLayout = () => {
-      if (typeof window === "undefined") {
-        return;
-      }
+    if (!hasHydratedClientState) {
+      return;
+    }
 
-      const nextIsWide = window.innerWidth >= 1280;
-      setIsWideLayout(nextIsWide);
-
-      if (window.innerWidth >= 1536) {
-        setLeftPanelWidth((prev) => Math.max(prev, 380));
-      }
-    };
-
-    syncWideLayout();
-    window.addEventListener("resize", syncWideLayout);
-    return () => window.removeEventListener("resize", syncWideLayout);
-  }, []);
-
-  useEffect(() => {
-    setStructureSectionCollapsed({
-      files: false,
-      pages: true,
-      apis: true,
+    replaceFeatureExplorerUrlState({
+      featureId: effectiveFeatureId,
     });
-  }, [effectiveFeatureId]);
+  }, [effectiveFeatureId, hasHydratedClientState]);
 
   const handleWorkspaceSelect = (nextWorkspaceId: string) => {
     router.push(`/workspace/${encodeURIComponent(nextWorkspaceId)}/feature-explorer`);
@@ -219,91 +165,8 @@ export function FeatureExplorerPageClient({
     setRepoSelectionOverrides((prev) => ({ ...prev, [workspaceId]: selection }));
   };
 
-  const applyFileAutoSelect = (detail: FeatureDetail, preferredFilePath = "") => {
-    const flat = flattenFiles(detail.fileTree);
-    const leafFiles = Object.values(flat).filter((node) => node.kind === "file");
-    const nextFile = (preferredFilePath
-      ? leafFiles.find((node) => node.path === preferredFilePath)
-      : null) ?? leafFiles[0];
-
-    if (nextFile) {
-      setActiveFileId(nextFile.id);
-      setSelectedFileIds([nextFile.id]);
-      setDesiredFilePath(nextFile.path);
-      const expanded: Record<string, boolean> = {};
-      for (const node of Object.values(flat)) {
-        if (node.kind === "folder") {
-          expanded[node.id] = true;
-        }
-      }
-      setExpandedIds(expanded);
-      return;
-    }
-
-    setActiveFileId("");
-    setSelectedFileIds([]);
-    setDesiredFilePath("");
-  };
-
-  // Auto-select first file when initial detail loads from hook
-  const [prevDetailId, setPrevDetailId] = useState<string>("");
-  useEffect(() => {
-    if (resolvedFeatureDetail && resolvedFeatureDetail.id !== prevDetailId) {
-      setPrevDetailId(resolvedFeatureDetail.id);
-      applyFileAutoSelect(
-        resolvedFeatureDetail,
-        resolvedFeatureDetail.id === effectiveFeatureId ? desiredFilePath : "",
-      );
-    }
-  }, [desiredFilePath, effectiveFeatureId, prevDetailId, resolvedFeatureDetail]);
-
-  useEffect(() => {
-    if (!hasHydratedClientState || hasResolvedInitialUrlSelection || !initialUrlState.featureId || loading || featureDetailLoading) {
-      return;
-    }
-
-    if (resolvedFeatureDetail?.id === initialUrlState.featureId) {
-      setHasResolvedInitialUrlSelection(true);
-      return;
-    }
-
-    fetchFeatureDetail(initialUrlState.featureId).then((detail) => {
-      if (detail) {
-        applyFileAutoSelect(detail, initialUrlState.filePath);
-      }
-      setHasResolvedInitialUrlSelection(true);
-    });
-  }, [
-    featureDetailLoading,
-    fetchFeatureDetail,
-    hasResolvedInitialUrlSelection,
-    initialUrlState.featureId,
-    initialUrlState.filePath,
-    hasHydratedClientState,
-    loading,
-    resolvedFeatureDetail,
-  ]);
-
-  useEffect(() => {
-    if (!hasHydratedClientState || !hasResolvedInitialUrlSelection) {
-      return;
-    }
-
-    replaceFeatureExplorerUrlState({
-      featureId: effectiveFeatureId,
-      filePath: activeFile?.path ?? "",
-    });
-  }, [activeFile?.path, effectiveFeatureId, hasHydratedClientState, hasResolvedInitialUrlSelection]);
-
   const handleSelectFeature = (nextFeatureId: string) => {
     setFeatureId(nextFeatureId);
-    setSelectedFileIds([]);
-    setActiveFileId("");
-    setDesiredFilePath("");
-    setExpandedIds({});
-    fetchFeatureDetail(nextFeatureId).then((detail) => {
-      if (detail) applyFileAutoSelect(detail);
-    });
   };
   const handleSelectSurface = (item: ExplorerSurfaceItem) => {
     setSelectedSurfaceKey(item.key);
@@ -315,16 +178,7 @@ export function FeatureExplorerPageClient({
 
     if (item.featureIds[0]) {
       handleSelectFeature(item.featureIds[0]);
-      return;
     }
-
-    setSelectedFileIds([]);
-    setActiveFileId("");
-    setExpandedIds({});
-  };
-
-  const handleToggleNode = (nodeId: string) => {
-    setExpandedIds((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
 
   const handleToggleSurfaceSection = (sectionId: string) => {
@@ -335,87 +189,6 @@ export function FeatureExplorerPageClient({
     setSurfaceTreeExpandedIds((prev) => ({ ...prev, [nodeId]: !prev[nodeId] }));
   };
 
-  const handleToggleStructureSection = (sectionId: string) => {
-    setStructureSectionCollapsed((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
-  };
-
-  const startLeftColumnResize = () => {
-    if (!isWideLayout || typeof window === "undefined") {
-      return;
-    }
-
-    const container = resizeContainerRef.current;
-    if (!container) {
-      return;
-    }
-
-    const rect = container.getBoundingClientRect();
-    const minLeftWidth = 260;
-    const maxLeftWidth = Math.min(520, rect.width - 360);
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const nextWidth = Math.max(minLeftWidth, Math.min(maxLeftWidth, event.clientX - rect.left));
-      setLeftPanelWidth(nextWidth);
-    };
-
-    const handlePointerUp = () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-  };
-
-  const handleSetActiveFile = (fileId: string) => {
-    setActiveFileId(fileId);
-    setDesiredFilePath(flatMap[fileId]?.path ?? "");
-  };
-
-  const handleActivateFile = (fileId: string) => {
-    handleSetActiveFile(fileId);
-    setSelectedFileIds(fileId ? [fileId] : []);
-  };
-
-  const handleToggleNodeSelection = (nodeId: string) => {
-    const targetFileIds = selectableFileIdsByNode[nodeId] ?? [];
-    if (targetFileIds.length === 0) {
-      return;
-    }
-
-    const isRemoving = targetFileIds.every((fileId) => selectedFileIds.includes(fileId));
-    const nextSelectedIds = isRemoving
-      ? selectedFileIds.filter((fileId) => !targetFileIds.includes(fileId))
-      : [...new Set([...selectedFileIds, ...targetFileIds])];
-
-    setSelectedFileIds(nextSelectedIds);
-
-    if (!isRemoving) {
-      handleSetActiveFile(targetFileIds[0] ?? "");
-      return;
-    }
-
-    if (activeFileId && targetFileIds.includes(activeFileId)) {
-      const nextActiveFileId = nextSelectedIds[0] ?? "";
-      if (nextActiveFileId) {
-        handleSetActiveFile(nextActiveFileId);
-      } else {
-        setActiveFileId("");
-        setDesiredFilePath("");
-      }
-    }
-  };
-
-  const middlePanelTitle = selectedSurface && selectedSurface.kind !== "feature"
-    ? (middleHeadingDetail || activeFeature?.name || t.featureExplorer.featureStructureHeading)
-    : (activeFeature?.name || middleHeadingDetail || t.featureExplorer.featureStructureHeading);
-  const middlePanelSummary = selectedSurface && selectedSurface.kind !== "feature"
-    ? (activeFeature?.summary || selectedSurface.secondary || "")
-    : (activeFeature?.summary || "");
   const repositoryStatusLabel = repositoryStatusTone === "ready"
     ? t.featureExplorer.repositoryReady
     : repositoryStatusTone === "inferred"
@@ -446,390 +219,185 @@ export function FeatureExplorerPageClient({
     >
       <div className="flex h-full min-h-0 bg-desktop-bg-primary">
         <main className="flex min-w-0 flex-1">
-          <section
-            ref={resizeContainerRef}
-            className="grid min-h-0 flex-1 grid-cols-1"
-            style={isWideLayout
-              ? {
-                  gridTemplateColumns: `${leftPanelWidth}px 8px minmax(320px,1fr)`,
-                }
-              : undefined}
-          >
-            <aside className="flex min-h-0 flex-col border-r border-desktop-border bg-desktop-bg-secondary/20">
-              <div className="border-b border-desktop-border px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1 rounded-sm border border-desktop-border bg-desktop-bg-primary px-2.5 py-1.5">
-                    <RepoPicker
-                      value={effectiveRepoSelection}
-                      onChange={handleRepoSelectionChange}
-                      additionalRepos={workspaceRepos}
-                      pathDisplay="hidden"
-                    />
-                  </div>
-                </div>
-                <div className="mt-1.5 flex items-center gap-1.5">
-                  <label className="flex min-w-0 flex-1 items-center gap-2 rounded-sm border border-desktop-border bg-desktop-bg-primary px-2.5 py-1.5 text-xs text-desktop-text-secondary">
-                    <Search className="h-3.5 w-3.5" />
-                    <input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder={t.featureExplorer.searchPlaceholder}
-                      className="w-full bg-transparent text-xs text-desktop-text-primary outline-none placeholder:text-desktop-text-secondary"
-                    />
-                  </label>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                  <span className={`rounded-sm border px-1.5 py-1 text-[9px] font-semibold normal-case tracking-normal ${repositoryStatusChipClassName}`}>
-                    {repositoryStatusLabel}
-                  </span>
-                  {surfaceNavigationOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setSurfaceNavigationView(option.id)}
-                      title={option.tooltip}
-                      className={`rounded-sm border px-2 py-1 text-[10px] font-medium ${
-                        surfaceNavigationView === option.id
-                          ? "border-desktop-accent bg-desktop-bg-active text-desktop-text-primary"
-                          : "border-desktop-border bg-desktop-bg-primary text-desktop-text-secondary hover:text-desktop-text-primary"
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1 text-[9px] text-desktop-text-secondary">
-                  <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                    {curatedFeatureCount} {t.featureExplorer.curatedFeaturesLabel}
-                  </span>
-                  <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                    {inferredFeatureCount} {t.featureExplorer.inferredFeaturesLabel}
-                  </span>
-                  <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                    {surfaceIndex.pages.length} {t.featureExplorer.pageSection}
-                  </span>
-                  <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                    {surfaceIndex.contractApis.length} {t.featureExplorer.contractApiSection}
-                  </span>
-                  {surfaceIndex.generatedAt ? (
-                    <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                      {formatShortDate(surfaceIndex.generatedAt)}
-                    </span>
-                  ) : null}
+          <aside className="flex min-h-0 flex-1 flex-col border-r border-desktop-border bg-desktop-bg-secondary/20">
+            <div className="border-b border-desktop-border px-3 py-2">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1 rounded-sm border border-desktop-border bg-desktop-bg-primary px-2.5 py-1.5">
+                  <RepoPicker
+                    value={effectiveRepoSelection}
+                    onChange={handleRepoSelectionChange}
+                    additionalRepos={workspaceRepos}
+                    pathDisplay="hidden"
+                  />
                 </div>
               </div>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <label className="flex min-w-0 flex-1 items-center gap-2 rounded-sm border border-desktop-border bg-desktop-bg-primary px-2.5 py-1.5 text-xs text-desktop-text-secondary">
+                  <Search className="h-3.5 w-3.5" />
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={t.featureExplorer.searchPlaceholder}
+                    className="w-full bg-transparent text-xs text-desktop-text-primary outline-none placeholder:text-desktop-text-secondary"
+                  />
+                </label>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                <span className={`rounded-sm border px-1.5 py-1 text-[9px] font-semibold normal-case tracking-normal ${repositoryStatusChipClassName}`}>
+                  {repositoryStatusLabel}
+                </span>
+                {surfaceNavigationOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setSurfaceNavigationView(option.id)}
+                    title={option.tooltip}
+                    className={`rounded-sm border px-2 py-1 text-[10px] font-medium ${
+                      surfaceNavigationView === option.id
+                        ? "border-desktop-accent bg-desktop-bg-active text-desktop-text-primary"
+                        : "border-desktop-border bg-desktop-bg-primary text-desktop-text-secondary hover:text-desktop-text-primary"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1 text-[9px] text-desktop-text-secondary">
+                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                  {curatedFeatureCount} {t.featureExplorer.curatedFeaturesLabel}
+                </span>
+                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                  {inferredFeatureCount} {t.featureExplorer.inferredFeaturesLabel}
+                </span>
+                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                  {surfaceIndex.pages.length} {t.featureExplorer.pageSection}
+                </span>
+                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                  {surfaceIndex.contractApis.length} {t.featureExplorer.contractApiSection}
+                </span>
+                {surfaceIndex.generatedAt ? (
+                  <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                    {formatShortDate(surfaceIndex.generatedAt)}
+                  </span>
+                ) : null}
+              </div>
+            </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                {loading ? (
-                  <div className="px-3 py-4 text-xs text-desktop-text-secondary">Loading…</div>
-                ) : error ? (
-                  <div className="px-3 py-4 text-xs text-red-400">{error}</div>
-                ) : surfaceNavigationView === "capabilities" ? (
-                  featureSidebarGroups.length > 0 ? (
-                    <div className="space-y-3 px-2 pb-3 pt-2">
-                      {featureSidebarGroups.map((group) => {
-                        const collapsed = surfaceSectionCollapsed[group.id] ?? (group.id === inferredGroupId && curatedFeatureCount > 0);
-                        const groupNode = capabilityTreeNodes.find((node) => node.id === `capability:${group.id}`);
-                        const groupMetrics = capabilityGroupMetrics[group.id] ?? { pages: 0, apis: 0, files: 0 };
-                        return (
-                          <div key={group.id}>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleSurfaceSection(group.id)}
-                              className="mb-1 flex w-full items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary hover:text-desktop-text-primary"
-                            >
-                              <span className="flex items-center gap-1.5">
-                                {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                                <span>{group.title}</span>
-                              </span>
-                              <span className="flex items-center gap-1 text-[9px] font-medium normal-case tracking-normal text-current/80">
-                                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                                  {groupMetrics.pages} {t.featureExplorer.pageSection}
-                                </span>
-                                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                                  {groupMetrics.apis} API
-                                </span>
-                                <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
-                                  {groupMetrics.files} {t.featureExplorer.filesLabel}
-                                </span>
-                              </span>
-                            </button>
-                            {group.description ? (
-                              <div className="mb-1 px-1 text-[11px] leading-5 text-desktop-text-secondary">
-                                {group.description}
-                              </div>
-                            ) : null}
-                            {!collapsed ? (
-                              <div className="space-y-0.5">
-                                {(groupNode?.children ?? []).map((node) => (
-                                  <SurfaceTreeRow
-                                    key={node.id}
-                                    node={node}
-                                    depth={0}
-                                    activeSurfaceKey={activeSurfaceKey}
-                                    expandedIds={surfaceTreeExpandedIds}
-                                    onSelectSurface={handleSelectSurface}
-                                    onToggleNode={handleToggleSurfaceTreeNode}
-                                    unmappedLabel={t.featureExplorer.unmappedLabel}
-                                    defaultExpandedDepth={0}
-                                  />
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="px-3 py-4">
-                      <div className="rounded-sm border border-desktop-border bg-desktop-bg-primary p-3">
-                        <div className="text-[12px] font-semibold text-desktop-text-primary">
-                          {t.featureExplorer.featureTaxonomyEmptyTitle}
-                        </div>
-                        <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">
-                          {t.featureExplorer.featureTaxonomyEmptyDescription}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                ) : !surfaceTreeSection ? (
-                  <div className="px-3 py-4 text-xs text-desktop-text-secondary">
-                    {t.featureExplorer.noFeatureMatches}
-                  </div>
-                ) : (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="px-3 py-4 text-xs text-desktop-text-secondary">Loading…</div>
+              ) : error ? (
+                <div className="px-3 py-4 text-xs text-red-400">{error}</div>
+              ) : surfaceNavigationView === "capabilities" ? (
+                featureSidebarGroups.length > 0 ? (
                   <div className="space-y-3 px-2 pb-3 pt-2">
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleSurfaceSection(surfaceTreeSection.id)}
-                        className="mb-1 flex w-full items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary hover:text-desktop-text-primary"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          {(surfaceSectionCollapsed[surfaceTreeSection.id] ?? false)
-                            ? <ChevronRight className="h-3.5 w-3.5" />
-                            : <ChevronDown className="h-3.5 w-3.5" />}
-                          <span>{surfaceTreeSection.title}</span>
-                        </span>
-                        <span>{surfaceTreeSection.nodes.reduce((sum, node) => sum + node.itemCount, 0)}</span>
-                      </button>
-                      {!(surfaceSectionCollapsed[surfaceTreeSection.id] ?? false) ? (
-                        <div className="space-y-1">
-                          {surfaceTreeSection.nodes.map((node) => (
-                            <SurfaceTreeRow
-                              key={node.id}
-                              node={node}
-                              depth={0}
-                              activeSurfaceKey={activeSurfaceKey}
-                              expandedIds={surfaceTreeExpandedIds}
-                              onSelectSurface={handleSelectSurface}
-                              onToggleNode={handleToggleSurfaceTreeNode}
-                              unmappedLabel={t.featureExplorer.unmappedLabel}
-                              defaultExpandedDepth={0}
-                            />
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </aside>
-
-            {isWideLayout ? (
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize navigation panel"
-                onPointerDown={startLeftColumnResize}
-                className="group relative hidden cursor-col-resize bg-desktop-bg-secondary/10 xl:block"
-              >
-                <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-desktop-border transition-colors group-hover:bg-desktop-accent" />
-              </div>
-            ) : null}
-
-            <section className="flex min-h-0 flex-col bg-desktop-bg-primary">
-              <div className="border-b border-desktop-border px-3 py-2.5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[14px] font-semibold text-desktop-text-primary">
-                      {middlePanelTitle}
-                    </div>
-                    {middlePanelSummary ? (
-                      <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">
-                        {middlePanelSummary}
-                      </div>
-                    ) : null}
-                  </div>
-                  {activeFeature ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      <InlineStatPill label={t.featureExplorer.statusLabel} value={activeFeature.status || "-"} />
-                      <InlineStatPill label={t.featureExplorer.pageSection} value={String(featurePageDetails.length)} />
-                      <InlineStatPill label={t.featureExplorer.apiSurfacesLabel} value={String(featureApiDetails.length)} />
-                      <InlineStatPill label={t.featureExplorer.sourceFilesLabel} value={String(featureSourceFiles.length)} />
-                      <InlineStatPill label={t.featureExplorer.sessionsLabel} value={String(activeFeature.sessionCount)} />
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                {featureDetailLoading ? (
-                  <div className="px-3 py-4 text-xs text-desktop-text-secondary">Loading…</div>
-                ) : !effectiveFeatureId ? (
-                  <div className="px-3 py-4 text-xs text-desktop-text-secondary">
-                    {t.featureExplorer.featureStructureEmpty}
-                  </div>
-                ) : (
-                  <div className="space-y-3 px-3 py-3">
-                    {!activeFeature ? (
-                      <div className="rounded-sm border border-desktop-border bg-desktop-bg-primary p-3 text-[11px] text-desktop-text-secondary">
-                        {t.featureExplorer.featureStructureUnavailable}
-                      </div>
-                    ) : null}
-
-                    <FeatureStructureSection
-                      title={t.featureExplorer.sourceFilesLabel}
-                      count={featureSourceFiles.length}
-                      collapsed={structureSectionCollapsed.files ?? false}
-                      onToggle={() => handleToggleStructureSection("files")}
-                      toolbar={featureSourceFiles.length > 0 ? (
-                        <div className="flex items-center gap-1">
+                    {featureSidebarGroups.map((group) => {
+                      const collapsed = surfaceSectionCollapsed[group.id] ?? (group.id === inferredGroupId && curatedFeatureCount > 0);
+                      const groupNode = capabilityTreeNodes.find((node) => node.id === `capability:${group.id}`);
+                      const groupMetrics = capabilityGroupMetrics[group.id] ?? { pages: 0, apis: 0, files: 0 };
+                      return (
+                        <div key={group.id}>
                           <button
-                            onClick={() => setMiddleView("list")}
-                            className={`rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${middleView === "list" ? "bg-desktop-bg-active text-desktop-text-primary" : "text-desktop-text-secondary hover:text-desktop-text-primary"}`}
+                            type="button"
+                            onClick={() => handleToggleSurfaceSection(group.id)}
+                            className="mb-1 flex w-full items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary hover:text-desktop-text-primary"
                           >
-                            {t.featureExplorer.listView}
+                            <span className="flex items-center gap-1.5">
+                              {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                              <span>{group.title}</span>
+                            </span>
+                            <span className="flex items-center gap-1 text-[9px] font-medium normal-case tracking-normal text-current/80">
+                              <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                                {groupMetrics.pages} {t.featureExplorer.pageSection}
+                              </span>
+                              <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                                {groupMetrics.apis} API
+                              </span>
+                              <span className="rounded-sm border border-desktop-border bg-desktop-bg-primary px-1.5 py-0.5">
+                                {groupMetrics.files} {t.featureExplorer.filesLabel}
+                              </span>
+                            </span>
                           </button>
-                          <button
-                            onClick={() => setMiddleView("tree")}
-                            className={`rounded-sm px-1.5 py-0.5 text-[9px] font-medium ${middleView === "tree" ? "bg-desktop-bg-active text-desktop-text-primary" : "text-desktop-text-secondary hover:text-desktop-text-primary"}`}
-                          >
-                            {t.featureExplorer.treeView}
-                          </button>
-                        </div>
-                      ) : null}
-                    >
-                      {fileTree.length > 0 ? (
-                        <div className="overflow-hidden rounded-sm border border-desktop-border">
-                          <div className="grid grid-cols-[minmax(0,1fr)_56px_72px_96px] bg-desktop-bg-secondary/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-desktop-text-secondary">
-                            <div>{t.featureExplorer.nameColumn}</div>
-                            <div>{t.featureExplorer.changeColumn}</div>
-                            <div>{t.featureExplorer.sessionsColumn}</div>
-                            <div>{t.featureExplorer.updatedColumn}</div>
-                          </div>
-                          {middleView === "list" ? (
-                            <div className="divide-y divide-desktop-border">
-                              {sessionSortedFiles.map((node) => {
-                                const stat = fileStats[node.path];
-                                const isActive = activeFileId === node.id;
-                                const isSelected = selectedFileIds.includes(node.id);
-                                return (
-                                  <div
-                                    key={node.id}
-                                    className={`grid grid-cols-[minmax(0,1fr)_56px_72px_96px] items-center px-3 py-1 text-xs transition-colors ${
-                                      isActive ? "bg-desktop-bg-active" : "hover:bg-desktop-bg-secondary/40"
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-1.5">
-                                      <input
-                                        type="checkbox"
-                                        data-testid={`feature-tree-select-${node.id}`}
-                                        checked={isSelected}
-                                        onChange={() => handleToggleNodeSelection(node.id)}
-                                        className="h-3.5 w-3.5 rounded border-black/15 bg-transparent dark:border-white/20"
-                                      />
-                                      <button
-                                        type="button"
-                                        data-testid={`feature-tree-activate-${node.id}`}
-                                        onClick={() => handleActivateFile(node.id)}
-                                        className="flex min-w-0 items-center gap-1.5 text-left"
-                                      >
-                                        <FileIcon path={node.path} />
-                                        <span className="break-all text-[12px] text-desktop-text-primary" title={node.path}>{node.path}</span>
-                                      </button>
-                                    </div>
-                                    <div className="text-[11px] text-desktop-text-secondary">{stat?.changes ?? "-"}</div>
-                                    <div className="text-[11px] text-desktop-text-secondary">{stat?.sessions ?? "-"}</div>
-                                    <div className="text-[11px] text-desktop-text-secondary">{stat?.updatedAt ? formatShortDate(stat.updatedAt) : "-"}</div>
-                                  </div>
-                                );
-                              })}
+                          {group.description ? (
+                            <div className="mb-1 px-1 text-[11px] leading-5 text-desktop-text-secondary">
+                              {group.description}
                             </div>
-                          ) : (
-                            <div className="divide-y divide-desktop-border">
-                              {fileTree.map((node) => (
-                                <TreeNodeRow
+                          ) : null}
+                          {!collapsed ? (
+                            <div className="space-y-0.5">
+                              {(groupNode?.children ?? []).map((node) => (
+                                <SurfaceTreeRow
                                   key={node.id}
                                   node={node}
                                   depth={0}
-                                  expandedIds={expandedIds}
-                                  activeFileId={activeFileId}
-                                  selectedFileIds={selectedFileIds}
-                                  treeNodeStats={treeNodeStats}
-                                  selectableFileIdsByNode={selectableFileIdsByNode}
-                                  onToggleNode={handleToggleNode}
-                                  onToggleNodeSelection={handleToggleNodeSelection}
-                                  onSetActiveFile={handleActivateFile}
+                                  activeSurfaceKey={activeSurfaceKey}
+                                  expandedIds={surfaceTreeExpandedIds}
+                                  onSelectSurface={handleSelectSurface}
+                                  onToggleNode={handleToggleSurfaceTreeNode}
+                                  unmappedLabel={t.featureExplorer.unmappedLabel}
+                                  defaultExpandedDepth={0}
                                 />
                               ))}
                             </div>
-                          )}
+                          ) : null}
                         </div>
-                      ) : featureSourceFiles.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {featureSourceFiles.map((sourceFile) => (
-                            <SimpleSourceFileRow key={sourceFile} path={sourceFile} />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-desktop-text-secondary">{t.featureExplorer.sourceFilesEmpty}</div>
-                      )}
-                    </FeatureStructureSection>
-
-                    <FeatureStructureSection
-                      title={t.featureExplorer.frontendRoutesLabel}
-                      count={featurePageDetails.length}
-                      collapsed={structureSectionCollapsed.pages ?? false}
-                      onToggle={() => handleToggleStructureSection("pages")}
-                    >
-                      {featurePageDetails.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {featurePageDetails.map((page) => (
-                            <FeatureRouteRow key={page.route} page={page} />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-desktop-text-secondary">{t.featureExplorer.noPagesDeclared}</div>
-                      )}
-                    </FeatureStructureSection>
-
-                    <FeatureStructureSection
-                      title={t.featureExplorer.apiSourceLabel}
-                      count={featureApiDetails.length}
-                      collapsed={structureSectionCollapsed.apis ?? false}
-                      onToggle={() => handleToggleStructureSection("apis")}
-                    >
-                      {featureApiDetails.length > 0 ? (
-                        <div className="space-y-1.5">
-                          {featureApiDetails.map((api) => (
-                            <FeatureApiRow
-                              key={`${api.method}:${api.endpoint}`}
-                              api={api}
-                              implementationLabel={t.featureExplorer.implementationLabel}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-desktop-text-secondary">{t.featureExplorer.noApisDeclared}</div>
-                      )}
-                    </FeatureStructureSection>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-
-            </section>
-
-          </section>
+                ) : (
+                  <div className="px-3 py-4">
+                    <div className="rounded-sm border border-desktop-border bg-desktop-bg-primary p-3">
+                      <div className="text-[12px] font-semibold text-desktop-text-primary">
+                        {t.featureExplorer.featureTaxonomyEmptyTitle}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-5 text-desktop-text-secondary">
+                        {t.featureExplorer.featureTaxonomyEmptyDescription}
+                      </div>
+                    </div>
+                  </div>
+                )
+              ) : !surfaceTreeSection ? (
+                <div className="px-3 py-4 text-xs text-desktop-text-secondary">
+                  {t.featureExplorer.noFeatureMatches}
+                </div>
+              ) : (
+                <div className="space-y-3 px-2 pb-3 pt-2">
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSurfaceSection(surfaceTreeSection.id)}
+                      className="mb-1 flex w-full items-center justify-between px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-desktop-text-secondary hover:text-desktop-text-primary"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        {(surfaceSectionCollapsed[surfaceTreeSection.id] ?? false)
+                          ? <ChevronRight className="h-3.5 w-3.5" />
+                          : <ChevronDown className="h-3.5 w-3.5" />}
+                        <span>{surfaceTreeSection.title}</span>
+                      </span>
+                      <span>{surfaceTreeSection.nodes.reduce((sum, node) => sum + node.itemCount, 0)}</span>
+                    </button>
+                    {!(surfaceSectionCollapsed[surfaceTreeSection.id] ?? false) ? (
+                      <div className="space-y-1">
+                        {surfaceTreeSection.nodes.map((node) => (
+                          <SurfaceTreeRow
+                            key={node.id}
+                            node={node}
+                            depth={0}
+                            activeSurfaceKey={activeSurfaceKey}
+                            expandedIds={surfaceTreeExpandedIds}
+                            onSelectSurface={handleSelectSurface}
+                            onToggleNode={handleToggleSurfaceTreeNode}
+                            unmappedLabel={t.featureExplorer.unmappedLabel}
+                            defaultExpandedDepth={0}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
         </main>
       </div>
     </DesktopAppShell>

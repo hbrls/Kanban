@@ -124,10 +124,6 @@ describe("FeatureExplorerPageClient", () => {
         repoRoot: "",
         warnings: [],
       },
-      featureDetail: null,
-      featureDetailLoading: false,
-      initialFeatureId: "",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
     });
   });
 
@@ -218,7 +214,7 @@ describe("FeatureExplorerPageClient", () => {
     expect(window.localStorage.getItem("routa.repoSelection.featureExplorer.default")).toBeNull();
   });
 
-  it("renders a feature-first structure view from the feature tree index", async () => {
+  it("renders a feature-first navigation view from the feature tree index", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
       error: null,
@@ -290,10 +286,6 @@ describe("FeatureExplorerPageClient", () => {
         repoRoot: "/repo/default",
         warnings: [],
       },
-      featureDetail: null,
-      featureDetailLoading: false,
-      initialFeatureId: "feature-a",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
     });
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
@@ -302,7 +294,6 @@ describe("FeatureExplorerPageClient", () => {
     expect(screen.getAllByText("Execution").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Feature A").length).toBeGreaterThan(0);
     expect(screen.queryByText("Feature Structure")).toBeNull();
-    expect(screen.getByText("Summary")).toBeTruthy();
     expect(screen.getByTestId("feature-metric-pages-feature-a").textContent).toContain("1");
     expect(screen.getByTestId("feature-metric-apis-feature-a").textContent).toContain("1");
     expect(within(executionGroupToggle).getByText("1 Pages")).toBeTruthy();
@@ -312,17 +303,6 @@ describe("FeatureExplorerPageClient", () => {
     expect(screen.getByText("Feature taxonomy ready")).toBeTruthy();
     expect(screen.getByText("1 curated")).toBeTruthy();
     expect(screen.getByText("0 inferred")).toBeTruthy();
-    expect(screen.getByText("Frontend routes")).toBeTruthy();
-    expect(screen.getAllByText("API surfaces").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Source files").length).toBeGreaterThan(0);
-    expect(screen.queryByText("/workspace/:workspaceId/feature-explorer")).toBeNull();
-    expect(screen.queryByText("/api/feature-explorer")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: /Frontend routes/i }));
-    expect(screen.getByText("/workspace/:workspaceId/feature-explorer")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: /API Source/i }));
-    expect(screen.getByText("/api/feature-explorer")).toBeTruthy();
   });
 
   it("switches surface navigation to surfaces tree mode", async () => {
@@ -349,10 +329,6 @@ describe("FeatureExplorerPageClient", () => {
         repoRoot: "/repo/default",
         warnings: [],
       },
-      featureDetail: null,
-      featureDetailLoading: false,
-      initialFeatureId: "",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
     });
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
@@ -425,10 +401,6 @@ describe("FeatureExplorerPageClient", () => {
         repoRoot: "/repo/default",
         warnings: [],
       },
-      featureDetail: null,
-      featureDetailLoading: false,
-      initialFeatureId: "feature-explorer",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
     });
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
@@ -484,10 +456,6 @@ describe("FeatureExplorerPageClient", () => {
         repoRoot: "/repo/default",
         warnings: [],
       },
-      featureDetail: null,
-      featureDetailLoading: false,
-      initialFeatureId: "",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
     });
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
@@ -561,10 +529,6 @@ describe("FeatureExplorerPageClient", () => {
         repoRoot: "/repo/default",
         warnings: [],
       },
-      featureDetail: null,
-      featureDetailLoading: false,
-      initialFeatureId: "",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
     });
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
@@ -645,10 +609,6 @@ describe("FeatureExplorerPageClient", () => {
         repoRoot: "/repo/default",
         warnings: [],
       },
-      featureDetail: null,
-      featureDetailLoading: false,
-      initialFeatureId: "feature-explorer",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
     });
 
     render(<FeatureExplorerPageClient workspaceId="default" />);
@@ -661,252 +621,6 @@ describe("FeatureExplorerPageClient", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "/workspace/:workspaceId/feature-explorer" })).toBeTruthy();
     });
-  });
-
-  it("summarizes folder session counts from descendant files", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [
-        { id: "kanban", name: "Kanban", description: "" },
-      ],
-      features: [
-        {
-          id: "kanban-workflow",
-          name: "Kanban Workflow",
-          group: "kanban",
-          summary: "Workflow surface",
-          status: "active",
-          sessionCount: 6,
-          changedFiles: 6,
-          updatedAt: "2026-04-17T08:00:00.000Z",
-          sourceFileCount: 1,
-          pageCount: 0,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "kanban-workflow",
-        name: "Kanban Workflow",
-        group: "kanban",
-        summary: "Workflow surface",
-        status: "active",
-        pages: [],
-        apis: [],
-        sourceFiles: ["src/app/api/kanban/boards/route.ts"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 6,
-        changedFiles: 6,
-        updatedAt: "2026-04-17T08:00:00.000Z",
-        fileTree: [
-          {
-            id: "folder-src",
-            name: "src",
-            path: "src",
-            kind: "folder",
-            children: [
-              {
-                id: "folder-app",
-                name: "app",
-                path: "src/app",
-                kind: "folder",
-                children: [
-                  {
-                    id: "file-route",
-                    name: "route.ts",
-                    path: "src/app/api/kanban/boards/route.ts",
-                    kind: "file",
-                    children: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-        fileStats: {
-          "src/app/api/kanban/boards/route.ts": {
-            changes: 6,
-            sessions: 6,
-            updatedAt: "2026-04-17T08:00:00.000Z",
-          },
-        },
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "kanban-workflow",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("feature-tree-sessions-folder-src").textContent).toBe("6");
-    });
-
-    expect(screen.getAllByText("Kanban Workflow").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Source files").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("feature-tree-changes-folder-src").textContent).toBe("6");
-    expect(screen.getByTestId("feature-tree-sessions-folder-app").textContent).toBe("6");
-    expect(screen.getByTestId("feature-tree-updated-folder-src").textContent).not.toBe("-");
-
-    fireEvent.click(screen.getByTestId("feature-tree-select-folder-src"));
-    expect((screen.getByTestId("feature-tree-select-folder-src") as HTMLInputElement).checked).toBe(false);
-    expect((screen.getByTestId("feature-tree-select-file-route") as HTMLInputElement).checked).toBe(false);
-
-    fireEvent.click(screen.getByTestId("feature-tree-select-folder-src"));
-    expect((screen.getByTestId("feature-tree-select-folder-src") as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByTestId("feature-tree-select-file-route") as HTMLInputElement).checked).toBe(true);
-  });
-
-  it("updates file selection when activating a different file row", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
-      features: [
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workspace",
-          summary: "Workspace entry point",
-          status: "shipped",
-          sessionCount: 2,
-          changedFiles: 2,
-          updatedAt: "2026-04-18T08:00:00.000Z",
-          sourceFileCount: 2,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [
-          {
-            route: "/workspace/:workspaceId",
-            title: "Workspace Overview",
-            description: "Workspace entry point",
-            sourceFile: "src/app/workspace/[workspaceId]/page.tsx",
-          },
-        ],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        implementationApis: [],
-        metadata: {
-          schemaVersion: 1,
-          capabilityGroups: [{ id: "workspace", name: "Workspace", description: "" }],
-          features: [
-            {
-              id: "workspace-overview",
-              name: "Workspace Overview",
-              group: "workspace",
-              pages: ["/workspace/:workspaceId"],
-              apis: [],
-              sourceFiles: [
-                "src/app/workspace/[workspaceId]/overview/page.tsx",
-                "src/app/workspace/[workspaceId]/page.tsx",
-              ],
-            },
-          ],
-        },
-        repoRoot: "/repo/default",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "workspace-overview",
-        name: "Workspace Overview",
-        group: "workspace",
-        summary: "Workspace entry point",
-        status: "shipped",
-        pages: ["/workspace/:workspaceId"],
-        apis: [],
-        sourceFiles: [
-          "src/app/workspace/[workspaceId]/overview/page.tsx",
-          "src/app/workspace/[workspaceId]/page.tsx",
-        ],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 2,
-        changedFiles: 2,
-        updatedAt: "2026-04-18T08:00:00.000Z",
-        fileTree: [
-          {
-            id: "folder-src",
-            name: "src",
-            path: "src",
-            kind: "folder",
-            children: [
-              {
-                id: "folder-app",
-                name: "app",
-                path: "src/app",
-                kind: "folder",
-                children: [
-                  {
-                    id: "file-overview",
-                    name: "page.tsx",
-                    path: "src/app/workspace/[workspaceId]/overview/page.tsx",
-                    kind: "file",
-                    children: [],
-                  },
-                  {
-                    id: "file-root",
-                    name: "page.tsx",
-                    path: "src/app/workspace/[workspaceId]/page.tsx",
-                    kind: "file",
-                    children: [],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-        fileStats: {
-          "src/app/workspace/[workspaceId]/overview/page.tsx": {
-            changes: 1,
-            sessions: 1,
-            updatedAt: "2026-04-17T08:00:00.000Z",
-          },
-          "src/app/workspace/[workspaceId]/page.tsx": {
-            changes: 1,
-            sessions: 1,
-            updatedAt: "2026-04-18T08:00:00.000Z",
-          },
-        },
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "workspace-overview",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("feature-tree-select-file-overview")).toBeTruthy();
-    });
-
-    expect((screen.getByTestId("feature-tree-select-file-overview") as HTMLInputElement).checked).toBe(true);
-    expect((screen.getByTestId("feature-tree-select-file-root") as HTMLInputElement).checked).toBe(false);
-
-    fireEvent.click(screen.getByTestId("feature-tree-activate-file-root"));
-
-    await waitFor(() => {
-      expect((screen.getByTestId("feature-tree-select-file-root") as HTMLInputElement).checked).toBe(true);
-    });
-
-    expect((screen.getByTestId("feature-tree-select-file-overview") as HTMLInputElement).checked).toBe(false);
   });
 
 });

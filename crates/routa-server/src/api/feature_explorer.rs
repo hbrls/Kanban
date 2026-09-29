@@ -25,7 +25,6 @@ const MAX_FILE_SIGNAL_REPEATED_COMMANDS: usize = 6;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(get_feature_list))
-        .route("/{featureId}", get(get_feature_detail))
         .route("/{featureId}/files", get(get_feature_files))
         .route("/{featureId}/apis", get(get_feature_apis))
 }
@@ -51,38 +50,6 @@ struct FeatureSummaryResponse {
     source_file_count: usize,
     page_count: usize,
     api_count: usize,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct FeatureDetailResponse {
-    id: String,
-    name: String,
-    group: String,
-    summary: String,
-    status: String,
-    pages: Vec<String>,
-    apis: Vec<String>,
-    source_files: Vec<String>,
-    related_features: Vec<String>,
-    domain_objects: Vec<String>,
-    session_count: usize,
-    changed_files: usize,
-    updated_at: String,
-    file_tree: Vec<FileTreeNode>,
-    surface_links: Vec<SurfaceLinkResponse>,
-    page_details: Vec<PageDetailResponse>,
-    api_details: Vec<ApiDetailResponse>,
-    file_stats: HashMap<String, FileStatResponse>,
-    file_signals: HashMap<String, FileSignalResponse>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct FileStatResponse {
-    changes: usize,
-    sessions: usize,
-    updated_at: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -136,31 +103,6 @@ struct FileTreeNode {
     path: String,
     kind: String,
     children: Vec<FileTreeNode>,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SurfaceLinkResponse {
-    kind: String,
-    route: String,
-    source_path: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PageDetailResponse {
-    name: String,
-    route: String,
-    description: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ApiDetailResponse {
-    group: String,
-    method: String,
-    endpoint: String,
-    description: String,
 }
 
 fn map_error(error: impl std::fmt::Display) -> (StatusCode, Json<Value>) {
@@ -1668,11 +1610,6 @@ fn normalize_repo_relative(repo_root: &Path, value: &str) -> Option<String> {
         .map(|v| v.to_string_lossy().replace('\\', "/"))
 }
 
-fn split_declared_api(declaration: &str) -> Option<(&str, &str)> {
-    let (method, endpoint) = declaration.split_once(' ')?;
-    Some((method.trim(), endpoint.trim()))
-}
-
 async fn get_feature_list(
     State(state): State<AppState>,
     Query(query): Query<RepoContextQuery>,
@@ -1734,169 +1671,6 @@ async fn get_feature_list(
         "capabilityGroups": capability_groups,
         "features": features,
     })))
-}
-
-async fn get_feature_detail(
-    State(state): State<AppState>,
-    AxumPath(feature_id): AxumPath<String>,
-    Query(query): Query<RepoContextQuery>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let repo_root = resolve_repo_root(
-        &state,
-        query.workspace_id.as_deref(),
-        query.codebase_id.as_deref(),
-        query.repo_path.as_deref(),
-        "workspaceId, codebaseId, or repoPath required",
-        ResolveRepoRootOptions::default(),
-    )
-    .await
-    .map_err(map_context_error)?;
-
-    let feature_tree = load_feature_tree(&repo_root).map_err(map_error)?;
-    let (session_stats, file_stats, file_signals, analyses) =
-        collect_session_stats(&repo_root, &feature_tree);
-
-    let feature = feature_tree
-        .features
-        .iter()
-        .find(|f| f.id == feature_id)
-        .ok_or_else(|| {
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": "Feature not found", "featureId": feature_id })),
-            )
-        })?;
-
-    let surface_catalog = FeatureSurfaceCatalog::from_repo_root(&repo_root).unwrap_or_default();
-    let mut surface_links = Vec::new();
-    for source_file in &feature.source_files {
-        for link in surface_catalog.best_links_for_path(source_file) {
-            surface_links.push(SurfaceLinkResponse {
-                kind: format!("{:?}", link.kind),
-                route: link.route,
-                source_path: link.source_path,
-            });
-        }
-    }
-
-    // Collect all related source files (from feature + discovered surfaces)
-    let mut all_files: Vec<String> = feature.source_files.clone();
-    for link in &surface_links {
-        if !all_files.contains(&link.source_path) {
-            all_files.push(link.source_path.clone());
-        }
-    }
-    for analysis_path in collect_feature_analysis_paths(&feature.id, &analyses) {
-        if !all_files.contains(&analysis_path) {
-            all_files.push(analysis_path);
-        }
-    }
-    all_files.sort();
-
-    let file_tree = build_file_tree(&all_files);
-
-    let page_details: Vec<PageDetailResponse> = feature
-        .pages
-        .iter()
-        .map(|route| {
-            if let Some(page) = feature_tree.frontend_page_for_route(route) {
-                PageDetailResponse {
-                    name: page.name.clone(),
-                    route: page.route.clone(),
-                    description: page.description.clone(),
-                }
-            } else {
-                PageDetailResponse {
-                    name: route.clone(),
-                    route: route.clone(),
-                    description: String::new(),
-                }
-            }
-        })
-        .collect();
-
-    let api_details: Vec<ApiDetailResponse> = feature
-        .apis
-        .iter()
-        .map(|declaration| {
-            if let Some(api) = feature_tree.api_endpoint_for_declaration(declaration) {
-                ApiDetailResponse {
-                    group: api.domain.clone(),
-                    method: api.method.clone(),
-                    endpoint: api.endpoint.clone(),
-                    description: api.description.clone(),
-                }
-            } else {
-                let (method, endpoint) = split_declared_api(declaration)
-                    .map(|(method, endpoint)| (method.to_string(), endpoint.to_string()))
-                    .unwrap_or_else(|| ("GET".to_string(), declaration.clone()));
-                ApiDetailResponse {
-                    group: String::new(),
-                    method,
-                    endpoint,
-                    description: String::new(),
-                }
-            }
-        })
-        .collect();
-
-    let (session_count, changed_files, updated_at) = session_stats
-        .get(&feature.id)
-        .cloned()
-        .unwrap_or((0, feature.source_files.len(), String::new()));
-
-    // Build per-file stats for this feature's source files
-    let feature_file_stats: HashMap<String, FileStatResponse> = all_files
-        .iter()
-        .filter_map(|f| {
-            file_stats.get(f).map(|(changes, sessions, updated)| {
-                (
-                    f.clone(),
-                    FileStatResponse {
-                        changes: *changes,
-                        sessions: *sessions,
-                        updated_at: updated.clone(),
-                    },
-                )
-            })
-        })
-        .collect();
-    let feature_file_signals: HashMap<String, FileSignalResponse> = all_files
-        .iter()
-        .filter_map(|f| {
-            file_signals
-                .get(f)
-                .map(|signal| (f.clone(), signal.clone()))
-        })
-        .collect();
-
-    let response = FeatureDetailResponse {
-        id: feature.id.clone(),
-        name: feature.name.clone(),
-        group: feature.group.clone(),
-        summary: feature.summary.clone(),
-        status: feature.status.clone(),
-        pages: feature.pages.clone(),
-        apis: feature.apis.clone(),
-        source_files: all_files,
-        related_features: feature.related_features.clone(),
-        domain_objects: feature.domain_objects.clone(),
-        session_count,
-        changed_files,
-        updated_at: if updated_at.is_empty() {
-            "-".to_string()
-        } else {
-            updated_at
-        },
-        file_tree,
-        surface_links,
-        page_details,
-        api_details,
-        file_stats: feature_file_stats,
-        file_signals: feature_file_signals,
-    };
-
-    Ok(Json(serde_json::to_value(response).map_err(map_error)?))
 }
 
 async fn get_feature_files(

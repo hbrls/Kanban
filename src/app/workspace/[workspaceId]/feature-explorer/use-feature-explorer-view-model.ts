@@ -5,11 +5,6 @@ import { useMemo } from "react";
 import type { TranslationDictionary } from "@/i18n";
 
 import {
-  buildSelectableFileIdsByNode,
-  buildTreeNodeStats,
-  flattenFiles,
-} from "./feature-explorer-file-tree";
-import {
   type ExplorerSurfaceItem,
   type SurfaceNavigationView,
   type SurfaceTreeNode,
@@ -25,7 +20,6 @@ import {
 } from "./surface-navigation";
 import type {
   CapabilityGroup,
-  FeatureDetail,
   FeatureSummary,
   FeatureSurfaceIndexResponse,
   FeatureSurfaceMetadataItem,
@@ -54,10 +48,8 @@ type SurfaceTreeSection = {
 } | null;
 
 type UseFeatureExplorerViewModelParams = {
-  activeFileId: string;
   capabilityGroups: CapabilityGroup[];
   effectiveFeatureId: string;
-  featureDetail: FeatureDetail | null;
   features: FeatureSummary[];
   inferredGroupId: string;
   messages: FeatureExplorerMessages;
@@ -160,10 +152,8 @@ function buildApiFeatureMap(
 }
 
 export function useFeatureExplorerViewModel({
-  activeFileId,
   capabilityGroups,
   effectiveFeatureId,
-  featureDetail,
   features,
   inferredGroupId,
   messages,
@@ -560,78 +550,6 @@ export function useFeatureExplorerViewModel({
 
     return null;
   }, [capabilityTreeNodes, effectiveFeatureId, selectedSurfaceKey, surfaceTreeSection]);
-  const surfaceOnlySelection = Boolean(
-    selectedSurface && selectedSurface.kind !== "feature" && selectedSurface.featureIds.length === 0,
-  );
-  const resolvedFeatureDetail = useMemo(
-    () => (featureDetail?.id === effectiveFeatureId ? featureDetail : null),
-    [effectiveFeatureId, featureDetail],
-  );
-  const activeFeatureMetadata = useMemo(
-    () => featureMetadataById.get(effectiveFeatureId) ?? null,
-    [effectiveFeatureId, featureMetadataById],
-  );
-  const featurePageDetails = useMemo(() => {
-    if (resolvedFeatureDetail?.pageDetails?.length) {
-      return resolvedFeatureDetail.pageDetails.filter(
-        (page, index, pages) => pages.findIndex((candidate) => candidate.route === page.route) === index,
-      );
-    }
-
-    const declaredPages = activeFeatureMetadata?.pages ?? [];
-    return declaredPages
-      .map((route) => {
-        const matched = surfaceIndex.pages.find((page) => page.route === route);
-        return matched ?? {
-          name: route,
-          route,
-          description: "",
-          sourceFile: "",
-        };
-      })
-      .filter((page, index, pages) => pages.findIndex((candidate) => candidate.route === page.route) === index);
-  }, [activeFeatureMetadata, resolvedFeatureDetail, surfaceIndex.pages]);
-  const featureApiDetails = useMemo(() => {
-    if (resolvedFeatureDetail?.apiDetails?.length) {
-      return resolvedFeatureDetail.apiDetails.filter(
-        (api, index, apis) => apis.findIndex(
-          (candidate) => candidate.method === api.method && candidate.endpoint === api.endpoint,
-        ) === index,
-      );
-    }
-
-    const declaredApis = activeFeatureMetadata?.apis ?? [];
-    return declaredApis
-      .map((declaration) => {
-        const parsed = parseApiDeclaration(declaration);
-        const lookupKey = buildApiLookupKey(parsed.method, parsed.path);
-        const contractApi = surfaceIndex.contractApis.find(
-          (api) => buildApiLookupKey(api.method, api.path) === lookupKey,
-        );
-        const nextjsSourceFiles = surfaceIndex.nextjsApis
-          .filter((api) => buildApiLookupKey(api.method, api.path) === lookupKey)
-          .flatMap((api) => api.sourceFiles);
-        const rustSourceFiles = surfaceIndex.rustApis
-          .filter((api) => buildApiLookupKey(api.method, api.path) === lookupKey)
-          .flatMap((api) => api.sourceFiles);
-
-        return {
-          group: contractApi?.domain ?? "",
-          method: parsed.method,
-          endpoint: parsed.path,
-          description: contractApi?.summary ?? "",
-          ...(nextjsSourceFiles.length > 0 ? { nextjsSourceFiles: [...new Set(nextjsSourceFiles)] } : {}),
-          ...(rustSourceFiles.length > 0 ? { rustSourceFiles: [...new Set(rustSourceFiles)] } : {}),
-        };
-      })
-      .filter((api, index, apis) => apis.findIndex(
-        (candidate) => candidate.method === api.method && candidate.endpoint === api.endpoint,
-      ) === index);
-  }, [activeFeatureMetadata, resolvedFeatureDetail, surfaceIndex.contractApis, surfaceIndex.nextjsApis, surfaceIndex.rustApis]);
-  const featureSourceFiles = useMemo(
-    () => [...new Set(resolvedFeatureDetail?.sourceFiles ?? activeFeatureMetadata?.sourceFiles ?? [])],
-    [activeFeatureMetadata, resolvedFeatureDetail],
-  );
   const curatedFeatureCount = useMemo(
     () => features.filter((feature) => feature.group !== inferredGroupId && feature.status !== "inferred").length,
     [features, inferredGroupId],
@@ -647,70 +565,17 @@ export function useFeatureExplorerViewModel({
     : hasInferredFeatureTaxonomy
       ? "inferred"
       : "missing";
-  const fileTree = useMemo(
-    () => (surfaceOnlySelection ? [] : resolvedFeatureDetail?.fileTree ?? []),
-    [resolvedFeatureDetail, surfaceOnlySelection],
-  );
-  const fileStats = useMemo(
-    () => (surfaceOnlySelection ? {} : resolvedFeatureDetail?.fileStats ?? {}),
-    [resolvedFeatureDetail, surfaceOnlySelection],
-  );
-  const flatMap = useMemo(() => flattenFiles(fileTree), [fileTree]);
-  const treeNodeStats = useMemo(() => buildTreeNodeStats(fileTree, fileStats), [fileTree, fileStats]);
-  const selectableFileIdsByNode = useMemo(() => buildSelectableFileIdsByNode(fileTree), [fileTree]);
-  const sessionSortedFiles = useMemo(() => {
-    const leafFiles = Object.values(flatMap).filter((node) => node.kind === "file");
-    return leafFiles.sort((left, right) => {
-      const leftStat = fileStats[left.path];
-      const rightStat = fileStats[right.path];
-      const leftSessions = leftStat?.sessions ?? 0;
-      const rightSessions = rightStat?.sessions ?? 0;
-      if (rightSessions !== leftSessions) {
-        return rightSessions - leftSessions;
-      }
-      const leftChanges = leftStat?.changes ?? 0;
-      const rightChanges = rightStat?.changes ?? 0;
-      return rightChanges - leftChanges;
-    });
-  }, [fileStats, flatMap]);
 
-  const activeFile = flatMap[activeFileId] ?? null;
-  const activeFeature = features.find((feature) => feature.id === effectiveFeatureId);
   const activeSurfaceKey = selectedSurface?.key ?? (effectiveFeatureId ? `feature:${effectiveFeatureId}` : "");
-  const selectedSurfaceFeatureNames = useMemo(
-    () => (selectedSurface?.featureIds ?? []).map(
-      (id) => featureSummaryById.get(id)?.name ?? featureMetadataById.get(id)?.name ?? id,
-    ),
-    [featureMetadataById, featureSummaryById, selectedSurface],
-  );
-  const middleHeadingDetail = selectedSurface?.kind === "feature"
-    ? activeFeature?.name ?? ""
-    : selectedSurface
-      ? `${selectedSurface.label}${selectedSurfaceFeatureNames[0] ? ` -> ${selectedSurfaceFeatureNames[0]}` : ""}`
-      : "";
 
   return {
-    activeFeature,
-    activeFile,
     activeSurfaceKey,
     capabilityTreeNodes,
     curatedFeatureCount,
-    featureApiDetails,
-    featurePageDetails,
     featureSidebarGroups,
-    featureSourceFiles,
-    fileStats,
-    fileTree,
-    flatMap,
     inferredFeatureCount,
-    middleHeadingDetail,
     repositoryStatusTone,
-    resolvedFeatureDetail,
-    selectedSurface,
-    selectableFileIdsByNode,
-    sessionSortedFiles,
     surfaceNavigationOptions,
     surfaceTreeSection,
-    treeNodeStats,
   };
 }

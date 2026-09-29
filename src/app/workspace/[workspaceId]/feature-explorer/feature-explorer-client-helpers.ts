@@ -3,7 +3,6 @@ import { loadRepoSelection } from "@/client/utils/repo-selection-storage";
 
 export type FeatureExplorerUrlState = {
   featureId: string;
-  filePath: string;
 };
 
 export function loadInitialRepoSelection(workspaceId: string): RepoSelection | null {
@@ -12,13 +11,12 @@ export function loadInitialRepoSelection(workspaceId: string): RepoSelection | n
 
 export function readFeatureExplorerUrlState(): FeatureExplorerUrlState {
   if (typeof window === "undefined") {
-    return { featureId: "", filePath: "" };
+    return { featureId: "" };
   }
 
   const params = new URLSearchParams(window.location.search);
   return {
     featureId: params.get("feature") ?? "",
-    filePath: params.get("file") ?? "",
   };
 }
 
@@ -33,13 +31,18 @@ export function replaceFeatureExplorerUrlState(nextState: FeatureExplorerUrlStat
   } else {
     params.delete("feature");
   }
-  if (nextState.filePath) {
-    params.set("file", nextState.filePath);
-  } else {
-    params.delete("file");
-  }
+  params.delete("file");
 
   const query = params.toString();
   const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
   window.history.replaceState(window.history.state, "", nextUrl);
+}
+
+export function formatShortDate(iso: string): string {
+  if (!iso || iso === "-") return "-";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${mm}-${dd}`;
 }

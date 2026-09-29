@@ -28,26 +28,6 @@ describe("useFeatureExplorerData", () => {
   beforeEach(() => {
     desktopAwareFetch.mockReset();
     desktopAwareFetch.mockImplementation(async (url: string) => {
-      if (url.startsWith("/feature-explorer/feature-a?")) {
-        return okJson({
-          id: "feature-a",
-          name: "Feature A",
-          group: "execution",
-          summary: "Summary",
-          status: "active",
-          pages: [],
-          apis: [],
-          sourceFiles: ["src/app/page.tsx"],
-          relatedFeatures: [],
-          domainObjects: [],
-          sessionCount: 0,
-          changedFiles: 1,
-          updatedAt: "-",
-          fileTree: [],
-          fileStats: {},
-        });
-      }
-
       if (url.startsWith("/feature-explorer?")) {
         return okJson({
           capabilityGroups: [{ id: "execution", name: "Execution", description: "" }],
@@ -117,12 +97,11 @@ describe("useFeatureExplorerData", () => {
     );
 
     await waitFor(() => {
-      expect(result.current.initialFeatureId).toBe("feature-a");
+      expect(result.current.features).toHaveLength(1);
     });
 
     expect(desktopAwareFetch).toHaveBeenCalledWith("/feature-explorer?workspaceId=default");
     expect(desktopAwareFetch).toHaveBeenCalledWith("/spec/surface-index?workspaceId=default");
-    expect(desktopAwareFetch).toHaveBeenCalledWith("/feature-explorer/feature-a?workspaceId=default");
 
     rerender({
       workspaceId: "default",
@@ -138,9 +117,6 @@ describe("useFeatureExplorerData", () => {
 
     expect(desktopAwareFetch).toHaveBeenCalledWith(
       "/spec/surface-index?workspaceId=default&repoPath=%2Ftmp%2Flocal-project",
-    );
-    expect(desktopAwareFetch).toHaveBeenCalledWith(
-      "/feature-explorer/feature-a?workspaceId=default&repoPath=%2Ftmp%2Flocal-project",
     );
   });
 
@@ -187,7 +163,6 @@ describe("useFeatureExplorerData", () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.features).toEqual([]);
-    expect(result.current.initialFeatureId).toBe("");
     expect(result.current.surfaceIndex.warnings[0]).toContain("FEATURE_TREE.md");
     expect(desktopAwareFetch).not.toHaveBeenCalledWith(
       expect.stringMatching(/^\/feature-explorer\/[^?]+\?/),

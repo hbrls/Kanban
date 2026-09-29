@@ -10,10 +10,6 @@ use tempfile::TempDir;
 mod common;
 use common::ApiFixture;
 
-#[path = "support/feature_explorer_history.rs"]
-mod feature_explorer_history;
-use feature_explorer_history::FeatureExplorerHistoryFixture;
-
 struct GitRepoFixture {
     _temp: TempDir,
     repo_path: PathBuf,
@@ -1818,42 +1814,6 @@ async fn api_feature_explorer_contract_for_workspace_repo() {
 
     assert!(payload["features"].as_array().is_some());
     assert!(payload["capabilityGroups"].as_array().is_some());
-}
-
-#[tokio::test]
-async fn api_feature_explorer_detail_includes_file_signals_for_workspace_repo() {
-    let fixture = ApiFixture::new().await;
-    let repo_root = workspace_root();
-    let _history = FeatureExplorerHistoryFixture::install(&repo_root).await;
-
-    let response = fixture
-        .client
-        .get(fixture.endpoint("/api/feature-explorer/feature-explorer"))
-        .query(&[("repoPath", repo_root.to_string_lossy().to_string())])
-        .send()
-        .await
-        .expect("get feature explorer detail payload");
-
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let payload: Value = response
-        .json()
-        .await
-        .expect("decode feature explorer detail payload");
-
-    let file_signals = payload["fileSignals"]
-        .as_object()
-        .expect("fileSignals object should exist");
-    assert!(
-        !file_signals.is_empty(),
-        "expected non-empty fileSignals for feature-explorer detail, got {payload:?}"
-    );
-    assert!(
-        file_signals.values().any(|signal| signal["sessions"]
-            .as_array()
-            .is_some_and(|sessions| !sessions.is_empty())),
-        "expected fileSignals sessions to be populated for feature-explorer detail, got {payload:?}"
-    );
 }
 
 #[tokio::test]
