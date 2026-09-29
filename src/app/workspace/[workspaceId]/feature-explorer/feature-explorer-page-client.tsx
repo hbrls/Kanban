@@ -11,20 +11,12 @@ import {
 import { DesktopAppShell } from "@/client/components/desktop-app-shell";
 import { RepoPicker, type RepoSelection } from "@/client/components/repo-picker";
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
-import { useAcp } from "@/client/hooks/use-acp";
 import { useCodebases, useWorkspaces } from "@/client/hooks/use-workspaces";
-import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { saveRepoSelection } from "@/client/utils/repo-selection-storage";
 import { useTranslation } from "@/i18n";
 
-import type {
-  AggregatedSelectionSession,
-  FeatureDetail,
-  FeatureSummary,
-  RetrospectiveMemoryResponse,
-} from "./types";
+import type { FeatureDetail } from "./types";
 import {
-  buildSessionAnalysisSessionName,
   type FeatureExplorerUrlState,
   loadInitialRepoSelection,
   readFeatureExplorerUrlState,
@@ -32,8 +24,6 @@ import {
 } from "./feature-explorer-client-helpers";
 import { FileIcon, flattenFiles, formatShortDate, TreeNodeRow } from "./feature-explorer-file-tree";
 import { FeatureApiRow, FeatureRouteRow, FeatureStructureSection, InlineStatPill, SimpleSourceFileRow } from "./feature-explorer-structure-sections";
-import { FeatureExplorerDrawers, FeatureExplorerInspectorPane } from "./feature-explorer-secondary-ui";
-import { buildSessionAnalysisPrompt } from "./session-analysis";
 import {
   type ExplorerSurfaceItem,
   type SurfaceNavigationView,
@@ -42,57 +32,6 @@ import {
 import { useFeatureExplorerData } from "./use-feature-explorer-data";
 import { useFeatureExplorerViewModel } from "./use-feature-explorer-view-model";
 
-function emptyRetrospectiveMemoryResponse(): RetrospectiveMemoryResponse {
-  return {
-    storageRoot: "",
-    matchedMemories: [],
-  };
-}
-
-function compareRetrospectiveFeatureCandidates(left: FeatureSummary, right: FeatureSummary): number {
-  const leftIsInferred = left.status === "inferred";
-  const rightIsInferred = right.status === "inferred";
-  if (leftIsInferred !== rightIsInferred) {
-    return leftIsInferred ? 1 : -1;
-  }
-
-  if (right.sessionCount !== left.sessionCount) {
-    return right.sessionCount - left.sessionCount;
-  }
-
-  if (right.changedFiles !== left.changedFiles) {
-    return right.changedFiles - left.changedFiles;
-  }
-
-  const leftSurfaceCount = left.sourceFileCount + left.pageCount + left.apiCount;
-  const rightSurfaceCount = right.sourceFileCount + right.pageCount + right.apiCount;
-  if (rightSurfaceCount !== leftSurfaceCount) {
-    return rightSurfaceCount - leftSurfaceCount;
-  }
-
-  if (left.updatedAt !== right.updatedAt) {
-    return right.updatedAt.localeCompare(left.updatedAt);
-  }
-
-  return left.name.localeCompare(right.name);
-}
-
-function deriveRetrospectiveFeatureIds(
-  features: FeatureSummary[],
-  prioritizedFeatureId: string,
-  limit = 4,
-): string[] {
-  const rankedIds = [...features]
-    .filter((feature) => Boolean(feature.id))
-    .sort(compareRetrospectiveFeatureCandidates)
-    .map((feature) => feature.id);
-
-  return [...new Set([
-    ...(prioritizedFeatureId ? [prioritizedFeatureId] : []),
-    ...rankedIds,
-  ])].slice(0, limit);
-}
-
 export function FeatureExplorerPageClient({
   workspaceId,
 }: {
@@ -100,20 +39,11 @@ export function FeatureExplorerPageClient({
 }) {
   const inferredGroupId = "inferred-surfaces";
   const router = useRouter();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const workspacesHook = useWorkspaces();
   const { codebases } = useCodebases(workspaceId);
 
   const workspace = workspacesHook.workspaces.find((item) => item.id === workspaceId) ?? null;
-  const analysisAcp = useAcp();
-  const analysisAcpConnected = analysisAcp.connected;
-  const analysisAcpLoading = analysisAcp.loading;
-  const connectAnalysisAcp = analysisAcp.connect;
-  const analysisProviders = analysisAcp.providers;
-  const analysisSelectedProvider = analysisAcp.selectedProvider;
-  const setAnalysisProvider = analysisAcp.setProvider;
-  const selectAnalysisSession = analysisAcp.selectSession;
-  const promptAnalysisSession = analysisAcp.promptSession;
   const workspaceRepos = useMemo(
     () =>
       codebases.map((codebase) => ({
@@ -124,9 +54,6 @@ export function FeatureExplorerPageClient({
     [codebases],
   );
   const [repoSelectionOverrides, setRepoSelectionOverrides] = useState<Record<string, RepoSelection | null>>({});
-  const [retrospectiveMemoryResponse, setRetrospectiveMemoryResponse] = useState<RetrospectiveMemoryResponse>(emptyRetrospectiveMemoryResponse);
-  const [isLoadingRetrospectiveMemory, setIsLoadingRetrospectiveMemory] = useState(false);
-  const [retrospectiveMemoryError, setRetrospectiveMemoryError] = useState<string | null>(null);
   const hasRepoSelectionOverride = Object.prototype.hasOwnProperty.call(repoSelectionOverrides, workspaceId);
   const manualRepoSelection = hasRepoSelectionOverride
     ? (repoSelectionOverrides[workspaceId] ?? null)
@@ -187,14 +114,6 @@ export function FeatureExplorerPageClient({
   const [hasHydratedClientState, setHasHydratedClientState] = useState(false);
   const [isWideLayout, setIsWideLayout] = useState(false);
   const [leftPanelWidth, setLeftPanelWidth] = useState(320);
-  const [rightPanelWidth, setRightPanelWidth] = useState(380);
-  const [isSessionAnalysisDrawerOpen, setIsSessionAnalysisDrawerOpen] = useState(false);
-  const [isStartingSessionAnalysis, setIsStartingSessionAnalysis] = useState(false);
-  const [sessionAnalysisError, setSessionAnalysisError] = useState<string | null>(null);
-  const [analysisSessionId, setAnalysisSessionId] = useState<string | null>(null);
-  const [analysisSessionName, setAnalysisSessionName] = useState("");
-  const [analysisSessionProviderId, setAnalysisSessionProviderId] = useState("");
-  const [isAnalysisSessionPaneOpen, setIsAnalysisSessionPaneOpen] = useState(false);
   const resizeContainerRef = useRef<HTMLElement | null>(null);
 
   const effectiveFeatureId = featureId || initialFeatureId;
@@ -215,14 +134,10 @@ export function FeatureExplorerPageClient({
     middleHeadingDetail,
     repositoryStatusTone,
     resolvedFeatureDetail,
-    selectedFilePaths,
-    selectedScopeSessions,
     selectedSurface,
-    selectedSurfaceFeatureNames,
     selectableFileIdsByNode,
     sessionSortedFiles,
     surfaceNavigationOptions,
-    surfaceOnlySelection,
     surfaceTreeSection,
     treeNodeStats,
   } = useFeatureExplorerViewModel({
@@ -234,15 +149,10 @@ export function FeatureExplorerPageClient({
     inferredGroupId,
     messages: t.featureExplorer,
     query,
-    selectedFileIds,
     selectedSurfaceKey,
     surfaceIndex,
     surfaceNavigationView,
   });
-  const analysisSessionProviderName = useMemo(
-    () => analysisProviders.find((provider) => provider.id === analysisSessionProviderId)?.name ?? analysisSessionProviderId,
-    [analysisProviders, analysisSessionProviderId],
-  );
   const capabilityGroupMetrics = useMemo(
     () => capabilityTreeNodes.reduce<Record<string, { pages: number; apis: number; files: number }>>((acc, node) => {
       acc[node.id.replace("capability:", "")] = node.children.reduce(
@@ -257,89 +167,6 @@ export function FeatureExplorerPageClient({
     }, {}),
     [capabilityTreeNodes],
   );
-  const prioritizedRetrospectiveFeatureId = surfaceOnlySelection
-    ? ""
-    : (resolvedFeatureDetail?.id ?? activeFeature?.id ?? effectiveFeatureId);
-  const retrospectiveFeatureIds = useMemo(
-    () => deriveRetrospectiveFeatureIds(features, prioritizedRetrospectiveFeatureId),
-    [features, prioritizedRetrospectiveFeatureId],
-  );
-  const retrospectiveFeatureKey = retrospectiveFeatureIds.join("|");
-  const retrospectiveFileKey = selectedFilePaths.join("|");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchRetrospectiveMemories() {
-      if (!effectiveRepoSelection?.path) {
-        setRetrospectiveMemoryResponse(emptyRetrospectiveMemoryResponse());
-        setRetrospectiveMemoryError(null);
-        setIsLoadingRetrospectiveMemory(false);
-        return;
-      }
-
-      if (retrospectiveFeatureIds.length === 0 && selectedFilePaths.length === 0) {
-        setRetrospectiveMemoryResponse(emptyRetrospectiveMemoryResponse());
-        setRetrospectiveMemoryError(null);
-        setIsLoadingRetrospectiveMemory(false);
-        return;
-      }
-
-      setIsLoadingRetrospectiveMemory(true);
-
-      try {
-        const params = new URLSearchParams({
-          workspaceId,
-          repoPath: effectiveRepoSelection.path,
-        });
-        for (const featureId of retrospectiveFeatureIds) {
-          params.append("featureId", featureId);
-        }
-        for (const filePath of selectedFilePaths) {
-          params.append("filePath", filePath);
-        }
-
-        const response = await desktopAwareFetch(`/feature-explorer/retrospectives?${params.toString()}`);
-        const payload = await response.json().catch(() => null) as RetrospectiveMemoryResponse | { error?: string; details?: string } | null;
-
-        if (!response.ok) {
-          throw new Error(
-            (payload && "details" in payload && payload.details)
-            || (payload && "error" in payload && payload.error)
-            || t.featureExplorer.retrospectiveHistoryError,
-          );
-        }
-
-        if (!cancelled) {
-          setRetrospectiveMemoryResponse(payload && "matchedMemories" in payload ? payload : emptyRetrospectiveMemoryResponse());
-          setRetrospectiveMemoryError(null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setRetrospectiveMemoryResponse(emptyRetrospectiveMemoryResponse());
-          setRetrospectiveMemoryError(err instanceof Error ? err.message : t.featureExplorer.retrospectiveHistoryError);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingRetrospectiveMemory(false);
-        }
-      }
-    }
-
-    void fetchRetrospectiveMemories();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    effectiveRepoSelection?.path,
-    retrospectiveFeatureKey,
-    retrospectiveFeatureIds,
-    retrospectiveFileKey,
-    selectedFilePaths,
-    t.featureExplorer.retrospectiveHistoryError,
-    workspaceId,
-  ]);
 
   useEffect(() => {
     const urlState = readFeatureExplorerUrlState();
@@ -361,7 +188,6 @@ export function FeatureExplorerPageClient({
 
       if (window.innerWidth >= 1536) {
         setLeftPanelWidth((prev) => Math.max(prev, 380));
-        setRightPanelWidth((prev) => Math.max(prev, 400));
       }
     };
 
@@ -513,7 +339,7 @@ export function FeatureExplorerPageClient({
     setStructureSectionCollapsed((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  const startColumnResize = (panel: "left" | "right") => {
+  const startLeftColumnResize = () => {
     if (!isWideLayout || typeof window === "undefined") {
       return;
     }
@@ -525,19 +351,11 @@ export function FeatureExplorerPageClient({
 
     const rect = container.getBoundingClientRect();
     const minLeftWidth = 260;
-    const maxLeftWidth = Math.min(520, rect.width - rightPanelWidth - 360);
-    const minRightWidth = 300;
-    const maxRightWidth = Math.min(560, rect.width - leftPanelWidth - 360);
+    const maxLeftWidth = Math.min(520, rect.width - 360);
 
     const handlePointerMove = (event: PointerEvent) => {
-      if (panel === "left") {
-        const nextWidth = Math.max(minLeftWidth, Math.min(maxLeftWidth, event.clientX - rect.left));
-        setLeftPanelWidth(nextWidth);
-        return;
-      }
-
-      const nextWidth = Math.max(minRightWidth, Math.min(maxRightWidth, rect.right - event.clientX));
-      setRightPanelWidth(nextWidth);
+      const nextWidth = Math.max(minLeftWidth, Math.min(maxLeftWidth, event.clientX - rect.left));
+      setLeftPanelWidth(nextWidth);
     };
 
     const handlePointerUp = () => {
@@ -592,116 +410,6 @@ export function FeatureExplorerPageClient({
     }
   };
 
-  useEffect(() => {
-    if (!isSessionAnalysisDrawerOpen) {
-      return;
-    }
-
-    if (selectedFilePaths.length === 0 || selectedScopeSessions.length === 0) {
-      setIsSessionAnalysisDrawerOpen(false);
-    }
-  }, [isSessionAnalysisDrawerOpen, selectedFilePaths.length, selectedScopeSessions.length]);
-
-  useEffect(() => {
-    if ((!isSessionAnalysisDrawerOpen && !isAnalysisSessionPaneOpen) || analysisAcpConnected || analysisAcpLoading) {
-      return;
-    }
-
-    void connectAnalysisAcp();
-  }, [
-    analysisAcpConnected,
-    analysisAcpLoading,
-    connectAnalysisAcp,
-    isAnalysisSessionPaneOpen,
-    isSessionAnalysisDrawerOpen,
-  ]);
-
-  const handleOpenSessionAnalysisDrawer = () => {
-    setSessionAnalysisError(null);
-    setIsSessionAnalysisDrawerOpen(true);
-  };
-
-  const handleStartSessionAnalysis = async (sessionsToAnalyze: AggregatedSelectionSession[] = selectedScopeSessions) => {
-    if (!effectiveRepoSelection?.path || selectedFilePaths.length === 0 || sessionsToAnalyze.length === 0) {
-      return;
-    }
-
-    setSessionAnalysisError(null);
-    setIsStartingSessionAnalysis(true);
-
-    try {
-      const sessionName = buildSessionAnalysisSessionName(
-        locale,
-        surfaceOnlySelection ? null : resolvedFeatureDetail,
-        selectedFilePaths,
-      );
-      const prompt = buildSessionAnalysisPrompt({
-        locale,
-        workspaceId,
-        repoName: effectiveRepoSelection.name,
-        repoPath: effectiveRepoSelection.path,
-        branch: effectiveRepoSelection.branch,
-        featureDetail: surfaceOnlySelection ? null : resolvedFeatureDetail,
-        selectedFilePaths,
-        sessions: sessionsToAnalyze,
-      });
-
-      const response = await desktopAwareFetch("/api/acp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: `feature-explorer-analysis:${Date.now()}`,
-          method: "session/new",
-          params: {
-            workspaceId,
-            cwd: effectiveRepoSelection.path,
-            branch: effectiveRepoSelection.branch || undefined,
-            role: "ROUTA",
-            specialistId: "file-session-analyst",
-            specialistLocale: locale,
-            name: sessionName,
-            provider: analysisSelectedProvider,
-          },
-        }),
-      });
-
-      const payload = await response.json().catch(() => null) as {
-        result?: { sessionId?: string };
-        error?: { message?: string };
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(payload?.error?.message || t.featureExplorer.sessionAnalysisFailed);
-      }
-
-      if (payload?.error?.message) {
-        throw new Error(payload.error.message);
-      }
-
-      const sessionId = payload?.result?.sessionId;
-      if (!sessionId) {
-        throw new Error(t.featureExplorer.sessionAnalysisFailed);
-      }
-
-      await connectAnalysisAcp();
-      selectAnalysisSession(sessionId);
-      setAnalysisSessionId(sessionId);
-      setAnalysisSessionName(sessionName);
-      setAnalysisSessionProviderId(analysisSelectedProvider);
-      setIsAnalysisSessionPaneOpen(true);
-      setIsSessionAnalysisDrawerOpen(false);
-      void promptAnalysisSession(sessionId, prompt);
-    } catch (err) {
-      setSessionAnalysisError(
-        err instanceof Error && err.message
-          ? err.message
-          : t.featureExplorer.sessionAnalysisFailed,
-      );
-    } finally {
-      setIsStartingSessionAnalysis(false);
-    }
-  };
   const middlePanelTitle = selectedSurface && selectedSurface.kind !== "feature"
     ? (middleHeadingDetail || activeFeature?.name || t.featureExplorer.featureStructureHeading)
     : (activeFeature?.name || middleHeadingDetail || t.featureExplorer.featureStructureHeading);
@@ -743,7 +451,7 @@ export function FeatureExplorerPageClient({
             className="grid min-h-0 flex-1 grid-cols-1"
             style={isWideLayout
               ? {
-                  gridTemplateColumns: `${leftPanelWidth}px 8px minmax(320px,1fr) 8px ${rightPanelWidth}px`,
+                  gridTemplateColumns: `${leftPanelWidth}px 8px minmax(320px,1fr)`,
                 }
               : undefined}
           >
@@ -932,14 +640,14 @@ export function FeatureExplorerPageClient({
                 role="separator"
                 aria-orientation="vertical"
                 aria-label="Resize navigation panel"
-                onPointerDown={() => startColumnResize("left")}
+                onPointerDown={startLeftColumnResize}
                 className="group relative hidden cursor-col-resize bg-desktop-bg-secondary/10 xl:block"
               >
                 <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-desktop-border transition-colors group-hover:bg-desktop-accent" />
               </div>
             ) : null}
 
-            <section className="flex min-h-0 flex-col border-r border-desktop-border bg-desktop-bg-primary">
+            <section className="flex min-h-0 flex-col bg-desktop-bg-primary">
               <div className="border-b border-desktop-border px-3 py-2.5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -1121,67 +829,8 @@ export function FeatureExplorerPageClient({
 
             </section>
 
-            {isWideLayout ? (
-              <div
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Resize inspector panel"
-                onPointerDown={() => startColumnResize("right")}
-                className="group relative hidden cursor-col-resize bg-desktop-bg-secondary/10 xl:block"
-              >
-                <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-desktop-border transition-colors group-hover:bg-desktop-accent" />
-              </div>
-            ) : null}
-
-            <FeatureExplorerInspectorPane
-              featureDetail={surfaceOnlySelection ? null : resolvedFeatureDetail}
-              selectedFileCount={selectedFileIds.length}
-              selectedScopeSessions={selectedScopeSessions}
-              selectedSurface={selectedSurface}
-              selectedSurfaceFeatureNames={selectedSurfaceFeatureNames}
-              retrospectiveMemories={retrospectiveMemoryResponse.matchedMemories}
-              retrospectiveMemoryLoading={isLoadingRetrospectiveMemory}
-              retrospectiveMemoryError={retrospectiveMemoryError}
-              onOpenSessionAnalysis={handleOpenSessionAnalysisDrawer}
-              t={t}
-            />
-
           </section>
         </main>
-
-        <FeatureExplorerDrawers
-          workspaceId={workspaceId}
-          sessionAnalysisDrawerKey={`session-analysis:${isSessionAnalysisDrawerOpen ? "open" : "closed"}:${selectedFilePaths.join("|")}:${selectedScopeSessions.map((session) => `${session.provider}:${session.sessionId}`).join("|")}`}
-          sessionAnalysisOpen={isSessionAnalysisDrawerOpen}
-          selectedFilePaths={selectedFilePaths}
-          selectedScopeSessions={selectedScopeSessions}
-          providers={analysisProviders}
-          selectedProvider={analysisSelectedProvider}
-          onProviderChange={setAnalysisProvider}
-          isStartingSessionAnalysis={isStartingSessionAnalysis}
-          sessionAnalysisError={sessionAnalysisError}
-          onCloseSessionAnalysis={() => setIsSessionAnalysisDrawerOpen(false)}
-          onStartSessionAnalysis={handleStartSessionAnalysis}
-          analysisSessionPaneOpen={isAnalysisSessionPaneOpen}
-          analysisSessionId={analysisSessionId}
-          analysisSessionName={analysisSessionName}
-          analysisSessionProviderName={analysisSessionProviderName}
-          analysisSessionProviderId={analysisSessionProviderId}
-          fallbackSelectedProvider={analysisSelectedProvider}
-          onCloseAnalysisSessionPane={() => {
-            setIsAnalysisSessionPaneOpen(false);
-            setAnalysisSessionId(null);
-          }}
-          acp={analysisAcp}
-          onEnsureAnalysisSession={async () => analysisSessionId}
-          onSelectAnalysisSession={async (sessionId) => {
-            setAnalysisSessionId(sessionId);
-            selectAnalysisSession(sessionId);
-          }}
-          repoSelection={effectiveRepoSelection}
-          codebases={codebases}
-          t={t}
-        />
       </div>
     </DesktopAppShell>
   );

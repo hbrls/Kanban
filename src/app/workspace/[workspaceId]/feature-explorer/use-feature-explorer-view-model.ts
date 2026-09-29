@@ -4,7 +4,6 @@ import { useMemo } from "react";
 
 import type { TranslationDictionary } from "@/i18n";
 
-import { mergeSessionDiagnostics } from "./feature-explorer-client-helpers";
 import {
   buildSelectableFileIdsByNode,
   buildTreeNodeStats,
@@ -25,14 +24,12 @@ import {
   splitPathSegments,
 } from "./surface-navigation";
 import type {
-  AggregatedSelectionSession,
   CapabilityGroup,
   FeatureDetail,
   FeatureSummary,
   FeatureSurfaceIndexResponse,
   FeatureSurfaceMetadataItem,
   FeatureSurfacePage,
-  FileTreeNode,
 } from "./types";
 
 type FeatureExplorerMessages = TranslationDictionary["featureExplorer"];
@@ -65,7 +62,6 @@ type UseFeatureExplorerViewModelParams = {
   inferredGroupId: string;
   messages: FeatureExplorerMessages;
   query: string;
-  selectedFileIds: string[];
   selectedSurfaceKey: string;
   surfaceIndex: FeatureSurfaceIndexResponse;
   surfaceNavigationView: SurfaceNavigationView;
@@ -163,84 +159,6 @@ function buildApiFeatureMap(
   return map;
 }
 
-function buildSelectedScopeSessions(
-  flatMap: Record<string, FileTreeNode>,
-  resolvedFeatureDetail: FeatureDetail | null,
-  selectedFileIds: string[],
-): AggregatedSelectionSession[] {
-  if (!resolvedFeatureDetail?.fileSignals || selectedFileIds.length === 0) {
-    return [];
-  }
-
-  const aggregated = new Map<string, AggregatedSelectionSession>();
-
-  for (const fileId of selectedFileIds) {
-    const fileNode = flatMap[fileId];
-    if (!fileNode || fileNode.kind !== "file") {
-      continue;
-    }
-
-    const signal = resolvedFeatureDetail.fileSignals[fileNode.path];
-    if (!signal) {
-      continue;
-    }
-
-    for (const session of signal.sessions) {
-      const sessionKey = `${session.provider}:${session.sessionId}`;
-      const existing = aggregated.get(sessionKey);
-
-      if (existing) {
-        if (session.updatedAt > existing.updatedAt) {
-          existing.updatedAt = session.updatedAt;
-        }
-        if (!existing.promptSnippet && session.promptSnippet) {
-          existing.promptSnippet = session.promptSnippet;
-        }
-        if (!existing.resumeCommand && session.resumeCommand) {
-          existing.resumeCommand = session.resumeCommand;
-        }
-        existing.diagnostics = mergeSessionDiagnostics(existing.diagnostics, session.diagnostics);
-        for (const prompt of session.promptHistory ?? []) {
-          if (!existing.promptHistory.includes(prompt)) {
-            existing.promptHistory.push(prompt);
-          }
-        }
-        for (const toolName of session.toolNames ?? []) {
-          if (!existing.toolNames.includes(toolName)) {
-            existing.toolNames.push(toolName);
-          }
-        }
-        for (const changedFile of session.changedFiles ?? [fileNode.path]) {
-          if (!existing.changedFiles.includes(changedFile)) {
-            existing.changedFiles.push(changedFile);
-          }
-        }
-        continue;
-      }
-
-      aggregated.set(sessionKey, {
-        provider: session.provider,
-        sessionId: session.sessionId,
-        updatedAt: session.updatedAt,
-        promptSnippet: session.promptSnippet,
-        promptHistory: [...(session.promptHistory ?? [])],
-        toolNames: [...(session.toolNames ?? [])],
-        ...(session.resumeCommand ? { resumeCommand: session.resumeCommand } : {}),
-        changedFiles: [...(session.changedFiles ?? [fileNode.path])],
-        ...(session.diagnostics ? { diagnostics: mergeSessionDiagnostics(undefined, session.diagnostics) } : {}),
-      });
-    }
-  }
-
-  return [...aggregated.values()]
-    .map((session) => ({
-      ...session,
-      toolNames: session.toolNames.sort((left, right) => left.localeCompare(right)),
-      changedFiles: session.changedFiles.sort((left, right) => left.localeCompare(right)),
-    }))
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-}
-
 export function useFeatureExplorerViewModel({
   activeFileId,
   capabilityGroups,
@@ -250,7 +168,6 @@ export function useFeatureExplorerViewModel({
   inferredGroupId,
   messages,
   query,
-  selectedFileIds,
   selectedSurfaceKey,
   surfaceIndex,
   surfaceNavigationView,
@@ -739,15 +656,6 @@ export function useFeatureExplorerViewModel({
     [resolvedFeatureDetail, surfaceOnlySelection],
   );
   const flatMap = useMemo(() => flattenFiles(fileTree), [fileTree]);
-  const selectedFilePaths = useMemo(
-    () => [...new Set(
-      selectedFileIds
-        .map((fileId) => flatMap[fileId])
-        .filter((node): node is FileTreeNode => Boolean(node && node.kind === "file"))
-        .map((node) => node.path),
-    )].sort((left, right) => left.localeCompare(right)),
-    [flatMap, selectedFileIds],
-  );
   const treeNodeStats = useMemo(() => buildTreeNodeStats(fileTree, fileStats), [fileTree, fileStats]);
   const selectableFileIdsByNode = useMemo(() => buildSelectableFileIdsByNode(fileTree), [fileTree]);
   const sessionSortedFiles = useMemo(() => {
@@ -767,10 +675,6 @@ export function useFeatureExplorerViewModel({
   }, [fileStats, flatMap]);
 
   const activeFile = flatMap[activeFileId] ?? null;
-  const selectedScopeSessions = useMemo(
-    () => buildSelectedScopeSessions(flatMap, resolvedFeatureDetail, selectedFileIds),
-    [flatMap, resolvedFeatureDetail, selectedFileIds],
-  );
   const activeFeature = features.find((feature) => feature.id === effectiveFeatureId);
   const activeSurfaceKey = selectedSurface?.key ?? (effectiveFeatureId ? `feature:${effectiveFeatureId}` : "");
   const selectedSurfaceFeatureNames = useMemo(
@@ -802,14 +706,10 @@ export function useFeatureExplorerViewModel({
     middleHeadingDetail,
     repositoryStatusTone,
     resolvedFeatureDetail,
-    selectedFilePaths,
-    selectedScopeSessions,
     selectedSurface,
-    selectedSurfaceFeatureNames,
     selectableFileIdsByNode,
     sessionSortedFiles,
     surfaceNavigationOptions,
-    surfaceOnlySelection,
     surfaceTreeSection,
     treeNodeStats,
   };

@@ -5,10 +5,6 @@ const navState = vi.hoisted(() => ({
   push: vi.fn(),
 }));
 
-const clipboardState = vi.hoisted(() => ({
-  writeText: vi.fn(),
-}));
-
 const { useWorkspaces, useCodebases } = vi.hoisted(() => ({
   useWorkspaces: vi.fn(),
   useCodebases: vi.fn(),
@@ -16,66 +12,6 @@ const { useWorkspaces, useCodebases } = vi.hoisted(() => ({
 
 const { useFeatureExplorerData } = vi.hoisted(() => ({
   useFeatureExplorerData: vi.fn(),
-}));
-
-const analysisAcpState = vi.hoisted(() => ({
-  connected: false,
-  sessionId: null as string | null,
-  updates: [] as Array<{ sessionId: string; update?: Record<string, unknown> }>,
-  providers: [
-    {
-      id: "opencode",
-      name: "OpenCode",
-      description: "OpenCode provider",
-      command: "opencode",
-      status: "available" as const,
-      source: "static" as const,
-    },
-    {
-      id: "codex",
-      name: "Codex",
-      description: "Codex provider",
-      command: "codex-acp",
-      status: "available" as const,
-      source: "static" as const,
-    },
-  ],
-  selectedProvider: "opencode",
-  loading: false,
-  error: null as string | null,
-  authError: null,
-  dockerConfigError: null as string | null,
-  connect: vi.fn(async () => {
-    analysisAcpState.connected = true;
-  }),
-  createSession: vi.fn(),
-  resumeSession: vi.fn(),
-  forkSession: vi.fn(),
-  selectSession: vi.fn((sessionId: string) => {
-    analysisAcpState.sessionId = sessionId;
-  }),
-  setProvider: vi.fn((provider: string) => {
-    analysisAcpState.selectedProvider = provider;
-  }),
-  setMode: vi.fn(),
-  prompt: vi.fn(),
-  promptSession: vi.fn(async (sessionId: string, _text: string) => {
-    analysisAcpState.sessionId = sessionId;
-  }),
-  respondToUserInput: vi.fn(),
-  respondToUserInputForSession: vi.fn(),
-  cancel: vi.fn(),
-  disconnect: vi.fn(),
-  clearAuthError: vi.fn(),
-  clearDockerConfigError: vi.fn(),
-  listProviderModels: vi.fn(async () => []),
-  writeTerminal: vi.fn(),
-  resizeTerminal: vi.fn(),
-}));
-
-const sessionLaunchState = vi.hoisted(() => ({
-  desktopAwareFetch: vi.fn(),
-  storePendingPrompt: vi.fn(),
 }));
 
 const localStorageMock = vi.hoisted(() => {
@@ -107,30 +43,12 @@ vi.mock("../use-feature-explorer-data", () => ({
   useFeatureExplorerData,
 }));
 
-vi.mock("@/client/hooks/use-acp", () => ({
-  useAcp: () => analysisAcpState,
-}));
-
-vi.mock("@/client/utils/diagnostics", () => ({
-  desktopAwareFetch: sessionLaunchState.desktopAwareFetch,
-}));
-
-vi.mock("@/client/utils/pending-prompt", () => ({
-  storePendingPrompt: sessionLaunchState.storePendingPrompt,
-}));
-
 vi.mock("@/client/components/desktop-app-shell", () => ({
   DesktopAppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="desktop-shell">{children}</div>,
 }));
 
 vi.mock("@/client/components/workspace-switcher", () => ({
   WorkspaceSwitcher: () => <div data-testid="workspace-switcher" />,
-}));
-
-vi.mock("@/client/components/chat-panel", () => ({
-  ChatPanel: ({ activeSessionId }: { activeSessionId: string | null }) => (
-    <div data-testid="chat-panel">{activeSessionId ?? "no-session"}</div>
-  ),
 }));
 
 vi.mock("@/client/components/repo-picker", () => ({
@@ -158,101 +76,18 @@ vi.mock("@/client/components/repo-picker", () => ({
   ),
 }));
 
-vi.mock("@/client/components/acp-provider-dropdown", () => ({
-  AcpProviderDropdown: ({
-    providers,
-    onProviderChange,
-    dataTestId,
-  }: {
-    providers: Array<{ id: string; name: string }>;
-    onProviderChange: (provider: string) => void;
-    dataTestId?: string;
-  }) => (
-    <div data-testid={dataTestId ?? "acp-provider-dropdown"}>
-      {providers.map((provider) => (
-        <button key={provider.id} type="button" onClick={() => onProviderChange(provider.id)}>
-          {provider.name}
-        </button>
-      ))}
-    </div>
-  ),
-}));
-
 Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
   writable: true,
 });
 
-Object.defineProperty(navigator, "clipboard", {
-  value: clipboardState,
-  writable: true,
-});
-
 import { FeatureExplorerPageClient } from "../feature-explorer-page-client";
-
-function buildRetrospectivesResponse(overrides?: {
-  matchedMemories?: Array<{
-    scope: "file" | "feature";
-    targetId: string;
-    updatedAt: string;
-    summary: string;
-    featureId?: string;
-    featureName?: string;
-  }>;
-}): Response {
-  return new Response(
-    JSON.stringify({
-      storageRoot: "/tmp/routa-retrospectives",
-      matchedMemories: overrides?.matchedMemories ?? [],
-    }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    },
-  );
-}
 
 describe("FeatureExplorerPageClient", () => {
   beforeEach(() => {
     window.history.replaceState({}, "", "/workspace/default/feature-explorer");
     window.localStorage.clear();
     navState.push.mockReset();
-    clipboardState.writeText.mockReset();
-    sessionLaunchState.desktopAwareFetch.mockReset();
-    sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
-        return buildRetrospectivesResponse();
-      }
-
-      return new Response(JSON.stringify({ error: `Unhandled request: ${input}` }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-    sessionLaunchState.storePendingPrompt.mockReset();
-    analysisAcpState.connected = false;
-    analysisAcpState.sessionId = null;
-    analysisAcpState.updates = [];
-    analysisAcpState.selectedProvider = "opencode";
-    analysisAcpState.error = null;
-    analysisAcpState.connect.mockClear();
-    analysisAcpState.createSession.mockReset();
-    analysisAcpState.resumeSession.mockReset();
-    analysisAcpState.forkSession.mockReset();
-    analysisAcpState.selectSession.mockClear();
-    analysisAcpState.setProvider.mockClear();
-    analysisAcpState.setMode.mockReset();
-    analysisAcpState.prompt.mockReset();
-    analysisAcpState.promptSession.mockClear();
-    analysisAcpState.respondToUserInput.mockReset();
-    analysisAcpState.respondToUserInputForSession.mockReset();
-    analysisAcpState.cancel.mockReset();
-    analysisAcpState.disconnect.mockReset();
-    analysisAcpState.clearAuthError.mockReset();
-    analysisAcpState.clearDockerConfigError.mockReset();
-    analysisAcpState.listProviderModels.mockReset();
-    analysisAcpState.writeTerminal.mockReset();
-    analysisAcpState.resizeTerminal.mockReset();
     useWorkspaces.mockReturnValue({
       loading: false,
       workspaces: [{ id: "default", title: "Default Workspace" }],
@@ -383,336 +218,6 @@ describe("FeatureExplorerPageClient", () => {
     expect(window.localStorage.getItem("routa.repoSelection.featureExplorer.default")).toBeNull();
   });
 
-  it("shows saved retrospective history from top feature candidates on entry", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [],
-      features: [
-        {
-          id: "feature-explorer",
-          name: "Feature Explorer",
-          group: "workflow",
-          summary: "Browse feature context",
-          status: "active",
-          sessionCount: 2,
-          changedFiles: 1,
-          updatedAt: "2026-04-21T10:05:00.000Z",
-          sourceFileCount: 1,
-          pageCount: 1,
-          apiCount: 0,
-        },
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workspace",
-          summary: "Review the workspace shell",
-          status: "active",
-          sessionCount: 5,
-          changedFiles: 3,
-          updatedAt: "2026-04-21T11:05:00.000Z",
-          sourceFileCount: 3,
-          pageCount: 2,
-          apiCount: 1,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        implementationApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "feature-explorer",
-        name: "Feature Explorer",
-        group: "workflow",
-        summary: "Browse feature context",
-        status: "active",
-        pages: ["/workspace/:workspaceId/feature-explorer"],
-        apis: [],
-        sourceFiles: ["src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 2,
-        changedFiles: 1,
-        updatedAt: "2026-04-21T10:05:00.000Z",
-        fileTree: [
-          {
-            id: "file:feature-explorer-page-client",
-            name: "feature-explorer-page-client.tsx",
-            path: "src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx",
-            kind: "file",
-            children: [],
-          },
-        ],
-        fileStats: {},
-        fileSignals: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "feature-explorer",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
-        return buildRetrospectivesResponse({
-          matchedMemories: [
-            {
-              scope: "feature",
-              targetId: "workspace-overview",
-              featureId: "workspace-overview",
-              featureName: "Workspace Overview",
-              updatedAt: "2026-04-21T11:30:00.000Z",
-              summary: "Start from the workspace shell, then narrow to a single feature file.",
-            },
-          ],
-        });
-      }
-
-      return new Response(JSON.stringify({ error: `Unhandled request: ${input}` }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Saved history")).toBeTruthy();
-      expect(screen.getByText("Start from the workspace shell, then narrow to a single feature file.")).toBeTruthy();
-      expect(screen.getAllByText("Workspace Overview").length).toBeGreaterThan(0);
-      expect(screen.getByText("Feature")).toBeTruthy();
-    });
-
-    expect(
-      sessionLaunchState.desktopAwareFetch.mock.calls.some(([input]) =>
-        typeof input === "string"
-        && input.includes("/feature-explorer/retrospectives?")
-        && input.includes("featureId=feature-explorer")
-        && input.includes("featureId=workspace-overview")
-        && input.includes("filePath=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Ffeature-explorer%2Ffeature-explorer-page-client.tsx"),
-      ),
-    ).toBe(true);
-  });
-
-  it("loads file-level history for a deep-linked file selection", async () => {
-    window.history.replaceState(
-      {},
-      "",
-      "/workspace/default/feature-explorer?feature=feature-explorer&file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Ffeature-explorer%2Ffeature-explorer-page-client.tsx",
-    );
-
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [],
-      features: [
-        {
-          id: "feature-explorer",
-          name: "Feature Explorer",
-          group: "workflow",
-          summary: "Browse feature context",
-          status: "active",
-          sessionCount: 2,
-          changedFiles: 1,
-          updatedAt: "2026-04-21T10:05:00.000Z",
-          sourceFileCount: 1,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        implementationApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "feature-explorer",
-        name: "Feature Explorer",
-        group: "workflow",
-        summary: "Browse feature context",
-        status: "active",
-        pages: ["/workspace/:workspaceId/feature-explorer"],
-        apis: [],
-        sourceFiles: ["src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 2,
-        changedFiles: 1,
-        updatedAt: "2026-04-21T10:05:00.000Z",
-        fileTree: [
-          {
-            id: "file:feature-explorer-page-client",
-            name: "feature-explorer-page-client.tsx",
-            path: "src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx",
-            kind: "file",
-            children: [],
-          },
-        ],
-        fileStats: {},
-        fileSignals: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
-        return buildRetrospectivesResponse({
-          matchedMemories: [
-            {
-              scope: "file",
-              targetId: "src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx",
-              updatedAt: "2026-04-21T11:20:00.000Z",
-              summary: "Use the file path up front so the specialist skips feature-wide drift.",
-            },
-          ],
-        });
-      }
-
-      return new Response(JSON.stringify({ error: `Unhandled request: ${input}` }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Use the file path up front so the specialist skips feature-wide drift.")).toBeTruthy();
-    });
-
-    expect(
-      sessionLaunchState.desktopAwareFetch.mock.calls.some(([input]) =>
-        typeof input === "string"
-        && input.includes("/feature-explorer/retrospectives?")
-        && input.includes("filePath=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Ffeature-explorer%2Ffeature-explorer-page-client.tsx"),
-      ),
-    ).toBe(true);
-  });
-
-  it("renders structured saved history summaries as labeled blocks", async () => {
-    window.history.replaceState(
-      {},
-      "",
-      "/workspace/default/feature-explorer?feature=workspace-overview&file=src%2Fapp%2Fworkspace%2F%5BworkspaceId%5D%2Ffeature-explorer%2Fsession-analysis.ts",
-    );
-
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [],
-      features: [
-        {
-          id: "workspace-overview",
-          name: "Workspace Overview",
-          group: "workflow",
-          summary: "Workspace-scoped navigation",
-          status: "active",
-          sessionCount: 3,
-          changedFiles: 2,
-          updatedAt: "2026-04-22T04:54:46.127Z",
-          sourceFileCount: 1,
-          pageCount: 2,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        implementationApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "workspace-overview",
-        name: "Workspace Overview",
-        group: "workflow",
-        summary: "Workspace-scoped navigation",
-        status: "active",
-        pages: ["/workspace/:workspaceId"],
-        apis: [],
-        sourceFiles: ["src/app/workspace/[workspaceId]/feature-explorer/session-analysis.ts"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 3,
-        changedFiles: 2,
-        updatedAt: "2026-04-22T04:54:46.127Z",
-        fileTree: [
-          {
-            id: "file:session-analysis",
-            name: "session-analysis.ts",
-            path: "src/app/workspace/[workspaceId]/feature-explorer/session-analysis.ts",
-            kind: "file",
-            children: [],
-          },
-        ],
-        fileStats: {},
-        fileSignals: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
-        return buildRetrospectivesResponse({
-          matchedMemories: [
-            {
-              scope: "file",
-              targetId: "src/app/workspace/[workspaceId]/feature-explorer/session-analysis.ts",
-              updatedAt: "2026-04-22T04:54:46.127Z",
-              summary: [
-                "Scope: file:src/app/workspace/[workspaceId]/feature-explorer/session-analysis.ts | feature:workspace-overview",
-                "Next ask: Analyze only how session-analysis.ts writes retrospective memory.",
-                "Must include: exact file path, session IDs, acceptance criteria",
-                "Avoid: kanban drift, unquoted bracket paths",
-                "Still need: none",
-              ].join("\n"),
-            },
-          ],
-        });
-      }
-
-      return new Response(JSON.stringify({ error: `Unhandled request: ${input}` }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Scope")).toBeTruthy();
-      expect(screen.getByText("Next ask")).toBeTruthy();
-      expect(screen.getByText("Must include")).toBeTruthy();
-      expect(screen.getByText("Avoid")).toBeTruthy();
-      expect(screen.getByText("Still need")).toBeTruthy();
-      expect(screen.getByText("Analyze only how session-analysis.ts writes retrospective memory.")).toBeTruthy();
-      expect(screen.getByText("none")).toBeTruthy();
-    });
-  });
-
   it("renders a feature-first structure view from the feature tree index", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
@@ -818,10 +323,6 @@ describe("FeatureExplorerPageClient", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /API Source/i }));
     expect(screen.getByText("/api/feature-explorer")).toBeTruthy();
-
-    expect(screen.queryByRole("button", { name: "Context" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Screenshot" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "API" })).toBeNull();
   });
 
   it("switches surface navigation to surfaces tree mode", async () => {
@@ -1162,174 +663,6 @@ describe("FeatureExplorerPageClient", () => {
     });
   });
 
-  it("does not duplicate feature details in the inspector for feature selections", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "kanban", name: "Kanban", description: "Kanban workflows" }],
-      features: [
-        {
-          id: "kanban-workflow",
-          name: "Kanban Workflow",
-          group: "kanban",
-          summary: "Workflow surface",
-          status: "active",
-          sessionCount: 6,
-          changedFiles: 6,
-          updatedAt: "2026-04-17T08:00:00.000Z",
-          sourceFileCount: 1,
-          pageCount: 0,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "kanban-workflow",
-        name: "Kanban Workflow",
-        group: "kanban",
-        summary: "Workflow surface",
-        status: "active",
-        pages: [],
-        apis: [],
-        sourceFiles: ["src/app/api/kanban/boards/route.ts"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 6,
-        changedFiles: 6,
-        updatedAt: "2026-04-17T08:00:00.000Z",
-        fileTree: [],
-        fileStats: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "kanban-workflow",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    expect(screen.queryByText("Selected surface")).toBeNull();
-    expect(screen.getAllByText("Kanban Workflow").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Capability group")).toBeNull();
-  });
-
-  it("keeps the inspector focused on surface evidence when a non-feature surface is selected", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [{ id: "workspace", name: "Workspace", description: "Workspace surfaces" }],
-      features: [
-        {
-          id: "feature-explorer",
-          name: "Feature Explorer",
-          group: "workspace",
-          summary: "Inspect feature surfaces",
-          status: "active",
-          sessionCount: 12,
-          changedFiles: 8,
-          updatedAt: "2026-04-20T08:00:00.000Z",
-          sourceFileCount: 2,
-          pageCount: 1,
-          apiCount: 1,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [
-          {
-            route: "/workspace/:workspaceId/feature-explorer",
-            title: "Feature Explorer",
-            description: "Inspect feature surfaces",
-            sourceFile: "src/app/workspace/[workspaceId]/feature-explorer/page.tsx",
-          },
-        ],
-        apis: [],
-        contractApis: [
-          {
-            domain: "feature-explorer",
-            method: "GET",
-            path: "/api/feature-explorer",
-            operationId: "listFeatureExplorer",
-            summary: "List feature explorer features",
-          },
-        ],
-        nextjsApis: [
-          {
-            domain: "feature-explorer",
-            method: "GET",
-            path: "/api/feature-explorer",
-            sourceFiles: ["src/app/api/feature-explorer/route.ts"],
-          },
-        ],
-        rustApis: [],
-        metadata: {
-          schemaVersion: 1,
-          capabilityGroups: [{ id: "workspace", name: "Workspace", description: "Workspace surfaces" }],
-          features: [
-            {
-              id: "feature-explorer",
-              name: "Feature Explorer",
-              group: "workspace",
-              pages: ["/workspace/:workspaceId/feature-explorer"],
-              apis: ["GET /api/feature-explorer"],
-              sourceFiles: [
-                "src/app/workspace/[workspaceId]/feature-explorer/page.tsx",
-                "src/app/api/feature-explorer/route.ts",
-              ],
-            },
-          ],
-        },
-        repoRoot: "/repo/default",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "feature-explorer",
-        name: "Feature Explorer",
-        group: "workspace",
-        summary: "Inspect feature surfaces",
-        status: "active",
-        pages: ["/workspace/:workspaceId/feature-explorer"],
-        apis: ["GET /api/feature-explorer"],
-        sourceFiles: [
-          "src/app/workspace/[workspaceId]/feature-explorer/page.tsx",
-          "src/app/api/feature-explorer/route.ts",
-        ],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 12,
-        changedFiles: 8,
-        updatedAt: "2026-04-20T08:00:00.000Z",
-        fileTree: [],
-        fileStats: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "feature-explorer",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    fireEvent.click(screen.getByLabelText("Expand Feature Explorer"));
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "/api/feature-explorer" })).toBeTruthy();
-    });
-    fireEvent.click(screen.getByRole("button", { name: "/api/feature-explorer" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Selected surface")).toBeTruthy();
-    });
-    expect(screen.queryByText("Learned prompt context")).toBeNull();
-  });
-
   it("summarizes folder session counts from descendant files", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
@@ -1436,7 +769,7 @@ describe("FeatureExplorerPageClient", () => {
     expect((screen.getByTestId("feature-tree-select-file-route") as HTMLInputElement).checked).toBe(true);
   });
 
-  it("updates inspector evidence when activating a different file row", async () => {
+  it("updates file selection when activating a different file row", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
       error: null,
@@ -1552,38 +885,6 @@ describe("FeatureExplorerPageClient", () => {
             updatedAt: "2026-04-18T08:00:00.000Z",
           },
         },
-        fileSignals: {
-          "src/app/workspace/[workspaceId]/overview/page.tsx": {
-            sessions: [
-              {
-                provider: "codex",
-                sessionId: "session-overview",
-                updatedAt: "2026-04-17T08:00:00.000Z",
-                promptSnippet: "overview prompt",
-                promptHistory: ["overview prompt"],
-                toolNames: ["Read"],
-                changedFiles: ["src/app/workspace/[workspaceId]/overview/page.tsx"],
-              },
-            ],
-            toolHistory: ["Read"],
-            promptHistory: ["overview prompt"],
-          },
-          "src/app/workspace/[workspaceId]/page.tsx": {
-            sessions: [
-              {
-                provider: "codex",
-                sessionId: "session-root",
-                updatedAt: "2026-04-18T08:00:00.000Z",
-                promptSnippet: "root prompt",
-                promptHistory: ["root prompt"],
-                toolNames: ["Write"],
-                changedFiles: ["src/app/workspace/[workspaceId]/page.tsx"],
-              },
-            ],
-            toolHistory: ["Write"],
-            promptHistory: ["root prompt"],
-          },
-        },
       },
       featureDetailLoading: false,
       initialFeatureId: "workspace-overview",
@@ -1593,7 +894,7 @@ describe("FeatureExplorerPageClient", () => {
     render(<FeatureExplorerPageClient workspaceId="default" />);
 
     await waitFor(() => {
-      expect(screen.getByText("session-overview")).toBeTruthy();
+      expect(screen.getByTestId("feature-tree-select-file-overview")).toBeTruthy();
     });
 
     expect((screen.getByTestId("feature-tree-select-file-overview") as HTMLInputElement).checked).toBe(true);
@@ -1602,12 +903,10 @@ describe("FeatureExplorerPageClient", () => {
     fireEvent.click(screen.getByTestId("feature-tree-activate-file-root"));
 
     await waitFor(() => {
-      expect(screen.getByText("session-root")).toBeTruthy();
+      expect((screen.getByTestId("feature-tree-select-file-root") as HTMLInputElement).checked).toBe(true);
     });
 
-    expect(screen.queryByText("session-overview")).toBeNull();
     expect((screen.getByTestId("feature-tree-select-file-overview") as HTMLInputElement).checked).toBe(false);
-    expect((screen.getByTestId("feature-tree-select-file-root") as HTMLInputElement).checked).toBe(true);
   });
 
 });

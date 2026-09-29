@@ -82,18 +82,6 @@ export interface FileSignal {
   promptHistory: string[];
 }
 
-export interface AggregatedSelectionSession {
-  provider: string;
-  sessionId: string;
-  updatedAt: string;
-  promptSnippet: string;
-  promptHistory: string[];
-  toolNames: string[];
-  resumeCommand?: string;
-  changedFiles: string[];
-  diagnostics?: FileSessionDiagnostics;
-}
-
 export interface FileTreeNode {
   id: string;
   name: string;
@@ -194,19 +182,3 @@ export interface FeatureListResponse {
   capabilityGroups: CapabilityGroup[];
   features: FeatureSummary[];
 }
-
-export interface RetrospectiveMemoryEntry {
-  scope: "file" | "feature";
-  targetId: string;
-  updatedAt: string;
-  summary: string;
-  featureId?: string;
-  featureName?: string;
-}
-
-export interface RetrospectiveMemoryResponse {
-  storageRoot: string;
-  matchedMemories: RetrospectiveMemoryEntry[];
-}
-
-export type InspectorTab = "context" | "screenshot" | "api";
