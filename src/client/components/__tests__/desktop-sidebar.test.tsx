@@ -27,7 +27,7 @@ describe("DesktopSidebar", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
     expect(screen.queryByRole("link", { name: "MCP Servers" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Spec" }).getAttribute("href")).toBe("/workspace/default/spec");
+    expect(screen.queryByRole("link", { name: "Spec" })).toBeNull();
     expect(screen.getByRole("link", { name: "Harness" }).getAttribute("href")).toBe("/settings/harness?workspaceId=default");
     expect(screen.queryByRole("link", { name: "Fluency" })).toBeNull();
     expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/settings?workspaceId=default");
