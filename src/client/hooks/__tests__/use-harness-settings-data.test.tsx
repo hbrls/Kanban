@@ -19,15 +19,6 @@ describe("useHarnessSettingsData", () => {
     fetchMock.mockImplementation(async (input) => {
       const url = String(input);
 
-      if (url.startsWith("/api/fitness/specs?")) {
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          fitnessDir: "/repo/docs/fitness",
-          files: [],
-        });
-      }
-
       if (url.startsWith("/api/fitness/plan?")) {
         return okJson({
           generatedAt: "2026-03-31T00:00:00.000Z",
@@ -315,7 +306,6 @@ describe("useHarnessSettingsData", () => {
     }));
 
     await waitFor(() => {
-      expect(result.current.specsState.loading).toBe(false);
       expect(result.current.planState.loading).toBe(false);
     });
 
@@ -347,7 +337,6 @@ describe("useHarnessSettingsData", () => {
     }));
 
     await waitFor(() => {
-      expect(result.current.specsState.loading).toBe(false);
       expect(result.current.planState.loading).toBe(false);
     });
 
@@ -361,7 +350,7 @@ describe("useHarnessSettingsData", () => {
     });
 
     expect(fetchMock.mock.calls.some(([url]) => (
-      String(url).startsWith("/api/fitness/specs?")
+      String(url).startsWith("/api/fitness/plan?")
       && String(url).includes("codebaseId=mirror-codebase")
       && String(url).includes("repoPath=%2Fmirror")
     ))).toBe(true);

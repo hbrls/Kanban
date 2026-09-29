@@ -158,16 +158,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
       tierNormal: string;
       tierDeep: string;
     };
-    fitnessFiles: {
-      loadingFiles: string;
-      loading: string;
-      title: string;
-      description: string;
-      noDimensionFiles: string;
-      dimensionRadar: string;
-      dimensionRadarDescription: string;
-      specScore: string;
-    };
     hookWorkbench: {
       inspector: string;
       lifecycle: string;
@@ -294,23 +284,11 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
           releaseUnavailable: string;
         };
         detailChips: {
-          tier: string;
-          metricsAndGates: string;
           prePushPhases: string;
           flowsAndJobs: string;
           releaseFlows: string;
-          dimensions: string;
-          metricsLabel: string;
-          hardGatesLabel: string;
         };
         detailSections: {
-          fitness: {
-            title: string;
-            noPhase: string;
-            hookPhasesTitle: string;
-            relatedSurface: string;
-            relatedItems: string[];
-          };
           workflow: {
             title: string;
             noAction: string;
@@ -327,17 +305,10 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
             relatedSurface: string;
             relatedItems: string[];
           };
-          test: {
-            noDimensionSpec: string;
-            hookPhasesTitle: string;
-            dimensionFilesTitle: string;
-          };
           build: {
-            noRulebookManifest: string;
             instructionSourceTitle: string;
             contextTitle: string;
             contextItem: string;
-            rulebookTitle: string;
           };
           thinking: {
             specSourcesTitle: string;
@@ -438,27 +409,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     runningLabel: string;
     queuedLabel: string;
     kanbanHealth: string;
-    fitnessLabel: string;
-    fitnessModeFast: string;
-    fitnessModeFull: string;
-    fitnessLoading: string;
-    fitnessLoadError: string;
-    fitnessNoData: string;
-    fitnessIssue: string;
-    fitnessBlocked: string;
-    fitnessHardGate: string;
-    fitnessScoreBlocked: string;
-    fitnessSkipped: string;
-    fitnessLast: string;
-    fitnessOpenDetails: string;
-    fitnessWorkbenchTitle: string;
-    fitnessWorkbenchNoRepo: string;
-    fitnessWorkbenchProcess: string;
-    fitnessWorkbenchProcessHint: string;
-    fitnessWorkbenchGenerating: string;
-    fitnessWorkbenchWaiting: string;
-    fitnessWorkbenchContextLoading: string;
-    fitnessWorkbenchSaved: string;
     missing: string;
     sessionMismatch: string;
     backendAgents: string;

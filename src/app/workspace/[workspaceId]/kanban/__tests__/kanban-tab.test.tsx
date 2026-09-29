@@ -81,13 +81,6 @@ vi.mock("@/client/components/repo-picker", () => ({
   shortenRepoPath: (value: string) => value,
 }));
 
-vi.mock("../use-runtime-fitness-status", async () => {
-  const { mockUseRuntimeFitnessStatus } = await import("./test-utils");
-  return {
-    useRuntimeFitnessStatus: mockUseRuntimeFitnessStatus,
-  };
-});
-
 const board: KanbanBoardInfo = {
   id: "board-1",
   workspaceId: "workspace-1",

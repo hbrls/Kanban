@@ -295,13 +295,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       quickNavigation: string;
       expandNavigation: string;
       collapseNavigation: string;
-      quickStart: {
-        title: string;
-        description: string;
-        viewQualityDimensions: string;
-        reviewHooks: string;
-        checkCICD: string;
-      };
       architectureQuality: {
         navigationLabel: string;
         title: string;

@@ -294,13 +294,6 @@ const en: TranslationDictionary = {
       quickNavigation: "Quick Navigation",
       expandNavigation: "Expand navigation menu",
       collapseNavigation: "Collapse navigation menu",
-      quickStart: {
-        title: "Quick Start",
-        description: "Start with these key checkpoints to review your repository governance configuration",
-        viewQualityDimensions: "View Quality Dimensions",
-        reviewHooks: "Review Hook Configuration",
-        checkCICD: "Check CI/CD Pipelines",
-      },
       architectureQuality: {
         navigationLabel: "Architecture",
         title: "Architecture Quality",

@@ -12,10 +12,8 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import type { TierValue } from "@/client/components/harness-execution-plan-flow";
 import { HarnessUnsupportedState } from "@/client/components/harness-support-state";
 import type {
-  FitnessSpecSummary,
   GitHubActionsFlow,
   GitHubActionsFlowsResponse,
   HooksResponse,
@@ -52,12 +50,7 @@ type LoopDetailSection = {
 
 type HarnessGovernanceLoopGraphProps = {
   repoPath?: string;
-  selectedTier: TierValue;
-  specsError: string | null;
-  dimensionCount: number;
   planError: string | null;
-  metricCount: number;
-  hardGateCount: number;
   unsupportedMessage?: string | null;
   hooksData?: HooksResponse | null;
   hooksError?: string | null;
@@ -65,7 +58,6 @@ type HarnessGovernanceLoopGraphProps = {
   workflowError?: string | null;
   instructionsData?: InstructionsResponse | null;
   instructionsError?: string | null;
-  fitnessFiles?: FitnessSpecSummary[];
   designDecisionNodeEnabled?: boolean;
   selectedNodeId?: string | null;
   onSelectedNodeChange?: (nodeId: string) => void;
@@ -352,8 +344,6 @@ function buildGraph(args: {
   hookSummary: HookSummary | null;
   instructionSummary: InstructionSummary | null;
   workflowSummary: WorkflowSummary | null;
-  metricCount: number;
-  hardGateCount: number;
   designDecisionNodeEnabled?: boolean;
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
@@ -363,8 +353,6 @@ function buildGraph(args: {
     hookSummary,
     instructionSummary,
     workflowSummary,
-    metricCount,
-    hardGateCount,
     designDecisionNodeEnabled,
     selectedNodeId,
     onSelectNode,
@@ -480,11 +468,9 @@ function buildGraph(args: {
       layer: "commit",
       title: g.nodeLabels.precommit,
       tone: getLayerTone("commit"),
-      note: metricCount > 0
-        ? g.detailChips.metricsAndGates.replace("{metrics}", String(metricCount)).replace("{gates}", String(hardGateCount))
-        : hookSummary
-          ? g.detailChips.prePushPhases.replace("{count}", String(hookSummary.phaseCount))
-          : g.clues.precommitNote,
+      note: hookSummary
+        ? g.detailChips.prePushPhases.replace("{count}", String(hookSummary.phaseCount))
+        : g.clues.precommitNote,
       active: true,
       ...buildSelectionState("precommit", true),
     }),
@@ -638,46 +624,21 @@ function buildGraph(args: {
 
 function buildDetailSections(args: {
   selectedNodeId: string | null;
-  hooksData: HooksResponse | null;
   workflowData: GitHubActionsFlowsResponse | null;
   instructionSummary: InstructionSummary | null;
-  fitnessFiles: FitnessSpecSummary[];
-  dimensionCount: number;
-  metricCount: number;
-  hardGateCount: number;
-  selectedTier: TierValue;
   g: TranslationDictionary["harness"]["governanceLoop"]["graph"];
 }) {
   const {
     selectedNodeId,
-    hooksData,
     workflowData,
     instructionSummary,
-    fitnessFiles,
-    dimensionCount,
-    metricCount,
-    hardGateCount,
-    selectedTier,
     g,
   } = args;
 
-  const uniquePhases = [...new Set((hooksData?.profiles ?? []).flatMap((profile) => profile.phases ?? []))];
   const workflowNames = (workflowData?.flows ?? []).map((flow) => flow.name);
   const workflowJobs = (workflowData?.flows ?? []).flatMap((flow) => flow.jobs?.map((job) => `${flow.name}: ${job.id}`) ?? []);
-  const dimensionFiles = fitnessFiles
-    .filter((file) => file.kind === "dimension")
-    .map((file) => file.dimension ?? file.name);
-  const primaryRuleFiles = fitnessFiles
-    .filter((file) => file.kind === "rulebook" || file.kind === "manifest")
-    .map((file) => file.name);
 
   switch (selectedNodeId) {
-    case "precommit":
-      return [
-        { title: g.detailSections.fitness.title, items: [g.detailChips.tier.replace("{tier}", String(selectedTier)), g.detailChips.dimensions.replace("{count}", String(dimensionCount)), g.detailChips.metricsLabel.replace("{count}", String(metricCount)), g.detailChips.hardGatesLabel.replace("{count}", String(hardGateCount))] },
-        { title: g.detailSections.fitness.hookPhasesTitle, items: uniquePhases.length ? uniquePhases : [g.detailSections.fitness.noPhase] },
-        { title: g.detailSections.fitness.relatedSurface, items: g.detailSections.fitness.relatedItems },
-      ] satisfies LoopDetailSection[];
     case "post-commit":
       return [
         { title: g.detailSections.workflow.title, items: workflowNames.length ? workflowNames.slice(0, 8) : [g.detailSections.workflow.noAction] },
@@ -690,18 +651,10 @@ function buildDetailSections(args: {
         { title: g.detailSections.release.evidenceTitle, items: g.detailSections.release.evidenceItems },
         { title: g.detailSections.release.relatedSurface, items: g.detailSections.release.relatedItems },
       ] satisfies LoopDetailSection[];
-    case "review":
-    case "test":
-      return [
-        { title: g.detailSections.fitness.title, items: [g.detailChips.tier.replace("{tier}", String(selectedTier)), g.detailChips.dimensions.replace("{count}", String(dimensionCount)), g.detailChips.metricsLabel.replace("{count}", String(metricCount)), g.detailChips.hardGatesLabel.replace("{count}", String(hardGateCount))] },
-        { title: g.detailSections.test.hookPhasesTitle, items: uniquePhases.length ? uniquePhases : [g.detailSections.fitness.noPhase] },
-        { title: g.detailSections.test.dimensionFilesTitle, items: dimensionFiles.length ? dimensionFiles.slice(0, 6) : [g.detailSections.test.noDimensionSpec] },
-      ] satisfies LoopDetailSection[];
     case "build":
       return [
         { title: g.detailSections.build.instructionSourceTitle, items: [instructionSummary?.fileName ?? "AGENTS.md"] },
         { title: g.detailSections.build.contextTitle, items: [g.detailSections.build.contextItem] },
-        { title: g.detailSections.build.rulebookTitle, items: primaryRuleFiles.length ? primaryRuleFiles.slice(0, 4) : [g.detailSections.build.noRulebookManifest] },
       ] satisfies LoopDetailSection[];
     case "thinking":
       return [
@@ -725,13 +678,8 @@ function buildDetailSections(args: {
 
 export function HarnessGovernanceLoopGraph({
   repoPath,
-  selectedTier,
-  specsError,
-  dimensionCount,
   planError,
   designDecisionNodeEnabled,
-  metricCount,
-  hardGateCount,
   unsupportedMessage,
   hooksData,
   hooksError,
@@ -739,7 +687,6 @@ export function HarnessGovernanceLoopGraph({
   workflowError,
   instructionsData,
   instructionsError,
-  fitnessFiles = [],
   selectedNodeId,
   onSelectedNodeChange,
   contextPanel,
@@ -791,8 +738,6 @@ export function HarnessGovernanceLoopGraph({
       hookSummary,
       instructionSummary,
       workflowSummary,
-      metricCount,
-      hardGateCount,
       designDecisionNodeEnabled,
       selectedNodeId: activeSelectedNodeId,
       onSelectNode: (nodeId) => {
@@ -804,27 +749,21 @@ export function HarnessGovernanceLoopGraph({
       },
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, designDecisionNodeEnabled, hardGateCount, hookSummary, instructionSummary, metricCount, onSelectedNodeChange, t.harness.governanceLoop.graph, workflowSummary],
+    [activeSelectedNodeId, designDecisionNodeEnabled, hookSummary, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph, workflowSummary],
   );
 
   const graphIssues = [...new Set(
-    [specsError, planError, hooksError, workflowError, instructionsError]
+    [planError, hooksError, workflowError, instructionsError]
       .filter((issue): issue is string => Boolean(issue)),
   )];
   const detailSections = useMemo(
     () => buildDetailSections({
       selectedNodeId: activeSelectedNodeId,
-      hooksData: hooksData ?? null,
       workflowData: workflowData ?? null,
       instructionSummary,
-      fitnessFiles,
-      dimensionCount,
-      metricCount,
-      hardGateCount,
-      selectedTier,
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, dimensionCount, fitnessFiles, hardGateCount, hooksData, instructionSummary, metricCount, selectedTier, t.harness.governanceLoop.graph, workflowData],
+    [activeSelectedNodeId, instructionSummary, t.harness.governanceLoop.graph, workflowData],
   );
 
   return (

@@ -9,44 +9,6 @@ import type { CodeownersResponse } from "@/core/harness/codeowners-types";
 import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 
 export type RunnerKind = "shell" | "graph" | "sarif";
-export type SpecKind = "rulebook" | "manifest" | "dimension" | "narrative" | "policy";
-
-export type MetricSummary = {
-  name: string;
-  command: string;
-  description: string;
-  tier: string;
-  hardGate: boolean;
-  gate: string;
-  runner: RunnerKind;
-  pattern?: string;
-  evidenceType?: string;
-  scope: string[];
-  runWhenChanged: string[];
-};
-
-export type FitnessSpecSummary = {
-  name: string;
-  relativePath: string;
-  kind: SpecKind;
-  language: "markdown" | "yaml";
-  dimension?: string;
-  weight?: number;
-  thresholdPass?: number;
-  thresholdWarn?: number;
-  metricCount: number;
-  metrics: MetricSummary[];
-  source: string;
-  frontmatterSource?: string;
-  manifestEntries?: string[];
-};
-
-export type SpecsResponse = {
-  generatedAt: string;
-  repoRoot: string;
-  fitnessDir: string;
-  files: FitnessSpecSummary[];
-};
 
 export type HookMetricSummary = {
   name: string;
@@ -386,19 +348,6 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? value as Record<string, unknown> : null;
 }
 
-function normalizeSpecsResponse(payload: Partial<SpecsResponse> | null | undefined): SpecsResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    fitnessDir: payload?.fitnessDir ?? "",
-    files: safeArray(payload?.files).map((file) => ({
-      ...file,
-      metrics: safeArray(file.metrics),
-      manifestEntries: safeArray(file.manifestEntries),
-    })),
-  };
-}
-
 function normalizePlanResponse(payload: Partial<PlanResponse> | null | undefined): PlanResponse {
   const dimensions = safeArray(payload?.dimensions).map((dimension) => ({
     ...dimension,
@@ -728,7 +677,6 @@ export function useHarnessSettingsData({
     [codebaseId, hasRepoContext, preferCurrentRepoForArchitecture, repoPath, workspaceId],
   );
 
-  const [specsState, setSpecsState] = useState<QueryState<SpecsResponse>>(emptyQueryState);
   const [planState, setPlanState] = useState<QueryState<PlanResponse>>(emptyQueryState);
   const [architectureState, setArchitectureState] = useState<QueryState<ArchitectureQualityResponse>>(emptyQueryState);
   const [hooksState, setHooksState] = useState<QueryState<HooksResponse>>(emptyQueryState);
@@ -744,45 +692,6 @@ export function useHarnessSettingsData({
   const instructionsContextKey = baseQuery?.toString() ?? "";
   const architectureContextKey = architectureQuery?.toString() ?? "";
   useEffect(() => { setArchitectureState(emptyQueryState()); }, [architectureContextKey]);
-
-  useEffect(() => {
-    if (!baseQuery) {
-      setSpecsState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchSpecs = async () => {
-      setSpecsState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/fitness/specs?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load fitness specs");
-        }
-        if (!cancelled) {
-          setSpecsState({
-            loading: false,
-            error: null,
-            data: normalizeSpecsResponse(payload as Partial<SpecsResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setSpecsState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchSpecs();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
 
   useEffect(() => {
     if (!baseQuery) {
@@ -1208,7 +1117,6 @@ export function useHarnessSettingsData({
   }, [baseQuery]);
 
   return {
-    specsState,
     planState,
     architectureState,
     hooksState,

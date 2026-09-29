@@ -38,38 +38,6 @@ function createGitHubActionsData(
 }
 
 const mockHarnessSettingsData = {
-  specsState: {
-    loading: false,
-    error: null,
-    data: {
-      files: [
-        {
-          name: "README.md",
-          relativePath: "docs/fitness/README.md",
-          kind: "rulebook",
-          language: "markdown",
-          metricCount: 0,
-          metrics: [],
-          source: "# Fitness README\n\n```bash\nentrix run --tier fast\n```",
-          frontmatterSource: undefined,
-        },
-        {
-          name: "code-quality.md",
-          relativePath: "docs/fitness/code-quality.md",
-          kind: "dimension",
-          language: "markdown",
-          dimension: "code_quality",
-          weight: 24,
-          thresholdPass: 90,
-          thresholdWarn: 80,
-          metricCount: 2,
-          metrics: [],
-          source: "# Code quality",
-          frontmatterSource: "---",
-        },
-      ],
-    },
-  },
   planState: {
     loading: false,
     error: null,
@@ -255,10 +223,6 @@ vi.mock("@/client/components/harness-design-decision-panel", () => ({
   HarnessDesignDecisionPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`design-decision-panel-${variant}`}>Design decisions</div>
   ),
-}));
-
-vi.mock("@/client/components/harness-fitness-files-dashboard", () => ({
-  HarnessFitnessFilesDashboard: () => <div data-testid="fitness-files-dashboard" />,
 }));
 
 vi.mock("@/client/components/harness-governance-loop-graph", () => ({

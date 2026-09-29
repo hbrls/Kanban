@@ -47,12 +47,7 @@ describe("HarnessGovernanceLoopGraph", () => {
     render(
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
-        selectedTier="normal"
-        specsError={null}
-        dimensionCount={8}
         planError={null}
-        metricCount={31}
-        hardGateCount={13}
         instructionsData={null}
         hooksData={null}
         workflowData={null}
@@ -76,12 +71,7 @@ describe("HarnessGovernanceLoopGraph", () => {
     render(
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
-        selectedTier="normal"
-        specsError={null}
-        dimensionCount={8}
         planError={null}
-        metricCount={31}
-        hardGateCount={13}
         instructionsData={null}
         hooksData={null}
         workflowData={{
@@ -121,12 +111,7 @@ describe("HarnessGovernanceLoopGraph", () => {
     render(
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
-        selectedTier="normal"
-        specsError={null}
-        dimensionCount={8}
         planError={null}
-        metricCount={31}
-        hardGateCount={13}
         instructionsData={null}
         hooksData={null}
         workflowData={null}

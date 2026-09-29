@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/i18n";
 import { DesktopAppShell } from "@/client/components/desktop-app-shell";
-import { CodeViewer } from "@/client/components/codemirror/code-viewer";
 import { RepoPicker, type RepoSelection } from "@/client/components/repo-picker";
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
 import {
@@ -15,7 +14,6 @@ import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent
 import { HarnessArchitectureQualityPanel } from "@/client/components/harness-architecture-quality-panel";
 import { HarnessAutomationPanel } from "@/client/components/harness-automation-panel";
 import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
-import { HarnessFitnessFilesDashboard } from "@/client/components/harness-fitness-files-dashboard";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
 import { HarnessGitHubActionsFlowPanel } from "@/client/components/harness-github-actions-flow-panel";
@@ -26,10 +24,7 @@ import { HarnessCodeownersPanel } from "@/client/components/harness-codeowners-p
 import { HarnessReviewTriggersPanel } from "@/client/components/harness-review-triggers-panel";
 import { HarnessReleaseTriggersPanel } from "@/client/components/harness-release-triggers-panel";
 import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
-import {
-  HarnessUnsupportedState,
-  getHarnessUnsupportedRepoMessage,
-} from "@/client/components/harness-support-state";
+import { getHarnessUnsupportedRepoMessage } from "@/client/components/harness-support-state";
 import { SpecBoardPanel } from "@/app/workspace/[workspaceId]/spec/spec-page-client";
 import { useHarnessSettingsData } from "@/client/hooks/use-harness-settings-data";
 import { useCodebases, useWorkspaces } from "@/client/hooks/use-workspaces";
@@ -49,7 +44,6 @@ type SectionId =
   | "review-triggers"
   | "release-triggers"
   | "codeowners"
-  | "entrix-fitness"
   | "ci-cd";
 
 interface SectionDef {
@@ -72,8 +66,6 @@ const GOVERNANCE_NODE_SECTION_MAP: Partial<Record<string, SectionId>> = {
   coding: "design-decisions",
   build: "agent-instructions",
   test: "repo-signals",
-  lint: "entrix-fitness",
-  precommit: "entrix-fitness",
   review: "review-triggers",
   release: "ci-cd",
   commit: "ci-cd",
@@ -106,22 +98,12 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "review-triggers":
     case "release-triggers":
     case "codeowners":
-    case "entrix-fitness":
     case "ci-cd":
       return value;
     case "overview":
     default:
       return DEFAULT_SECTION;
   }
-}
-
-function extractMarkdownCodeBlocks(source: string) {
-  const matches = [...source.matchAll(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g)];
-  return matches.map((match, index) => ({
-    id: `${match[1] || "text"}-${index}`,
-    language: match[1] || "text",
-    code: match[2]?.trim() ?? "",
-  })).filter((block) => block.code.length > 0);
 }
 
 function sectionStatusClass(tone: SectionStatusTone = "neutral") {
@@ -156,7 +138,6 @@ export default function HarnessConsolePage() {
     selection: RepoSelection | null;
   }>({ workspaceId: "", selection: null });
   const [selectedTier, setSelectedTier] = useState<TierValue>("normal");
-  const [selectedSpecName, setSelectedSpecName] = useState("");
 
   const rawPersistedRepoSelection = useMemo(
     () => loadRepoSelection("harness", workspaceId),
@@ -222,7 +203,6 @@ export default function HarnessConsolePage() {
   const activeRepoPath = activeRepoSelection?.path;
   const activeRepoCodebaseId = effectiveRepoOverride ? matchedSelectedCodebase?.id : activeCodebase?.id;
   const {
-    specsState,
     planState,
     architectureState,
     hooksState,
@@ -248,35 +228,14 @@ export default function HarnessConsolePage() {
     () => codeownersState ?? { loading: false, error: null, data: null },
     [codeownersState],
   );
-  const specFiles = useMemo(() => specsState.data?.files ?? [], [specsState.data?.files]);
-
-  const visibleSpec = useMemo(() => {
-    if (specFiles.length === 0) {
-      return null;
-    }
-    return specFiles.find((file) => file.name === selectedSpecName)
-      ?? specFiles.find((file) => file.name.toLowerCase() === "readme.md")
-      ?? specFiles.find((file) => file.kind === "dimension")
-      ?? specFiles[0]
-      ?? null;
-  }, [selectedSpecName, specFiles]);
-
-  const dimensionSpecs = specFiles.filter((file) => file.kind === "dimension");
-  const primaryFiles = specFiles.filter((file) => file.kind === "rulebook" || file.kind === "manifest" || file.kind === "dimension");
-  const auxiliaryFiles = specFiles.filter((file) => !primaryFiles.includes(file));
   const selectedRepoLabel = activeRepoSelection?.name ?? "None";
   const unsupportedRepoMessage = getHarnessUnsupportedRepoMessage(
-    specsState.error,
     planState.error,
     designDecisionsState.error,
   );
   const hasArchitectureOrAdrSignal = useMemo(
     () => (designDecisionsState.data?.sources?.length ?? 0) > 0,
     [designDecisionsState.data],
-  );
-  const visibleSpecCodeBlocks = useMemo(
-    () => (visibleSpec && visibleSpec.language === "markdown" ? extractMarkdownCodeBlocks(visibleSpec.source) : []),
-    [visibleSpec],
   );
   const hookCount = useMemo(
     () => (hooksState.data?.hookFiles?.length ?? 0) + (agentHooksState.data?.hooks?.length ?? 0),
@@ -303,7 +262,7 @@ export default function HarnessConsolePage() {
   );
   const [governanceView, setGovernanceView] = useState<"lifecycle" | "loop">("lifecycle");
   const [selectedGovernanceNodeId, setSelectedGovernanceNodeId] = useState<string | null>(null);
-  const [bottomPanelTab, setBottomPanelTab] = useState<"context" | "plan" | "fitness">("context");
+  const [bottomPanelTab, setBottomPanelTab] = useState<"context" | "plan">("context");
   const [showBottomPanel, setShowBottomPanel] = useState(false);
   const [explorerWidth, setExplorerWidth] = useState(DEFAULT_EXPLORER_WIDTH);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(DEFAULT_BOTTOM_PANEL_HEIGHT);
@@ -336,7 +295,7 @@ export default function HarnessConsolePage() {
     }
   }
 
-  function openBottomPanel(tab: "context" | "plan" | "fitness") {
+  function openBottomPanel(tab: "context" | "plan") {
     setBottomPanelTab(tab);
     setShowBottomPanel(true);
   }
@@ -408,7 +367,6 @@ export default function HarnessConsolePage() {
           tone: resolvedCodeownersState.data.codeownersFile ? "success" : "warning",
         }
       : null);
-    map.set("entrix-fitness", specFiles.length > 0 ? { label: `${dimensionSpecs.length}d / ${planState.data?.metricCount ?? 0}m` } : null);
     map.set("ci-cd", workflowCount > 0 ? { label: `${workflowCount} flows` } : null);
     return map;
   }, [
@@ -416,13 +374,10 @@ export default function HarnessConsolePage() {
     designDecisionsState.data,
     automationRuleCount,
     architectureState.data,
-    dimensionSpecs.length,
     hookCount,
     hooksState.data,
     instructionsState.data,
-    planState.data?.metricCount,
     resolvedCodeownersState.data,
-    specFiles.length,
     specSourcesState.data,
     workflowCount,
   ]);
@@ -446,7 +401,6 @@ export default function HarnessConsolePage() {
     { id: "review-triggers", label: t.settings.harness.reviewTriggers, shortLabel: "Review", code: "RV", group: "control" },
     { id: "release-triggers", label: t.settings.harness.releaseTriggers, shortLabel: "Release", code: "RL", group: "control" },
     { id: "codeowners", label: t.settings.harness.codeowners, shortLabel: "Owners", code: "CO", group: "control" },
-    { id: "entrix-fitness", label: t.settings.harness.entrixFitness, shortLabel: "Fitness", code: "FT", group: "signal" },
     { id: "ci-cd", label: t.settings.harness.ciCd, shortLabel: "CI/CD", code: "CI", group: "flow" },
   ], [t]);
 
@@ -534,167 +488,6 @@ export default function HarnessConsolePage() {
     workspaceId,
   ]);
 
-  function renderFitnessDetailArea() {
-    return (
-      <div className="overflow-hidden rounded-sm border border-desktop-border bg-desktop-bg-primary">
-        <div className="grid gap-0 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="min-w-0 border-r border-desktop-border bg-desktop-bg-secondary/40 p-3">
-            <div className="mb-2 flex items-center justify-between gap-2 text-[11px]">
-              <div className="font-semibold text-desktop-text-primary">Sources</div>
-              <div className="text-desktop-text-secondary">{specFiles.length}</div>
-            </div>
-            <div className="space-y-1.5">
-              {specsState.loading ? <div className="text-[10px] text-desktop-text-secondary">Loading fitness files...</div> : null}
-              {unsupportedRepoMessage ? <HarnessUnsupportedState className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300" /> : null}
-              {specsState.error && !unsupportedRepoMessage ? <div className="text-[10px] text-red-600 dark:text-red-400">{specsState.error}</div> : null}
-              {!specsState.loading && !specsState.error && !unsupportedRepoMessage && specFiles.length === 0 ? <div className="text-[10px] text-desktop-text-secondary">No fitness files found.</div> : null}
-              {!unsupportedRepoMessage ? primaryFiles.map((file) => (
-                <button
-                  key={file.name}
-                  type="button"
-                  onClick={() => setSelectedSpecName(file.name)}
-                  className={`w-full rounded-md border px-2.5 py-2 text-left transition-colors ${
-                    visibleSpec?.name === file.name
-                      ? "border-desktop-accent bg-desktop-bg-active text-desktop-text-primary"
-                      : "border-transparent bg-desktop-bg-primary text-desktop-text-secondary hover:border-desktop-border hover:bg-desktop-bg-primary/80 hover:text-desktop-text-primary"
-                  }`}
-                >
-                  <div className="text-[11px] font-medium">{file.name}</div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-[9px] text-current/75">
-                    <span>{file.kind === "dimension" ? (file.dimension ?? "dimension") : file.kind}</span>
-                    <span className="font-mono">{file.language}</span>
-                    {file.metricCount > 0 ? <span className="ml-auto">{file.metricCount} metrics</span> : null}
-                  </div>
-                </button>
-              )) : null}
-              {!unsupportedRepoMessage && auxiliaryFiles.length > 0 ? (
-                <details className="rounded-md border border-desktop-border bg-desktop-bg-primary/60 px-2.5 py-2">
-                  <summary className="cursor-pointer text-[9px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">Auxiliary ({auxiliaryFiles.length})</summary>
-                  <div className="mt-2 space-y-1">
-                    {auxiliaryFiles.map((file) => (
-                      <button
-                        key={file.name}
-                        type="button"
-                        onClick={() => setSelectedSpecName(file.name)}
-                        className={`w-full rounded px-2 py-1 text-left text-[10px] transition-colors ${
-                          visibleSpec?.name === file.name
-                            ? "bg-desktop-bg-active text-desktop-text-primary"
-                            : "text-desktop-text-secondary hover:bg-desktop-bg-primary hover:text-desktop-text-primary"
-                        }`}
-                      >
-                        {file.name}
-                      </button>
-                    ))}
-                  </div>
-                </details>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="min-w-0 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="text-sm font-semibold text-desktop-text-primary">{visibleSpec?.name ?? "Select a file"}</div>
-              {visibleSpec?.kind === "dimension" ? (
-                <div className="flex flex-wrap gap-1.5 text-[9px]">
-                  <span className="desktop-badge">w:{visibleSpec.weight ?? 0}</span>
-                  <span className="desktop-badge desktop-badge-success">pass:{visibleSpec.thresholdPass ?? 90}</span>
-                  <span className="desktop-badge desktop-badge-warning">warn:{visibleSpec.thresholdWarn ?? 80}</span>
-                </div>
-              ) : null}
-            </div>
-
-            {unsupportedRepoMessage ? (
-              <div className="mt-3">
-                <HarnessUnsupportedState />
-              </div>
-            ) : visibleSpec ? (
-              <div className="mt-3 space-y-3">
-                <div className="flex flex-wrap items-center gap-1.5 text-[9px] text-desktop-text-secondary">
-                  <span className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2 py-0.5">{visibleSpec.kind}</span>
-                  <span className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2 py-0.5">{visibleSpec.language}</span>
-                  <span className="font-mono text-desktop-text-primary">{visibleSpec.relativePath}</span>
-                </div>
-
-                {visibleSpec.kind === "dimension" && visibleSpec.frontmatterSource ? (
-                  <details className="rounded-md border border-desktop-border bg-desktop-bg-secondary/50 p-2.5">
-                    <summary className="cursor-pointer text-[9px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">Frontmatter</summary>
-                    <div className="mt-2">
-                      <CodeViewer
-                        code={visibleSpec.frontmatterSource}
-                        filename={`${visibleSpec.name}.frontmatter.yaml`}
-                        language="yaml"
-                        maxHeight="200px"
-                        showHeader={false}
-                        wordWrap
-                      />
-                    </div>
-                  </details>
-                ) : null}
-
-                {visibleSpec.language === "yaml" ? (
-                  <CodeViewer
-                    code={visibleSpec.source}
-                    filename={visibleSpec.name}
-                    language="yaml"
-                    maxHeight="320px"
-                    showHeader={false}
-                    wordWrap
-                  />
-                ) : null}
-
-                {visibleSpec.language === "markdown" && visibleSpec.kind !== "dimension" ? (
-                  visibleSpecCodeBlocks.length > 0 ? (
-                    <div className="space-y-2">
-                      {visibleSpecCodeBlocks.map((block) => (
-                        <CodeViewer
-                          key={block.id}
-                          code={block.code}
-                          filename={`${visibleSpec.name}.${block.language || "txt"}`}
-                          maxHeight="200px"
-                          showHeader={false}
-                          wordWrap
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-desktop-text-secondary">No command blocks found in this markdown file.</div>
-                  )
-                ) : null}
-
-                {visibleSpec.kind === "dimension" ? (
-                  <div className="overflow-hidden rounded-md border border-desktop-border">
-                    <div className="grid grid-cols-[minmax(0,1.5fr)_auto] gap-2 border-b border-desktop-border bg-desktop-bg-secondary px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">
-                      <div>Metric</div>
-                      <div>Dispatch</div>
-                    </div>
-                    {visibleSpec.metrics.map((metric) => (
-                      <div key={metric.name} className="grid grid-cols-[minmax(0,1.5fr)_auto] gap-2 border-t border-desktop-border px-3 py-2.5 first:border-t-0">
-                        <div className="min-w-0">
-                          <div className="text-[11px] font-semibold text-desktop-text-primary">{metric.name}</div>
-                          <div className="mt-1 break-all font-mono text-[9px] text-desktop-text-secondary">{metric.command || "No command"}</div>
-                          {metric.description ? <div className="mt-1 text-[10px] text-desktop-text-secondary">{metric.description}</div> : null}
-                        </div>
-                        <div className="flex flex-wrap content-start justify-end gap-1 text-[9px]">
-                          <span className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2 py-0.5 text-desktop-text-secondary">{metric.runner}</span>
-                          <span className="rounded-full border border-desktop-border bg-desktop-bg-secondary px-2 py-0.5 text-desktop-text-secondary">{metric.tier}</span>
-                          <span className={`rounded-full border px-2 py-0.5 ${metric.hardGate ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400" : "border-desktop-border bg-desktop-bg-secondary text-desktop-text-secondary"}`}>
-                            {metric.gate}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="mt-3 text-[11px] text-desktop-text-secondary">Select a fitness file to inspect.</div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   function renderOverview() {
     return (
       <div className="space-y-2">
@@ -726,12 +519,7 @@ export default function HarnessConsolePage() {
         ) : (
           <HarnessGovernanceLoopGraph
             repoPath={activeRepoPath}
-            selectedTier={selectedTier}
-            specsError={specsState.error}
-            dimensionCount={dimensionSpecs.length}
             planError={planState.error}
-            metricCount={planState.data?.metricCount ?? 0}
-            hardGateCount={planState.data?.hardGateCount ?? 0}
             unsupportedMessage={unsupportedRepoMessage}
             hooksData={hooksState.data}
             hooksError={hooksState.error}
@@ -739,7 +527,6 @@ export default function HarnessConsolePage() {
             workflowError={githubActionsState.error}
             instructionsData={instructionsState.data}
             instructionsError={instructionsState.error}
-            fitnessFiles={specFiles}
             designDecisionNodeEnabled={hasArchitectureOrAdrSignal}
             selectedNodeId={selectedGovernanceNodeId}
             onSelectedNodeChange={handleGovernanceNodeClick}
@@ -780,7 +567,7 @@ export default function HarnessConsolePage() {
         >
           <div className="flex h-9 items-center justify-between border-b border-desktop-border px-3">
             <div className="flex items-center gap-1">
-              {(["context", "plan", "fitness"] as const).map((tab) => (
+              {(["context", "plan"] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -791,7 +578,7 @@ export default function HarnessConsolePage() {
                       : "text-desktop-text-secondary hover:bg-desktop-bg-active hover:text-desktop-text-primary"
                   }`}
                 >
-                  {tab === "context" ? "Context" : tab === "plan" ? "Execution Plan" : "Fitness"}
+                  {tab === "context" ? "Context" : "Execution Plan"}
                 </button>
               ))}
             </div>
@@ -829,16 +616,6 @@ export default function HarnessConsolePage() {
                 onTierChange={setSelectedTier}
                 unsupportedMessage={unsupportedRepoMessage}
                 variant="compact"
-              />
-            ) : null}
-            {bottomPanelTab === "fitness" ? (
-              <HarnessFitnessFilesDashboard
-                specFiles={specFiles}
-                selectedSpec={visibleSpec}
-                loading={specsState.loading}
-                error={specsState.error}
-                unsupportedMessage={unsupportedRepoMessage}
-                embedded
               />
             ) : null}
           </div>
@@ -893,30 +670,6 @@ export default function HarnessConsolePage() {
         return <HarnessReleaseTriggersPanel {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} hideHeader />;
       case "codeowners":
         return <HarnessCodeownersPanel {...sharedProps} data={resolvedCodeownersState.data} loading={resolvedCodeownersState.loading} error={resolvedCodeownersState.error} hideHeader />;
-      case "entrix-fitness":
-        return (
-          <div className="space-y-4">
-            <HarnessFitnessFilesDashboard
-              specFiles={specFiles}
-              selectedSpec={visibleSpec}
-              loading={specsState.loading}
-              error={specsState.error}
-              unsupportedMessage={unsupportedRepoMessage}
-              embedded
-            />
-            {renderFitnessDetailArea()}
-            <HarnessExecutionPlanFlow
-              loading={planState.loading}
-              error={planState.error}
-              plan={planState.data}
-              repoLabel={selectedRepoLabel}
-              selectedTier={selectedTier}
-              onTierChange={setSelectedTier}
-              unsupportedMessage={unsupportedRepoMessage}
-              embedded
-            />
-          </div>
-        );
       case "ci-cd":
         return <HarnessGitHubActionsFlowPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={githubActionsState.data} loading={githubActionsState.loading} error={githubActionsState.error} hideHeader />;
       default:
@@ -977,7 +730,6 @@ export default function HarnessConsolePage() {
           }))}
         />
         <button type="button" className="desktop-btn desktop-btn-secondary" onClick={() => openBottomPanel("plan")}>Plan</button>
-        <button type="button" className="desktop-btn desktop-btn-secondary" onClick={() => openBottomPanel("fitness")}>Fitness</button>
       </div>
     );
 

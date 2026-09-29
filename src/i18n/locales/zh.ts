@@ -290,13 +290,6 @@ const zh: TranslationDictionary = {
       quickNavigation: "快速导航",
       expandNavigation: "展开导航菜单",
       collapseNavigation: "收起导航菜单",
-      quickStart: {
-        title: "快速开始",
-        description: "从这些关键检查点开始检查你的仓库治理配置",
-        viewQualityDimensions: "查看质量维度",
-        reviewHooks: "审查 Hook 配置",
-        checkCICD: "检查 CI/CD 流程",
-      },
       architectureQuality: {
         navigationLabel: "架构",
         title: "架构质量",

@@ -9,12 +9,3 @@ export function resetDesktopAwareFetchToGlobalFetch(desktopAwareFetch: DesktopAw
   desktopAwareFetch.mockReset();
   desktopAwareFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init));
 }
-
-export function mockUseRuntimeFitnessStatus() {
-  return {
-    data: null,
-    loading: false,
-    error: null,
-    refresh: () => {},
-  };
-}

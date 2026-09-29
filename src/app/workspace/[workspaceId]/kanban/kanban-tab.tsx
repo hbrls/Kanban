@@ -217,8 +217,6 @@ export function KanbanTab({
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
   const [agentPanelOpen, setAgentPanelOpen] = useState(false);
-  const [showFitnessWorkbench, setShowFitnessWorkbench] = useState(false);
-  const [fitnessWorkbenchSessionId, setFitnessWorkbenchSessionId] = useState<string | null>(null);
   const [detailSplitRatio, setDetailSplitRatio] = useState(0.48);
   const [isDraggingDetailSplit, setIsDraggingDetailSplit] = useState(false);
 
@@ -2159,15 +2157,6 @@ export function KanbanTab({
     repoSync,
   };
 
-  const fitnessWorkbenchModalProps = {
-    open: showFitnessWorkbench,
-    workspaceId,
-    codebase: defaultCodebase,
-    sessionId: fitnessWorkbenchSessionId,
-    onSessionIdChange: setFitnessWorkbenchSessionId,
-    onClose: () => setShowFitnessWorkbench(false),
-  };
-
   return (
     <KanbanTabContent
       headerProps={kanbanTabHeaderProps}
@@ -2184,7 +2173,6 @@ export function KanbanTab({
       deleteTaskModalProps={deleteTaskModalProps}
       moveBlockedModalProps={moveBlockedModalProps}
       statusBarProps={statusBarProps}
-      fitnessWorkbenchModalProps={fitnessWorkbenchModalProps}
     />
   );
 }

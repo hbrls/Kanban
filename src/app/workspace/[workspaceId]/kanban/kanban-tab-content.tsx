@@ -9,7 +9,6 @@ import { KanbanStatusBar } from "./kanban-status-bar";
 import { KanbanGitHubImportModal } from "./kanban-github-import-modal";
 import { KanbanBoardSurface, KanbanCreateTaskModal, KanbanTaskDetailOverlay } from "./kanban-tab-panels";
 import { KanbanSettingsModal } from "./kanban-settings-modal";
-import { KanbanFitnessWorkbenchModal } from "./kanban-fitness-workbench-modal";
 import {
   KanbanCodebaseModal,
   KanbanDeleteCodebaseModal,
@@ -32,7 +31,6 @@ type ReplaceAllReposModalProps = ComponentProps<typeof KanbanReplaceAllReposModa
 type DeleteTaskModalProps = ComponentProps<typeof KanbanDeleteTaskModal>;
 type MoveBlockedModalProps = ComponentProps<typeof KanbanMoveBlockedModal>;
 type StatusBarProps = ComponentProps<typeof KanbanStatusBar>;
-type FitnessWorkbenchModalProps = ComponentProps<typeof KanbanFitnessWorkbenchModal>;
 
 export interface KanbanTabHeaderActionProps {
   board: KanbanBoardInfo | null;
@@ -66,7 +64,6 @@ export interface KanbanTabContentProps {
   deleteTaskModalProps: DeleteTaskModalProps;
   moveBlockedModalProps: MoveBlockedModalProps;
   statusBarProps: StatusBarProps;
-  fitnessWorkbenchModalProps: FitnessWorkbenchModalProps;
 }
 
 function KanbanTabHeaderActionSlot({
@@ -167,7 +164,6 @@ export function KanbanTabContent({
   deleteTaskModalProps,
   moveBlockedModalProps,
   statusBarProps,
-  fitnessWorkbenchModalProps,
 }: KanbanTabContentProps) {
   const { key: codebaseModalKey, ...codebaseModalRestProps } = codebaseModalProps as KanbanCodebaseModalProps & {
     key?: string;
@@ -225,7 +221,6 @@ export function KanbanTabContent({
       <KanbanDeleteTaskModal {...deleteTaskModalProps}/>
       <KanbanMoveBlockedModal {...moveBlockedModalProps}/>
       <KanbanStatusBar {...statusBarProps}/>
-      <KanbanFitnessWorkbenchModal {...fitnessWorkbenchModalProps}/>
     </div>
   );
 }
