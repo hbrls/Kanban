@@ -190,24 +190,6 @@ Object.defineProperty(navigator, "clipboard", {
 
 import { FeatureExplorerPageClient } from "../feature-explorer-page-client";
 
-function buildFrictionProfilesResponse(): Response {
-  return new Response(
-    JSON.stringify({
-      generatedAt: "2026-04-21T10:00:00.000Z",
-      thresholds: {
-        minFileSessions: 2,
-        minFeatureSessions: 2,
-      },
-      fileProfiles: {},
-      featureProfiles: {},
-    }),
-    {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    },
-  );
-}
-
 function buildRetrospectivesResponse(overrides?: {
   matchedMemories?: Array<{
     scope: "file" | "feature";
@@ -238,10 +220,6 @@ describe("FeatureExplorerPageClient", () => {
     clipboardState.writeText.mockReset();
     sessionLaunchState.desktopAwareFetch.mockReset();
     sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/friction-profiles?")) {
-        return buildFrictionProfilesResponse();
-      }
-
       if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
         return buildRetrospectivesResponse();
       }
@@ -405,135 +383,6 @@ describe("FeatureExplorerPageClient", () => {
     expect(window.localStorage.getItem("routa.repoSelection.featureExplorer.default")).toBeNull();
   });
 
-  it("refreshes friction profiles and surfaces the summary counts", async () => {
-    useFeatureExplorerData.mockReturnValue({
-      loading: false,
-      error: null,
-      capabilityGroups: [],
-      features: [
-        {
-          id: "feature-explorer",
-          name: "Feature Explorer",
-          group: "workflow",
-          summary: "Browse feature context",
-          status: "active",
-          sessionCount: 2,
-          changedFiles: 1,
-          updatedAt: "2026-04-21T10:05:00.000Z",
-          sourceFileCount: 1,
-          pageCount: 1,
-          apiCount: 0,
-        },
-      ],
-      surfaceIndex: {
-        generatedAt: "",
-        pages: [],
-        apis: [],
-        contractApis: [],
-        nextjsApis: [],
-        rustApis: [],
-        implementationApis: [],
-        metadata: null,
-        repoRoot: "",
-        warnings: [],
-      },
-      featureDetail: {
-        id: "feature-explorer",
-        name: "Feature Explorer",
-        group: "workflow",
-        summary: "Browse feature context",
-        status: "active",
-        pages: ["/workspace/:workspaceId/feature-explorer"],
-        apis: [],
-        sourceFiles: ["src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx"],
-        relatedFeatures: [],
-        domainObjects: [],
-        sessionCount: 2,
-        changedFiles: 1,
-        updatedAt: "2026-04-21T10:05:00.000Z",
-        fileTree: [],
-        fileStats: {},
-        fileSignals: {},
-      },
-      featureDetailLoading: false,
-      initialFeatureId: "feature-explorer",
-      fetchFeatureDetail: vi.fn().mockResolvedValue(null),
-    });
-
-    sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string, init?: RequestInit) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/friction-profiles?")) {
-        const isRefresh = init?.method === "POST";
-        return new Response(
-          JSON.stringify({
-            generatedAt: isRefresh ? "2026-04-21T11:00:00.000Z" : "2026-04-21T10:00:00.000Z",
-            thresholds: {
-              minFileSessions: 2,
-              minFeatureSessions: 2,
-            },
-            fileProfiles: {
-              "src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx": {
-                scope: "file",
-                targetId: "src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx",
-                targetLabel: "feature-explorer-page-client.tsx",
-                generatedAt: "2026-04-21T11:00:00.000Z",
-                updatedAt: "2026-04-21T10:30:00.000Z",
-                selectedFiles: ["src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx"],
-                matchedSessionIds: ["session-1", "session-2"],
-                failures: [],
-                repeatedReadFiles: [],
-              },
-            },
-            featureProfiles: {
-              "feature-explorer": {
-                scope: "feature",
-                targetId: "feature-explorer",
-                targetLabel: "Feature Explorer",
-                generatedAt: "2026-04-21T11:00:00.000Z",
-                updatedAt: "2026-04-21T10:30:00.000Z",
-                featureId: "feature-explorer",
-                featureName: "Feature Explorer",
-                selectedFiles: ["src/app/workspace/[workspaceId]/feature-explorer/feature-explorer-page-client.tsx"],
-                matchedSessionIds: ["session-1", "session-2"],
-                failures: [],
-                repeatedReadFiles: [],
-              },
-            },
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      return new Response(JSON.stringify({ error: `Unhandled request: ${input}` }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    });
-
-    render(<FeatureExplorerPageClient workspaceId="default" />);
-
-    await waitFor(() => {
-      expect(screen.getByText("1 file profiles")).toBeTruthy();
-      expect(screen.getByText("1 feature profiles")).toBeTruthy();
-      expect(screen.getByText("Friction profile ready")).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByTestId("refresh-friction-profiles-button"));
-
-    await waitFor(() => {
-      expect(sessionLaunchState.desktopAwareFetch).toHaveBeenCalledWith(
-        "/feature-explorer/friction-profiles?workspaceId=default&repoPath=%2Frepo%2Fdefault",
-        expect.objectContaining({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
-        }),
-      );
-    });
-  });
-
   it("shows saved retrospective history from top feature candidates on entry", async () => {
     useFeatureExplorerData.mockReturnValue({
       loading: false,
@@ -611,10 +460,6 @@ describe("FeatureExplorerPageClient", () => {
     });
 
     sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/friction-profiles?")) {
-        return buildFrictionProfilesResponse();
-      }
-
       if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
         return buildRetrospectivesResponse({
           matchedMemories: [
@@ -726,10 +571,6 @@ describe("FeatureExplorerPageClient", () => {
     });
 
     sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/friction-profiles?")) {
-        return buildFrictionProfilesResponse();
-      }
-
       if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
         return buildRetrospectivesResponse({
           matchedMemories: [
@@ -834,10 +675,6 @@ describe("FeatureExplorerPageClient", () => {
     });
 
     sessionLaunchState.desktopAwareFetch.mockImplementation(async (input: string) => {
-      if (typeof input === "string" && input.startsWith("/feature-explorer/friction-profiles?")) {
-        return buildFrictionProfilesResponse();
-      }
-
       if (typeof input === "string" && input.startsWith("/feature-explorer/retrospectives?")) {
         return buildRetrospectivesResponse({
           matchedMemories: [
