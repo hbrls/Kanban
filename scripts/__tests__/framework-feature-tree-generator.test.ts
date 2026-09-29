@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { parseFeatureTree } from "../../src/app/api/feature-explorer/shared";
+import { parseFeatureTree } from "../../src/core/spec/feature-tree-parser";
 import { readFeatureSurfaceIndex } from "../../src/core/spec/feature-surface-index";
 import featureSurfaceMetadata from "../../src/core/spec/feature-surface-metadata";
 import {

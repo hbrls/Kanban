@@ -13,7 +13,6 @@ pub mod clone_local;
 pub mod clone_progress;
 pub mod codebases;
 pub mod debug;
-pub mod feature_explorer;
 pub mod files;
 pub mod fitness;
 pub mod git;
@@ -92,7 +91,6 @@ pub fn api_router(state: AppState) -> Router<AppState> {
         .nest("/api/graph", graph::router())
         .nest("/api/harness", harness::router())
         .nest("/api/harness/templates", harness_templates::router())
-        .nest("/api/feature-explorer", feature_explorer::router())
         .nest("/api/webhooks", webhooks::router())
         .nest("/api/background-tasks", background_tasks::router())
         .nest("/api/canvas", canvas::router())

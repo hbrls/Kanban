@@ -86,14 +86,6 @@ fn write_file(repo_path: &Path, relative_path: &str, content: &str) {
     fs::write(path, content).expect("file should be written");
 }
 
-fn workspace_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("workspace root")
-        .to_path_buf()
-}
-
 fn json_has_error(resp: &Value, expected: &str) -> bool {
     resp.get("error")
         .and_then(Value::as_str)
@@ -1790,30 +1782,6 @@ paths:
             .is_some_and(|warning| warning.contains("Feature surface index not found")),
         "expected missing surface index warning, got {missing_json:?}"
     );
-}
-
-#[tokio::test]
-async fn api_feature_explorer_contract_for_workspace_repo() {
-    let fixture = ApiFixture::new().await;
-    let repo_root = workspace_root();
-
-    let response = fixture
-        .client
-        .get(fixture.endpoint("/api/feature-explorer"))
-        .query(&[("repoPath", repo_root.to_string_lossy().to_string())])
-        .send()
-        .await
-        .expect("get feature explorer payload");
-
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let payload: Value = response
-        .json()
-        .await
-        .expect("decode feature explorer payload");
-
-    assert!(payload["features"].as_array().is_some());
-    assert!(payload["capabilityGroups"].as_array().is_some());
 }
 
 #[tokio::test]
