@@ -138,8 +138,6 @@ export function FeatureExplorerPageClient({
     [codebases],
   );
   const [repoSelectionOverrides, setRepoSelectionOverrides] = useState<Record<string, RepoSelection | null>>({});
-  const [generateRefreshCounter, setGenerateRefreshCounter] = useState(0);
-  const [isRefreshingFeatureTree, setIsRefreshingFeatureTree] = useState(false);
   const [frictionProfileSnapshot, setFrictionProfileSnapshot] = useState<FrictionProfileSnapshot>(emptyFrictionProfileSnapshot);
   const [isRefreshingFrictionProfiles, setIsRefreshingFrictionProfiles] = useState(false);
   const [frictionProfilesError, setFrictionProfilesError] = useState<string | null>(null);
@@ -152,7 +150,7 @@ export function FeatureExplorerPageClient({
     : null;
   const fallbackRepoSelection = workspaceRepos[0] ?? null;
   const effectiveRepoSelection = manualRepoSelection ?? fallbackRepoSelection;
-  const repoRefreshKey = `${effectiveRepoSelection?.path ?? ""}:${effectiveRepoSelection?.branch ?? ""}:${generateRefreshCounter}`;
+  const repoRefreshKey = `${effectiveRepoSelection?.path ?? ""}:${effectiveRepoSelection?.branch ?? ""}`;
 
   useEffect(() => {
     if (hasRepoSelectionOverride) {
@@ -271,12 +269,6 @@ export function FeatureExplorerPageClient({
     }
   };
 
-  useEffect(() => {
-    if (!loading) {
-      setIsRefreshingFeatureTree(false);
-    }
-  }, [loading]);
-
   const [middleView, setMiddleView] = useState<"list" | "tree">("tree");
   const [surfaceNavigationView, setSurfaceNavigationView] = useState<SurfaceNavigationView>("capabilities");
   const [initialUrlState, setInitialUrlState] = useState<FeatureExplorerUrlState>({ featureId: "", filePath: "" });
@@ -296,7 +288,6 @@ export function FeatureExplorerPageClient({
   const [leftPanelWidth, setLeftPanelWidth] = useState(320);
   const [rightPanelWidth, setRightPanelWidth] = useState(380);
   const [isSessionAnalysisDrawerOpen, setIsSessionAnalysisDrawerOpen] = useState(false);
-  const [isGenerateDrawerOpen, setIsGenerateDrawerOpen] = useState(false);
   const [isStartingSessionAnalysis, setIsStartingSessionAnalysis] = useState(false);
   const [sessionAnalysisError, setSessionAnalysisError] = useState<string | null>(null);
   const [analysisSessionId, setAnalysisSessionId] = useState<string | null>(null);
@@ -874,17 +865,6 @@ export function FeatureExplorerPageClient({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setIsGenerateDrawerOpen(true)}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-desktop-accent/50 bg-desktop-accent/10 px-2 py-1.5 text-[10px] font-medium text-desktop-accent hover:bg-desktop-accent/20"
-                    data-testid="generate-feature-tree-button"
-                    title={t.featureExplorer.generateFeatureTree}
-                    aria-label={t.featureExplorer.generateFeatureTree}
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    <span className="hidden xl:inline">{t.featureExplorer.generateFeatureTree}</span>
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => void handleRefreshFrictionProfiles()}
                     disabled={!effectiveRepoSelection?.path || isRefreshingFrictionProfiles}
                     className="inline-flex shrink-0 items-center gap-1 rounded-sm border border-desktop-border bg-desktop-bg-primary px-2 py-1.5 text-[10px] font-medium text-desktop-text-secondary hover:text-desktop-text-primary disabled:cursor-not-allowed disabled:opacity-60"
@@ -932,11 +912,6 @@ export function FeatureExplorerPageClient({
                   ))}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1 text-[9px] text-desktop-text-secondary">
-                  {isRefreshingFeatureTree ? (
-                    <span className="rounded-sm border border-desktop-accent/40 bg-desktop-accent/10 px-1.5 py-0.5 text-desktop-accent">
-                      {t.featureExplorer.refreshingFeatureTree}
-                    </span>
-                  ) : null}
                   {isRefreshingFrictionProfiles ? (
                     <span className="rounded-sm border border-desktop-accent/40 bg-desktop-accent/10 px-1.5 py-0.5 text-desktop-accent">
                       {t.featureExplorer.refreshingFrictionProfiles}
@@ -1323,13 +1298,6 @@ export function FeatureExplorerPageClient({
 
         <FeatureExplorerDrawers
           workspaceId={workspaceId}
-          repoPath={effectiveRepoSelection?.path}
-          generateOpen={isGenerateDrawerOpen}
-          onCloseGenerate={() => setIsGenerateDrawerOpen(false)}
-          onGenerated={() => {
-            setIsRefreshingFeatureTree(true);
-            setGenerateRefreshCounter((c) => c + 1);
-          }}
           sessionAnalysisDrawerKey={`session-analysis:${isSessionAnalysisDrawerOpen ? "open" : "closed"}:${selectedFilePaths.join("|")}:${selectedScopeSessions.map((session) => `${session.provider}:${session.sessionId}`).join("|")}`}
           sessionAnalysisOpen={isSessionAnalysisDrawerOpen}
           selectedFilePaths={selectedFilePaths}

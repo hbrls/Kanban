@@ -12,7 +12,6 @@ import {
   ContextPanel,
   SessionAnalysisDrawer,
 } from "./feature-explorer-inspector-panels";
-import { GenerateFeatureTreeDrawer } from "./generate-feature-tree-drawer";
 import type {
   AggregatedSelectionSession,
   FeatureDetail,
@@ -67,12 +66,8 @@ export function FeatureExplorerInspectorPane({
 
 export function FeatureExplorerDrawers({
   workspaceId,
-  repoPath,
   repoSelection,
   codebases,
-  generateOpen,
-  onCloseGenerate,
-  onGenerated,
   sessionAnalysisDrawerKey,
   sessionAnalysisOpen,
   selectedFilePaths,
@@ -97,12 +92,8 @@ export function FeatureExplorerDrawers({
   t,
 }: {
   workspaceId: string;
-  repoPath?: string;
   repoSelection: RepoSelection | null;
   codebases: CodebaseData[];
-  generateOpen: boolean;
-  onCloseGenerate: () => void;
-  onGenerated: () => void;
   sessionAnalysisDrawerKey: string;
   sessionAnalysisOpen: boolean;
   selectedFilePaths: string[];
@@ -128,16 +119,6 @@ export function FeatureExplorerDrawers({
 }) {
   return (
     <>
-      <GenerateFeatureTreeDrawer
-        open={generateOpen}
-        workspaceId={workspaceId}
-        repoPath={repoPath}
-        repoSelection={repoSelection}
-        codebases={codebases}
-        onClose={onCloseGenerate}
-        onGenerated={onGenerated}
-      />
-
       <SessionAnalysisDrawer
         key={sessionAnalysisDrawerKey}
         open={sessionAnalysisOpen}
