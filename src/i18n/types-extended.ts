@@ -742,6 +742,7 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     manualTask: string;
     taskTitle: string;
     description: string;
+    descriptionPlaceholder: string;
     testCases: string;
     testCasesPlaceholder: string;
     testCasesHint: string;

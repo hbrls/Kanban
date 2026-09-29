@@ -82,6 +82,12 @@ test.describe("Kanban workspace repository association", () => {
     const codebaseModal = page.getByTestId("codebase-detail-modal");
     await expect(codebaseModal).toBeVisible();
     await expect(codebaseModal).toContainText(PRIMARY_REPO_PATH);
+    const codebaseModalBox = await codebaseModal.boundingBox();
+    const viewportSize = page.viewportSize();
+    expect(codebaseModalBox).not.toBeNull();
+    expect(viewportSize).not.toBeNull();
+    expect(codebaseModalBox!.width).toBeLessThanOrEqual(viewportSize!.width * 0.9 + 1);
+    expect(codebaseModalBox!.height).toBeLessThanOrEqual(viewportSize!.height * 0.9 + 1);
     await page.screenshot({ path: "test-results/kanban-codebase-detail.png" });
     await page.getByRole("button", { name: "Close" }).click();
 
