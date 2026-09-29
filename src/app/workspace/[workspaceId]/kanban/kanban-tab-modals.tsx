@@ -145,7 +145,7 @@ export function KanbanCodebaseModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 px-3 py-4">
       <div
-        className="desktop-theme mx-auto flex h-full max-h-[92vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-sm border border-desktop-border bg-desktop-bg-primary shadow-2xl"
+        className="desktop-theme mx-auto flex h-[90vh] w-full max-w-[90vw] flex-col overflow-hidden rounded-sm border border-desktop-border bg-desktop-bg-primary shadow-2xl"
         data-testid="codebase-detail-modal"
       >
         <div className="border-b border-desktop-border bg-desktop-bg-primary px-4 py-3">
