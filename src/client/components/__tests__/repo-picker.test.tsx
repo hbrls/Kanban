@@ -120,4 +120,96 @@ describe("RepoPicker", () => {
       );
     });
   });
+
+  it("does not render a branch selector in the selected repo pill", () => {
+    render(
+      <RepoPicker
+        value={{
+          name: "routa-js",
+          path: "/Users/you/code/routa-js",
+          branch: "main",
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /change repository/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /clear repo selection/i }),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("branch-selector")).toBeNull();
+  });
+
+  it("keeps the branch selector inside the change repository dropdown", async () => {
+    desktopAwareFetch.mockImplementation(async (url: string) => {
+      if (url === "/api/clone") {
+        return new Response(
+          JSON.stringify({
+            repos: [
+              {
+                name: "routa-js",
+                path: "/Users/you/code/routa-js",
+                dirName: "routa-js",
+                branch: "main",
+                branches: ["main", "dev"],
+                status: {
+                  clean: true,
+                  ahead: 0,
+                  behind: 0,
+                  modified: 0,
+                  untracked: 0,
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ error: "unexpected request" }), {
+        status: 500,
+      });
+    });
+
+    const onChange = vi.fn();
+    render(
+      <RepoPicker
+        value={{
+          name: "routa-js",
+          path: "/Users/you/code/routa-js",
+          branch: "main",
+        }}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /change repository/i }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("branch-selector").length).toBeGreaterThan(0);
+    });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("clears the repo selection via onChange(null)", () => {
+    const onChange = vi.fn();
+    render(
+      <RepoPicker
+        value={{
+          name: "routa-js",
+          path: "/Users/you/code/routa-js",
+          branch: "main",
+        }}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /clear repo selection/i }),
+    );
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
 });
