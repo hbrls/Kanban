@@ -525,10 +525,6 @@ export function RepoPicker({
             }
           }}
           onClear={handleClear}
-          onBranchChange={(branch) => {
-            onChange({ ...value, branch });
-            fetchRepos();
-          }}
         />
       ) : (
         /* ── No repo: show trigger ── */
@@ -814,7 +810,6 @@ function SelectedRepoPill({
   triggerRef,
   onClickName,
   onClear,
-  onBranchChange,
 }: {
   value: RepoSelection;
   repos: ClonedRepo[];
@@ -822,7 +817,6 @@ function SelectedRepoPill({
   triggerRef: React.RefObject<HTMLButtonElement | null>;
   onClickName: () => void;
   onClear: () => void;
-  onBranchChange: (branch: string) => void;
 }) {
   const { t } = useTranslation();
   const currentRepo = repos.find((r) => r.path === value.path);
@@ -866,14 +860,6 @@ function SelectedRepoPill({
         >
           <ChevronDown className="h-3 w-3" />
         </button>
-
-        <div className="shrink-0">
-          <BranchSelector
-            repoPath={value.path}
-            currentBranch={value.branch}
-            onBranchChange={onBranchChange}
-          />
-        </div>
 
         {showInlinePath && (
           <span

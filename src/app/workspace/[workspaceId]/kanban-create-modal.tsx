@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { LayersArrowUp } from "lucide-react";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import { useTranslation } from "@/i18n";
 
@@ -40,24 +41,45 @@ interface KanbanCreateModalProps {
 function TipTapObjectiveEditor({
   value,
   onChange,
+  placeholder,
 }: {
   value: string;
-  onChange: (html: string) => void;
+  onChange: (markdown: string) => void;
+  placeholder?: string;
 }) {
   const editor = useEditor({
+    // Plain-text only: every formatting extension is disabled.
+    // Users write raw markdown; it is stored and shipped as-is.
     extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder: "Describe the work — supports **bold**, lists, code blocks…" }),
+      StarterKit.configure({
+        blockquote: false,
+        bold: false,
+        bulletList: false,
+        code: false,
+        codeBlock: false,
+        dropcursor: false,
+        heading: false,
+        horizontalRule: false,
+        italic: false,
+        listItem: false,
+        listKeymap: false,
+        link: false,
+        orderedList: false,
+        strike: false,
+        underline: false,
+      }),
+      Placeholder.configure({ placeholder: placeholder ?? "Describe the work in plain Markdown…" }),
     ],
     content: value || "",
     immediatelyRender: false,
     onUpdate: ({ editor: e }) => {
-      onChange(e.getHTML());
+      // Ship plain-text markdown, not HTML.
+      onChange(e.getText({ blockSeparator: "\n\n" }));
     },
     editorProps: {
       attributes: {
         class:
-          "min-h-[160px] max-h-[320px] overflow-y-auto px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none prose prose-sm dark:prose-invert max-w-none",
+          "tiptap-objective-editor min-h-[160px] max-h-[320px] overflow-y-auto px-3 py-2 font-mono text-sm text-slate-800 dark:text-slate-200 focus:outline-none max-w-none whitespace-pre-wrap",
       },
     },
   });
@@ -71,45 +93,28 @@ function TipTapObjectiveEditor({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400/40 dark:border-slate-700 dark:bg-[#0d1018]">
-      {/* Mini toolbar */}
+      {/* Toolbar reserved for future actions; formatting is intentionally unsupported. */}
       <div className="flex items-center gap-0.5 border-b border-slate-100 px-2 py-1 dark:border-slate-800">
-        {[
-          { label: "B", title: "Bold", cmd: () => editor?.chain().focus().toggleBold().run(), active: editor?.isActive("bold") },
-          { label: "I", title: "Italic", cmd: () => editor?.chain().focus().toggleItalic().run(), active: editor?.isActive("italic") },
-          { label: "</>", title: "Inline code", cmd: () => editor?.chain().focus().toggleCode().run(), active: editor?.isActive("code") },
-        ].map(({ label, title, cmd, active }) => (
-          <button
-            key={title}
-            type="button"
-            onClick={cmd}
-            title={title}
-            className={`rounded px-1.5 py-0.5 text-[11px] font-mono font-semibold transition-colors ${active
-                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-              }`}
-          >
-            {label}
-          </button>
-        ))}
-        <div className="mx-1 h-4 w-px bg-slate-200 dark:bg-slate-700" />
-        {[
-          { label: "UL", title: "Bullet list", cmd: () => editor?.chain().focus().toggleBulletList().run(), active: editor?.isActive("bulletList") },
-          { label: "OL", title: "Ordered list", cmd: () => editor?.chain().focus().toggleOrderedList().run(), active: editor?.isActive("orderedList") },
-          { label: "```", title: "Code block", cmd: () => editor?.chain().focus().toggleCodeBlock().run(), active: editor?.isActive("codeBlock") },
-        ].map(({ label, title, cmd, active }) => (
-          <button
-            key={title}
-            type="button"
-            onClick={cmd}
-            title={title}
-            className={`rounded px-1.5 py-0.5 text-[11px] font-mono font-semibold transition-colors ${active
-                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-              }`}
-          >
-            {label}
-          </button>
-        ))}
+        <button
+          type="button"
+          title="Insert preset description"
+          onClick={() =>
+            editor?.commands.setContent({
+              type: "doc",
+              content: [
+                "加载 .context/current-task.md",
+                "1）更新当前 Task Title",
+                "2）更新当前 Task Description",
+              ].map((line) => ({
+                type: "paragraph",
+                content: [{ type: "text", text: line }],
+              })),
+            })
+          }
+          className="rounded p-1 text-slate-500 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+        >
+          <LayersArrowUp className="h-3.5 w-3.5" />
+        </button>
       </div>
       <EditorContent editor={editor} />
     </div>
@@ -126,16 +131,13 @@ export function KanbanCreateModal({
   allCodebaseIds: _allCodebaseIds,
 }: KanbanCreateModalProps) {
   const { t } = useTranslation();
-  const canCreate = Boolean(draft.title.trim()) && Boolean(draft.objectiveHtml.replace(/<[^>]*>/g, "").trim());
+  const canCreate = Boolean(draft.title.trim()) && Boolean(draft.objectiveHtml.trim());
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-[#1c1f2e] dark:bg-[#12141c]">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4">
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t.kanbanCreate.manualTask}</h3>
-          <button onClick={onClose} className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-            {t.common.close}
-          </button>
         </div>
 
         <div className="space-y-3">
@@ -146,13 +148,11 @@ export function KanbanCreateModal({
             className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400/40 dark:border-slate-700 dark:bg-[#0d1018] dark:text-slate-100"
           />
 
-          <div>
-            <div className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">{t.kanbanCreate.description}</div>
-            <TipTapObjectiveEditor
-              value={draft.objectiveHtml}
-              onChange={(html) => setDraft((d) => ({ ...d, objectiveHtml: html }))}
-            />
-          </div>
+          <TipTapObjectiveEditor
+            value={draft.objectiveHtml}
+            onChange={(html) => setDraft((d) => ({ ...d, objectiveHtml: html }))}
+            placeholder={t.kanbanCreate.descriptionPlaceholder}
+          />
 
           <div>
             <div className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">{t.kanbanCreate.testCases}</div>
