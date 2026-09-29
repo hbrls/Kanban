@@ -117,6 +117,7 @@ function createTask(id: string, title: string, overrides: Partial<TaskInfo> = {}
 }
 
 beforeEach(() => {
+  window.history.replaceState({}, "", "/workspace/workspace-1/kanban");
   resetDesktopAwareFetchToGlobalFetch(desktopAwareFetch);
   dndKitHarness.reset();
   vi.useRealTimers();
@@ -2258,7 +2259,7 @@ describe.skip("KanbanTab card detail manual runs", () => {
     });
   });
 
-  it("closes the card detail from the run tabs close button", async () => {
+  it("keeps the session pane visible without a hide control", async () => {
     vi.stubGlobal("scrollIntoView", vi.fn());
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
 
@@ -2354,16 +2355,10 @@ describe.skip("KanbanTab card detail manual runs", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Story One" }));
 
-    await screen.findByRole("button", { name: /Hide session pane/i });
-    expect(screen.getByText("Card Detail")).toBeTruthy();
+    await screen.findByText("Card Detail");
 
-    fireEvent.click(screen.getByRole("button", { name: /Hide session pane/i }));
-
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /Hide session pane/i })).toBeNull();
-    });
-    expect(screen.getByText("Card Detail")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Show session pane/i })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Hide session pane/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Show session pane/i })).toBeNull();
   });
 
   it("closes the card detail from the detail header close button", async () => {
