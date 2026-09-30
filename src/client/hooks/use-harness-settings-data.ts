@@ -178,32 +178,6 @@ export type AgentHooksResponse = {
   warnings: string[];
 };
 
-export type GitHubActionsJob = {
-  id: string;
-  name: string;
-  runner: string;
-  kind: "job" | "approval" | "release";
-  stepCount: number | null;
-  needs: string[];
-};
-
-export type GitHubActionsFlow = {
-  id: string;
-  name: string;
-  event: string;
-  yaml: string;
-  jobs: GitHubActionsJob[];
-  relativePath?: string;
-};
-
-export type GitHubActionsFlowsResponse = {
-  generatedAt: string;
-  repoRoot: string;
-  workflowsDir: string;
-  flows: GitHubActionsFlow[];
-  warnings: string[];
-};
-
 export type { CodeownersResponse };
 
 export type QueryState<T> = {
@@ -320,24 +294,6 @@ function normalizeInstructionsResponse(
   };
 }
 
-function normalizeGitHubActionsFlowsResponse(
-  payload: Partial<GitHubActionsFlowsResponse> | null | undefined,
-): GitHubActionsFlowsResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    workflowsDir: payload?.workflowsDir ?? "",
-    flows: safeArray(payload?.flows).map((flow) => ({
-      ...flow,
-      jobs: safeArray(flow.jobs).map((job) => ({
-        ...job,
-        needs: safeArray(job.needs),
-      })),
-    })),
-    warnings: safeArray(payload?.warnings),
-  };
-}
-
 function normalizeAgentHooksResponse(
   payload: Partial<AgentHooksResponse> | null | undefined,
 ): AgentHooksResponse {
@@ -448,7 +404,6 @@ export function useHarnessSettingsData({
   const [planState, setPlanState] = useState<QueryState<PlanResponse>>(emptyQueryState);
   const [hooksState, setHooksState] = useState<QueryState<HooksResponse>>(emptyQueryState);
   const [instructionsState, setInstructionsState] = useState<QueryState<InstructionsResponse>>(emptyQueryState);
-  const [githubActionsState, setGithubActionsState] = useState<QueryState<GitHubActionsFlowsResponse>>(emptyQueryState);
   const [agentHooksState, setAgentHooksState] = useState<QueryState<AgentHooksResponse>>(emptyQueryState);
   const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
   const [designDecisionsState, setDesignDecisionsState] = useState<QueryState<DesignDecisionResponse>>(emptyQueryState);
@@ -582,45 +537,6 @@ export function useHarnessSettingsData({
       cancelled = true;
     };
   }, [baseQuery, instructionsContextKey, instructionsRefreshState]);
-
-  useEffect(() => {
-    if (!baseQuery) {
-      setGithubActionsState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchGithubActions = async () => {
-      setGithubActionsState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/harness/github-actions?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load GitHub Actions workflows");
-        }
-        if (!cancelled) {
-          setGithubActionsState({
-            loading: false,
-            error: null,
-            data: normalizeGitHubActionsFlowsResponse(payload as Partial<GitHubActionsFlowsResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setGithubActionsState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchGithubActions();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
 
   useEffect(() => {
     if (!baseQuery) {
@@ -829,7 +745,6 @@ export function useHarnessSettingsData({
     hooksState,
     agentHooksState,
     instructionsState,
-    githubActionsState,
     specSourcesState,
     designDecisionsState,
     codeownersState,

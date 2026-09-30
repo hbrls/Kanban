@@ -144,16 +144,6 @@ test.describe("Harness settings spec sources", () => {
       }));
     });
 
-    await page.route("**/api/harness/github-actions?**", async (route) => {
-      await route.fulfill(json({
-        generatedAt: "2026-03-30T00:00:00.000Z",
-        repoRoot: "/Users/phodal/ai/routa-js",
-        workflowsDir: ".github/workflows",
-        flows: [],
-        warnings: [],
-      }));
-    });
-
     await page.route("**/api/harness/automations?**", async (route) => {
       await route.fulfill(json({
         generatedAt: "2026-03-30T00:00:00.000Z",

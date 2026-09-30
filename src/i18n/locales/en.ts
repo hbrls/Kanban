@@ -283,7 +283,6 @@ const en: TranslationDictionary = {
       releaseTriggers: "Release Triggers",
       codeowners: "CODEOWNERS",
       entrixFitness: "Entrix Fitness",
-      ciCd: "CI/CD",
       sectionGroups: {
         intent: "Intent",
         control: "Control",

@@ -72,22 +72,6 @@ describe("useHarnessSettingsData", () => {
         });
       }
 
-      if (url.startsWith("/api/harness/github-actions?")) {
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          workflowsDir: "/repo/.github/workflows",
-          flows: [
-            {
-              id: "ci",
-              name: "CI",
-              event: "push",
-              yaml: "name: CI",
-            },
-          ],
-        });
-      }
-
       if (url.startsWith("/api/harness/agent-hooks?")) {
         return okJson({
           generatedAt: "2026-03-31T00:00:00.000Z",
@@ -226,7 +210,6 @@ describe("useHarnessSettingsData", () => {
     expect(result.current.hooksState.data?.hookFiles).toEqual([]);
     expect(result.current.hooksState.data?.profiles).toEqual([]);
     expect(result.current.hooksState.data?.reviewTriggerFile?.rules).toEqual([]);
-    expect(result.current.githubActionsState.data?.flows[0]?.jobs).toEqual([]);
     expect(result.current.agentHooksState.data?.hooks).toEqual([]);
     expect(result.current.specSourcesState.data?.sources[0]?.children).toEqual([]);
     expect(result.current.designDecisionsState.data?.sources[0]?.artifacts).toEqual([]);

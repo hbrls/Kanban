@@ -14,8 +14,6 @@ import {
 } from "@xyflow/react";
 import { HarnessUnsupportedState } from "@/client/components/harness-support-state";
 import type {
-  GitHubActionsFlow,
-  GitHubActionsFlowsResponse,
   HooksResponse,
   InstructionsResponse,
 } from "@/client/hooks/use-harness-settings-data";
@@ -28,14 +26,6 @@ type HookSummary = {
   mappedMetricCount: number;
   phaseCount: number;
   phaseLabels: string[];
-};
-
-type WorkflowSummary = {
-  flowCount: number;
-  jobCount: number;
-  remoteSignals: string[];
-  hasRepairLoop: boolean;
-  releaseFlowCount: number;
 };
 
 type InstructionSummary = {
@@ -54,8 +44,6 @@ type HarnessGovernanceLoopGraphProps = {
   unsupportedMessage?: string | null;
   hooksData?: HooksResponse | null;
   hooksError?: string | null;
-  workflowData?: GitHubActionsFlowsResponse | null;
-  workflowError?: string | null;
   instructionsData?: InstructionsResponse | null;
   instructionsError?: string | null;
   designDecisionNodeEnabled?: boolean;
@@ -310,40 +298,9 @@ function buildEdge(
   };
 }
 
-function summarizeSignals(flows: GitHubActionsFlow[]) {
-  const preferredSignals = ["workflow_dispatch", "push", "pull_request", "schedule"];
-  const signalSet = new Set(
-    flows
-      .map((flow) => flow.event)
-      .filter((event) => event.trim().length > 0),
-  );
-
-  const orderedSignals = preferredSignals.filter((signal) => signalSet.has(signal));
-  const extraSignals = [...signalSet].filter((signal) => !preferredSignals.includes(signal));
-  return [...orderedSignals, ...extraSignals].slice(0, 3);
-}
-
-function detectRepairLoop(flows: GitHubActionsFlow[]) {
-  return flows.some((flow) => {
-    const id = flow.id.toLowerCase();
-    const name = flow.name.toLowerCase();
-    return id === "ci-red-fixer" || name === "ci red fixer";
-  });
-}
-
-function detectReleaseWorkflows(flows: GitHubActionsFlow[]) {
-  const releaseKeywords = ["release", "publish", "deploy"];
-  return flows.filter((flow) => {
-    const id = flow.id.toLowerCase();
-    const name = flow.name.toLowerCase();
-    return releaseKeywords.some((keyword) => id.includes(keyword) || name.includes(keyword));
-  }).length;
-}
-
 function buildGraph(args: {
   hookSummary: HookSummary | null;
   instructionSummary: InstructionSummary | null;
-  workflowSummary: WorkflowSummary | null;
   designDecisionNodeEnabled?: boolean;
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
@@ -352,7 +309,6 @@ function buildGraph(args: {
   const {
     hookSummary,
     instructionSummary,
-    workflowSummary,
     designDecisionNodeEnabled,
     selectedNodeId,
     onSelectNode,
@@ -368,7 +324,6 @@ function buildGraph(args: {
     "precommit",
     "review",
     "post-commit",
-    "release",
   ]);
 
   const navigationGraph: Record<string, Partial<Record<"up" | "down" | "left" | "right", string>>> = {
@@ -498,9 +453,7 @@ function buildGraph(args: {
       layer: "commit",
       title: g.nodeLabels["post-commit"],
       tone: getLayerTone("commit"),
-      note: workflowSummary
-        ? g.detailChips.flowsAndJobs.replace("{flows}", String(workflowSummary.flowCount)).replace("{jobs}", String(workflowSummary.jobCount))
-        : g.clues.postCommitNote,
+      note: g.clues.postCommitNote,
       active: true,
       ...buildSelectionState("post-commit", true),
     }),
@@ -509,14 +462,10 @@ function buildGraph(args: {
       layer: "external",
       title: g.nodeLabels.release,
       tone: getLayerTone("external"),
-      note: workflowSummary && workflowSummary.releaseFlowCount > 0
-        ? g.detailChips.releaseFlows.replace("{count}", String(workflowSummary.releaseFlowCount))
-        : g.clues.releaseNote,
-      active: Boolean(workflowSummary && workflowSummary.releaseFlowCount > 0),
-      unavailableReason: workflowSummary && workflowSummary.releaseFlowCount > 0
-        ? undefined
-        : g.nodeNotes.releaseUnavailable,
-      ...buildSelectionState("release", Boolean(workflowSummary && workflowSummary.releaseFlowCount > 0)),
+      note: g.clues.releaseNote,
+      active: false,
+      unavailableReason: g.nodeNotes.releaseUnavailable,
+      ...buildSelectionState("release", false),
     }),
     buildNode("staging", col2X, externalRowY, {
       nodeId: "staging",
@@ -582,41 +531,6 @@ function buildGraph(args: {
         color: LOOP_EDGE_COLORS.feedback,
       },
     } satisfies Edge,
-
-    ...(workflowSummary?.hasRepairLoop
-      ? [
-        {
-          id: "post-commit-self-heal",
-          source: "post-commit",
-          target: "post-commit",
-          sourceHandle: "source-right",
-          targetHandle: "target-top",
-          type: "smoothstep",
-          label: g.edgeLabels.autoRepairRetry,
-          style: {
-            stroke: LOOP_EDGE_COLORS.commit,
-            strokeWidth: 1.8,
-            strokeDasharray: "6 4",
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: LOOP_EDGE_COLORS.commit,
-          },
-          labelStyle: {
-            fontSize: 10,
-            fill: "#475569",
-            fontWeight: 500,
-          },
-          labelBgPadding: [6, 3],
-          labelBgBorderRadius: 8,
-          labelBgStyle: {
-            fill: "rgba(248, 250, 252, 0.92)",
-            fillOpacity: 1,
-            stroke: "rgba(203, 213, 225, 0.9)",
-          },
-        } satisfies Edge,
-      ]
-      : []),
   ];
 
   return { nodes, edges, minHeight: 592 };
@@ -624,33 +538,16 @@ function buildGraph(args: {
 
 function buildDetailSections(args: {
   selectedNodeId: string | null;
-  workflowData: GitHubActionsFlowsResponse | null;
   instructionSummary: InstructionSummary | null;
   g: TranslationDictionary["harness"]["governanceLoop"]["graph"];
 }) {
   const {
     selectedNodeId,
-    workflowData,
     instructionSummary,
     g,
   } = args;
 
-  const workflowNames = (workflowData?.flows ?? []).map((flow) => flow.name);
-  const workflowJobs = (workflowData?.flows ?? []).flatMap((flow) => flow.jobs?.map((job) => `${flow.name}: ${job.id}`) ?? []);
-
   switch (selectedNodeId) {
-    case "post-commit":
-      return [
-        { title: g.detailSections.workflow.title, items: workflowNames.length ? workflowNames.slice(0, 8) : [g.detailSections.workflow.noAction] },
-        { title: g.detailSections.workflow.jobsTitle, items: workflowJobs.length ? workflowJobs.slice(0, 8) : [g.detailSections.workflow.noJob] },
-        { title: g.detailSections.workflow.relatedSurface, items: g.detailSections.workflow.relatedItems },
-      ] satisfies LoopDetailSection[];
-    case "release":
-      return [
-        { title: g.detailSections.release.title, items: workflowNames.length ? workflowNames.slice(0, 6) : [g.detailSections.release.noReleaseWorkflow] },
-        { title: g.detailSections.release.evidenceTitle, items: g.detailSections.release.evidenceItems },
-        { title: g.detailSections.release.relatedSurface, items: g.detailSections.release.relatedItems },
-      ] satisfies LoopDetailSection[];
     case "build":
       return [
         { title: g.detailSections.build.instructionSourceTitle, items: [instructionSummary?.fileName ?? "AGENTS.md"] },
@@ -683,8 +580,6 @@ export function HarnessGovernanceLoopGraph({
   unsupportedMessage,
   hooksData,
   hooksError,
-  workflowData,
-  workflowError,
   instructionsData,
   instructionsError,
   selectedNodeId,
@@ -710,19 +605,6 @@ export function HarnessGovernanceLoopGraph({
       phaseLabels: [...uniquePhases].map((phase) => PHASE_LABELS[phase]).filter(Boolean),
     } satisfies HookSummary;
   }, [hooksData]);
-  const workflowSummary = useMemo(() => {
-    const flows = Array.isArray(workflowData?.flows) ? workflowData.flows : [];
-    if (flows.length === 0) {
-      return null;
-    }
-    return {
-      flowCount: flows.length,
-      jobCount: flows.reduce((sum, flow) => sum + (flow.jobs?.length ?? 0), 0),
-      remoteSignals: summarizeSignals(flows),
-      hasRepairLoop: detectRepairLoop(flows),
-      releaseFlowCount: detectReleaseWorkflows(flows),
-    } satisfies WorkflowSummary;
-  }, [workflowData]);
   const instructionSummary = useMemo(() => {
     if (!instructionsData) {
       return null;
@@ -737,7 +619,6 @@ export function HarnessGovernanceLoopGraph({
     () => buildGraph({
       hookSummary,
       instructionSummary,
-      workflowSummary,
       designDecisionNodeEnabled,
       selectedNodeId: activeSelectedNodeId,
       onSelectNode: (nodeId) => {
@@ -749,21 +630,20 @@ export function HarnessGovernanceLoopGraph({
       },
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, designDecisionNodeEnabled, hookSummary, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph, workflowSummary],
+    [activeSelectedNodeId, designDecisionNodeEnabled, hookSummary, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph],
   );
 
   const graphIssues = [...new Set(
-    [planError, hooksError, workflowError, instructionsError]
+    [planError, hooksError, instructionsError]
       .filter((issue): issue is string => Boolean(issue)),
   )];
   const detailSections = useMemo(
     () => buildDetailSections({
       selectedNodeId: activeSelectedNodeId,
-      workflowData: workflowData ?? null,
       instructionSummary,
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, instructionSummary, t.harness.governanceLoop.graph, workflowData],
+    [activeSelectedNodeId, instructionSummary, t.harness.governanceLoop.graph],
   );
 
   return (

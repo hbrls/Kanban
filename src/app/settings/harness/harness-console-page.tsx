@@ -15,7 +15,6 @@ import { HarnessAutomationPanel } from "@/client/components/harness-automation-p
 import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
-import { HarnessGitHubActionsFlowPanel } from "@/client/components/harness-github-actions-flow-panel";
 import { HarnessHookRuntimePanel } from "@/client/components/harness-hook-runtime-panel";
 import { HarnessAgentHookPanel } from "@/client/components/harness-agent-hook-panel";
 import { HarnessCodeownersPanel } from "@/client/components/harness-codeowners-panel";
@@ -39,8 +38,7 @@ type SectionId =
   | "hook-systems"
   | "review-triggers"
   | "release-triggers"
-  | "codeowners"
-  | "ci-cd";
+  | "codeowners";
 
 interface SectionDef {
   id: SectionId;
@@ -62,9 +60,6 @@ const GOVERNANCE_NODE_SECTION_MAP: Partial<Record<string, SectionId>> = {
   coding: "design-decisions",
   build: "agent-instructions",
   review: "review-triggers",
-  release: "ci-cd",
-  commit: "ci-cd",
-  "post-commit": "ci-cd",
 };
 
 const DEFAULT_EXPLORER_WIDTH = 240;
@@ -91,7 +86,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "review-triggers":
     case "release-triggers":
     case "codeowners":
-    case "ci-cd":
       return value;
     case "overview":
     default:
@@ -199,7 +193,6 @@ export default function HarnessConsolePage() {
     hooksState,
     agentHooksState,
     instructionsState,
-    githubActionsState,
     specSourcesState,
     designDecisionsState,
     codeownersState,
@@ -228,10 +221,6 @@ export default function HarnessConsolePage() {
   const hookCount = useMemo(
     () => (hooksState.data?.hookFiles?.length ?? 0) + (agentHooksState.data?.hooks?.length ?? 0),
     [hooksState.data?.hookFiles?.length, agentHooksState.data?.hooks?.length],
-  );
-  const workflowCount = useMemo(
-    () => githubActionsState.data?.flows?.length ?? 0,
-    [githubActionsState.data?.flows?.length],
   );
   const automationRuleCount = useMemo(
     () => automationsState.data?.definitions?.length ?? 0,
@@ -349,7 +338,6 @@ export default function HarnessConsolePage() {
           tone: resolvedCodeownersState.data.codeownersFile ? "success" : "warning",
         }
       : null);
-    map.set("ci-cd", workflowCount > 0 ? { label: `${workflowCount} flows` } : null);
     return map;
   }, [
     automationsState.data,
@@ -360,7 +348,6 @@ export default function HarnessConsolePage() {
     instructionsState.data,
     resolvedCodeownersState.data,
     specSourcesState.data,
-    workflowCount,
   ]);
 
   const sections = useMemo((): SectionDef[] => [
@@ -374,7 +361,6 @@ export default function HarnessConsolePage() {
     { id: "review-triggers", label: t.settings.harness.reviewTriggers, shortLabel: "Review", code: "RV", group: "control" },
     { id: "release-triggers", label: t.settings.harness.releaseTriggers, shortLabel: "Release", code: "RL", group: "control" },
     { id: "codeowners", label: t.settings.harness.codeowners, shortLabel: "Owners", code: "CO", group: "control" },
-    { id: "ci-cd", label: t.settings.harness.ciCd, shortLabel: "CI/CD", code: "CI", group: "flow" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -412,7 +398,9 @@ export default function HarnessConsolePage() {
       case "precommit":
         return <HarnessExecutionPlanFlow loading={planState.loading} error={planState.error} plan={planState.data} repoLabel={selectedRepoLabel} selectedTier={selectedTier} onTierChange={setSelectedTier} unsupportedMessage={unsupportedRepoMessage} variant="compact" />;
       case "release":
-        return <HarnessGitHubActionsFlowPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={githubActionsState.data} loading={githubActionsState.loading} error={githubActionsState.error} variant="compact" initialCategory="Release" />;
+      case "commit":
+      case "post-commit":
+        return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
       case "review":
         return (
           <div className="space-y-3">
@@ -421,9 +409,6 @@ export default function HarnessConsolePage() {
             <HarnessCodeownersPanel {...props} data={resolvedCodeownersState.data} loading={resolvedCodeownersState.loading} error={resolvedCodeownersState.error} variant="compact" />
           </div>
         );
-      case "commit":
-      case "post-commit":
-        return <HarnessGitHubActionsFlowPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={githubActionsState.data} loading={githubActionsState.loading} error={githubActionsState.error} variant="compact" />;
       default:
         return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
     }
@@ -431,9 +416,6 @@ export default function HarnessConsolePage() {
     designDecisionsState.data,
     designDecisionsState.error,
     designDecisionsState.loading,
-    githubActionsState.data,
-    githubActionsState.error,
-    githubActionsState.loading,
     hooksState.data,
     hooksState.error,
     hooksState.loading,
@@ -494,8 +476,6 @@ export default function HarnessConsolePage() {
             unsupportedMessage={unsupportedRepoMessage}
             hooksData={hooksState.data}
             hooksError={hooksState.error}
-            workflowData={githubActionsState.data}
-            workflowError={githubActionsState.error}
             instructionsData={instructionsState.data}
             instructionsError={instructionsState.error}
             designDecisionNodeEnabled={hasArchitectureOrAdrSignal}
@@ -627,8 +607,6 @@ export default function HarnessConsolePage() {
         return <HarnessReleaseTriggersPanel {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} hideHeader />;
       case "codeowners":
         return <HarnessCodeownersPanel {...sharedProps} data={resolvedCodeownersState.data} loading={resolvedCodeownersState.loading} error={resolvedCodeownersState.error} hideHeader />;
-      case "ci-cd":
-        return <HarnessGitHubActionsFlowPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={githubActionsState.data} loading={githubActionsState.loading} error={githubActionsState.error} hideHeader />;
       default:
         return null;
     }
@@ -801,7 +779,6 @@ export default function HarnessConsolePage() {
             <div className="flex items-center gap-3">
               <span>{automationRuleCount} cleanup rules</span>
               <span>{hookCount} hooks</span>
-              <span>{workflowCount} workflows</span>
             </div>
           </div>
         </div>

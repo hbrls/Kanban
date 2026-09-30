@@ -284,7 +284,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       releaseTriggers: string;
       codeowners: string;
       entrixFitness: string;
-      ciCd: string;
       sectionGroups: {
         intent: string;
         control: string;

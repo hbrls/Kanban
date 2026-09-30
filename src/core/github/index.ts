@@ -55,22 +55,12 @@ export type {
 } from "./github-issue-gh";
 
 export {
-  classifyGitHubWorkflowCategory,
-  normalizeGitHubWorkflowEventTokens,
-} from "./workflow-classifier";
-
-export {
   analyzePullRequestReviewTriggers,
   buildAutomatedReviewComment,
   buildPullRequestDiffStats,
   collectReviewFocusAreas,
   filterReviewTriggerFiles,
 } from "./review-trigger-pr-review";
-
-export type {
-  GitHubWorkflowCategory,
-  GitHubWorkflowSummary,
-} from "./workflow-classifier";
 
 export type {
   GitHubPullRequestFile,

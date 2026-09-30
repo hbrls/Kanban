@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { GitHubActionsFlowsResponse } from "@/client/hooks/use-harness-settings-data";
 import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 import HarnessSettingsPage from "../page";
 
@@ -19,19 +18,6 @@ function createSpecSourcesData(
     generatedAt: "2026-03-30T00:00:00.000Z",
     repoRoot: "/Users/phodal/ai/routa-js",
     sources: [],
-    warnings: [],
-    ...overrides,
-  };
-}
-
-function createGitHubActionsData(
-  overrides: Partial<GitHubActionsFlowsResponse> = {},
-): GitHubActionsFlowsResponse {
-  return {
-    generatedAt: "2026-03-30T00:00:00.000Z",
-    repoRoot: "/Users/phodal/ai/routa-js",
-    workflowsDir: ".github/workflows",
-    flows: [],
     warnings: [],
     ...overrides,
   };
@@ -93,11 +79,6 @@ const mockHarnessSettingsData = {
       fallbackUsed: false,
       audit: null,
     },
-  },
-  githubActionsState: {
-    loading: false,
-    error: null,
-    data: createGitHubActionsData(),
   },
   automationsState: {
     loading: false,
@@ -233,22 +214,6 @@ vi.mock("@/client/components/harness-lifecycle-view", () => ({
       <button type="button" onClick={() => onSelectedNodeChange?.("thinking")}>select-thinking</button>
       <button type="button" onClick={() => onSelectedNodeChange?.("release")}>select-release</button>
     </div>
-  ),
-}));
-
-vi.mock("@/client/components/harness-github-actions-flow-panel", () => ({
-  HarnessGitHubActionsFlowPanel: ({
-    repoPath,
-    data,
-  }: {
-    repoPath?: string;
-    data?: { flows?: unknown[] } | null;
-  }) => (
-    <div
-      data-testid="github-actions-flow-panel"
-      data-repo-path={repoPath ?? ""}
-      data-flow-count={String(data?.flows?.length ?? 0)}
-    />
   ),
 }));
 
@@ -532,23 +497,6 @@ describe("HarnessSettingsPage", () => {
     render(<HarnessSettingsPage />);
 
     expect(screen.getByTestId("automation-panel-full")).not.toBeNull();
-  });
-
-  it("passes the active repo context into the CI/CD section", () => {
-    currentSearchParams = new URLSearchParams("section=ci-cd");
-    mockHarnessSettingsData.githubActionsState = {
-      loading: false,
-      error: null,
-      data: createGitHubActionsData({
-        flows: [{ id: "ci", name: "CI", event: "push", yaml: "name: CI", jobs: [] }],
-      }),
-    };
-
-    render(<HarnessSettingsPage />);
-
-    const panel = screen.getByTestId("github-actions-flow-panel");
-    expect(panel.getAttribute("data-repo-path")).toBe("/Users/phodal/ai/routa-js");
-    expect(panel.getAttribute("data-flow-count")).toBe("1");
   });
 
   it("resizes the explorer pane via the drag handle", () => {

@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::process::Command;
 
-use crate::api::harness_github_actions::get_github_actions;
 use crate::api::harness_hook_preview_events::{
     parse_json_lines, to_metric_results, to_phase_results,
 };
@@ -34,7 +33,6 @@ pub fn router() -> Router<AppState> {
         .route("/automations", get(get_harness_automations))
         .route("/codeowners", get(get_codeowners))
         .route("/design-decisions", get(get_design_decisions))
-        .route("/github-actions", get(get_github_actions))
         .route("/hooks", get(get_harness_hooks))
         .route("/hooks/preview", get(get_hook_preview))
         .route("/instructions", get(get_harness_instructions))

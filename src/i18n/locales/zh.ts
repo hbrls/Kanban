@@ -279,7 +279,6 @@ const zh: TranslationDictionary = {
       releaseTriggers: "发布触发器",
       codeowners: "CODEOWNERS",
       entrixFitness: "Entrix Fitness",
-      ciCd: "CI/CD",
       sectionGroups: {
         intent: "Intent",
         control: "Control",

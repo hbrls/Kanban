@@ -50,7 +50,6 @@ describe("HarnessGovernanceLoopGraph", () => {
         planError={null}
         instructionsData={null}
         hooksData={null}
-        workflowData={null}
       />,
     );
 
@@ -74,34 +73,15 @@ describe("HarnessGovernanceLoopGraph", () => {
         planError={null}
         instructionsData={null}
         hooksData={null}
-        workflowData={{
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          workflowsDir: "/repo/.github/workflows",
-          flows: [
-            {
-              id: "release",
-              name: "Release",
-              event: "workflow_dispatch",
-              yaml: "name: Release",
-              jobs: [],
-            },
-          ],
-          warnings: [],
-        }}
         selectedNodeId="build"
         onSelectedNodeChange={onSelectedNodeChange}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", {
-      name: /External loop Release/i,
-    }));
-    fireEvent.click(screen.getByRole("button", {
       name: /Push loop Change gates/i,
     }));
 
-    expect(onSelectedNodeChange).toHaveBeenCalledWith("release");
     expect(onSelectedNodeChange).toHaveBeenCalledWith("precommit");
   });
 
@@ -114,7 +94,6 @@ describe("HarnessGovernanceLoopGraph", () => {
         planError={null}
         instructionsData={null}
         hooksData={null}
-        workflowData={null}
         selectedNodeId="test"
         onSelectedNodeChange={onSelectedNodeChange}
       />,

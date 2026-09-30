@@ -68,47 +68,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
       previewError: string;
       previewNotFound: string;
     };
-    githubActions: {
-      loadingWorkflows: string;
-      loading: string;
-      noWorkflowsFound: string;
-      unsupported: string;
-      fetchError: string;
-      noRepo: string;
-      workflow: string;
-      workflows: string;
-      workflowOrchestrationDesc: string;
-      selectRepoToInspect: string;
-      trigger: string;
-      triggerSource: string;
-      triggerSet: string;
-      pipeline: string;
-      pipelineDetail: string;
-      stage: string;
-      stages: string;
-      jobs: string;
-      steps: string;
-      edges: string;
-      dependencies: string;
-      root: string;
-      moreJobs: string;
-      moreStages: string;
-      triggers: string;
-      noValidationWorkflows: string;
-      noReleaseWorkflows: string;
-      noAutomationWorkflows: string;
-      noMaintenanceWorkflows: string;
-      inspector: string;
-      jobDetail: string;
-      workflowDetail: string;
-      jobMetadataDesc: string;
-      workflowMetadataDesc: string;
-      runner: string;
-      stepCount: string;
-      sourcePath: string;
-      workflowYaml: string;
-      unknown: string;
-    };
     executionPlan: {
       dimensionsAndMetricsSubtitle: string;
       tierLabel: string;
@@ -276,26 +235,8 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
         };
         detailChips: {
           prePushPhases: string;
-          flowsAndJobs: string;
-          releaseFlows: string;
         };
         detailSections: {
-          workflow: {
-            title: string;
-            noAction: string;
-            noJob: string;
-            jobsTitle: string;
-            relatedSurface: string;
-            relatedItems: string[];
-          };
-          release: {
-            title: string;
-            noReleaseWorkflow: string;
-            evidenceTitle: string;
-            evidenceItems: string[];
-            relatedSurface: string;
-            relatedItems: string[];
-          };
           build: {
             instructionSourceTitle: string;
             contextTitle: string;
@@ -364,7 +305,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
           preRelease: string;
           deploy: string;
           evolve: string;
-          autoRepairRetry: string;
         };
         nodeDetails: string;
         phaseDetails: string;
