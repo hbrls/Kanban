@@ -272,12 +272,6 @@ vi.mock("@/client/components/harness-agent-hook-panel", () => ({
   ),
 }));
 
-vi.mock("@/client/components/harness-repo-signals-panel", () => ({
-  HarnessRepoSignalsPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`repo-signals-panel-${variant}`}>Repo signals</div>
-  ),
-}));
-
 vi.mock("@/client/components/harness-automation-panel", () => ({
   HarnessAutomationPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`automation-panel-${variant}`}>Cleanup &amp; correction</div>
@@ -394,7 +388,6 @@ describe("HarnessSettingsPage", () => {
     expect(screen.getByText("Flow")).not.toBeNull();
     expect(screen.getByText("Signal")).not.toBeNull();
     expect(screen.getByText("Cleanup & Correction")).not.toBeNull();
-    expect(screen.getByText("Test Feedback")).not.toBeNull();
   });
 
   it("uses the active codebase context by default", () => {

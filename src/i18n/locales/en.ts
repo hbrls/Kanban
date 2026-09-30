@@ -277,7 +277,6 @@ const en: TranslationDictionary = {
       specSources: "Spec Sources",
       agentInstructions: "Agent Instructions",
       designDecisions: "Design Decisions",
-      repositorySignals: "Test Feedback",
       automations: "Cleanup & Correction",
       hookSystems: "Hook Systems",
       reviewTriggers: "Review Triggers",

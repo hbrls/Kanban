@@ -19,7 +19,6 @@ import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view
 import { HarnessGitHubActionsFlowPanel } from "@/client/components/harness-github-actions-flow-panel";
 import { HarnessHookRuntimePanel } from "@/client/components/harness-hook-runtime-panel";
 import { HarnessAgentHookPanel } from "@/client/components/harness-agent-hook-panel";
-import { HarnessRepoSignalsPanel } from "@/client/components/harness-repo-signals-panel";
 import { HarnessCodeownersPanel } from "@/client/components/harness-codeowners-panel";
 import { HarnessReviewTriggersPanel } from "@/client/components/harness-review-triggers-panel";
 import { HarnessReleaseTriggersPanel } from "@/client/components/harness-release-triggers-panel";
@@ -38,7 +37,6 @@ type SectionId =
   | "spec-sources"
   | "agent-instructions"
   | "design-decisions"
-  | "repo-signals"
   | "automations"
   | "hook-systems"
   | "review-triggers"
@@ -65,7 +63,6 @@ const GOVERNANCE_NODE_SECTION_MAP: Partial<Record<string, SectionId>> = {
   thinking: "spec-sources",
   coding: "design-decisions",
   build: "agent-instructions",
-  test: "repo-signals",
   review: "review-triggers",
   release: "ci-cd",
   commit: "ci-cd",
@@ -92,7 +89,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "spec-sources":
     case "agent-instructions":
     case "design-decisions":
-    case "repo-signals":
     case "automations":
     case "hook-systems":
     case "review-triggers":
@@ -395,7 +391,6 @@ export default function HarnessConsolePage() {
     { id: "spec-sources", label: t.settings.harness.specSources, shortLabel: "Specs", code: "SP", group: "intent" },
     { id: "agent-instructions", label: t.settings.harness.agentInstructions, shortLabel: "Instructions", code: "AI", group: "intent" },
     { id: "design-decisions", label: t.settings.harness.designDecisions, shortLabel: "ADR", code: "DD", group: "intent" },
-    { id: "repo-signals", label: t.settings.harness.repositorySignals, shortLabel: "Feedback", code: "RS", group: "signal" },
     { id: "automations", label: t.settings.harness.automations, shortLabel: "Cleanup", code: "CC", group: "flow" },
     { id: "hook-systems", label: t.settings.harness.hookSystems, shortLabel: "Hooks", code: "HK", group: "control" },
     { id: "review-triggers", label: t.settings.harness.reviewTriggers, shortLabel: "Review", code: "RV", group: "control" },
@@ -438,8 +433,6 @@ export default function HarnessConsolePage() {
       case "lint":
       case "precommit":
         return <HarnessExecutionPlanFlow loading={planState.loading} error={planState.error} plan={planState.data} repoLabel={selectedRepoLabel} selectedTier={selectedTier} onTierChange={setSelectedTier} unsupportedMessage={unsupportedRepoMessage} variant="compact" />;
-      case "test":
-        return <HarnessRepoSignalsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} mode="test" variant="compact" />;
       case "release":
         return <HarnessGitHubActionsFlowPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={githubActionsState.data} loading={githubActionsState.loading} error={githubActionsState.error} variant="compact" initialCategory="Release" />;
       case "review":
@@ -653,8 +646,6 @@ export default function HarnessConsolePage() {
         return <HarnessAgentInstructionsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={instructionsState.data} loading={instructionsState.loading} error={instructionsState.error} onAuditRerun={reloadInstructions} hideHeader />;
       case "design-decisions":
         return <HarnessDesignDecisionPanel {...sharedProps} data={designDecisionsState.data} loading={designDecisionsState.loading} error={designDecisionsState.error} hideHeader />;
-      case "repo-signals":
-        return <HarnessRepoSignalsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} mode="test" hideHeader />;
       case "automations":
         return <HarnessAutomationPanel {...sharedProps} data={automationsState.data} loading={automationsState.loading} error={automationsState.error} hideHeader />;
       case "hook-systems":

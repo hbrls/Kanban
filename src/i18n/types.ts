@@ -278,7 +278,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       specSources: string;
       agentInstructions: string;
       designDecisions: string;
-      repositorySignals: string;
       automations: string;
       hookSystems: string;
       reviewTriggers: string;

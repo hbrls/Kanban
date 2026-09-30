@@ -69,15 +69,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
       previewError: "加载文件内容失败",
       previewNotFound: "文件未找到",
     },
-    repoSignals: {
-      loadingSignals: "正在加载仓库信号...",
-      noSignal: "无信号",
-      overview: "概览",
-      entrypoints: "入口点",
-      noMatchingScripts: "未检测到此反馈环的匹配脚本。",
-      noVariants: "无变体",
-      moreSuffix: "+{count} 更多",
-    },
     githubActions: {
       loadingWorkflows: "正在加载 GitHub Actions 工作流...",
       loading: "加载中...",

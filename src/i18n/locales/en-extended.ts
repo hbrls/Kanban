@@ -69,15 +69,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
       previewError: "Failed to load file content",
       previewNotFound: "File not found",
     },
-    repoSignals: {
-      loadingSignals: "Loading repository signals...",
-      noSignal: "No signal",
-      overview: "Overview",
-      entrypoints: "Entrypoints",
-      noMatchingScripts: "No matching scripts were detected for this feedback loop.",
-      noVariants: "No variants",
-      moreSuffix: "+{count} more",
-    },
     githubActions: {
       loadingWorkflows: "Loading GitHub Actions workflows...",
       loading: "Loading...",

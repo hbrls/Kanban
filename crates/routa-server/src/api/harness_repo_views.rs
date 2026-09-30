@@ -3,7 +3,6 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use routa_core::harness::detect_repo_signals;
 use routa_core::harness_automation::detect_repo_automations;
 use serde_json::Value;
 
@@ -12,26 +11,6 @@ use crate::api::repo_context::{
 };
 use crate::error::ServerError;
 use crate::state::AppState;
-
-pub async fn get_harness_repo_signals(
-    State(state): State<AppState>,
-    Query(query): Query<RepoContextQuery>,
-) -> Result<Json<Value>, ServerError> {
-    let repo_root = resolve_repo_root(
-        &state,
-        query.workspace_id.as_deref(),
-        query.codebase_id.as_deref(),
-        query.repo_path.as_deref(),
-        "Missing harness repo context. Provide workspaceId, codebaseId, or repoPath.",
-        ResolveRepoRootOptions::default(),
-    )
-    .await?;
-
-    let report = detect_repo_signals(&repo_root).map_err(ServerError::Internal)?;
-    Ok(Json(serde_json::to_value(report).map_err(|error| {
-        ServerError::Internal(format!("Failed to serialize report: {error}"))
-    })?))
-}
 
 pub async fn get_harness_automations(
     State(state): State<AppState>,

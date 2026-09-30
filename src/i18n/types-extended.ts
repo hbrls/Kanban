@@ -68,15 +68,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
       previewError: string;
       previewNotFound: string;
     };
-    repoSignals: {
-      loadingSignals: string;
-      noSignal: string;
-      overview: string;
-      entrypoints: string;
-      noMatchingScripts: string;
-      noVariants: string;
-      moreSuffix: string;
-    };
     githubActions: {
       loadingWorkflows: string;
       loading: string;
