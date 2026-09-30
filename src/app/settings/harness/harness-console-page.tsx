@@ -17,7 +17,6 @@ import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view
 import { HarnessHookRuntimePanel } from "@/client/components/harness-hook-runtime-panel";
 import { HarnessAgentHookPanel } from "@/client/components/harness-agent-hook-panel";
 import { HarnessReviewTriggersPanel } from "@/client/components/harness-review-triggers-panel";
-import { HarnessReleaseTriggersPanel } from "@/client/components/harness-release-triggers-panel";
 import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
 import { getHarnessUnsupportedRepoMessage } from "@/client/components/harness-support-state";
 import { SpecBoardPanel } from "@/app/workspace/[workspaceId]/spec/spec-page-client";
@@ -33,8 +32,7 @@ type SectionId =
   | "agent-instructions"
   | "design-decisions"
   | "hook-systems"
-  | "review-triggers"
-  | "release-triggers";
+  | "review-triggers";
 
 interface SectionDef {
   id: SectionId;
@@ -79,7 +77,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "design-decisions":
     case "hook-systems":
     case "review-triggers":
-    case "release-triggers":
       return value;
     case "overview":
     default:
@@ -314,7 +311,6 @@ export default function HarnessConsolePage() {
     map.set("design-decisions", designDecisionsState.data ? { label: `${designDecisionsState.data.sources?.length ?? 0} docs` } : null);
     map.set("hook-systems", hookCount > 0 ? { label: `${hookCount} hooks` } : null);
     map.set("review-triggers", hooksState.data?.reviewTriggerFile ? { label: `${hooksState.data.reviewTriggerFile.ruleCount} rules` } : null);
-    map.set("release-triggers", hooksState.data?.releaseTriggerFile ? { label: `${hooksState.data.releaseTriggerFile.ruleCount} rules` } : null);
     return map;
   }, [
     designDecisionsState.data,
@@ -332,7 +328,6 @@ export default function HarnessConsolePage() {
     { id: "design-decisions", label: t.settings.harness.designDecisions, shortLabel: "ADR", code: "DD", group: "intent" },
     { id: "hook-systems", label: t.settings.harness.hookSystems, shortLabel: "Hooks", code: "HK", group: "control" },
     { id: "review-triggers", label: t.settings.harness.reviewTriggers, shortLabel: "Review", code: "RV", group: "control" },
-    { id: "release-triggers", label: t.settings.harness.releaseTriggers, shortLabel: "Release", code: "RL", group: "control" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -374,12 +369,7 @@ export default function HarnessConsolePage() {
       case "post-commit":
         return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
       case "review":
-        return (
-          <div className="space-y-3">
-            <HarnessReviewTriggersPanel {...props} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} variant="compact" />
-            <HarnessReleaseTriggersPanel {...props} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} variant="compact" />
-          </div>
-        );
+        return <HarnessReviewTriggersPanel {...props} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} variant="compact" />;
       default:
         return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
     }
@@ -569,8 +559,6 @@ export default function HarnessConsolePage() {
         );
       case "review-triggers":
         return <HarnessReviewTriggersPanel {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} hideHeader />;
-      case "release-triggers":
-        return <HarnessReleaseTriggersPanel {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} hideHeader />;
       default:
         return null;
     }

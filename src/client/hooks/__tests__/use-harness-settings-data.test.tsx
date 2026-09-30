@@ -39,7 +39,6 @@ describe("useHarnessSettingsData", () => {
             source: "review_triggers: []",
             ruleCount: 0,
           },
-          releaseTriggerFile: null,
         });
       }
 

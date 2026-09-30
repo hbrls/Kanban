@@ -279,7 +279,6 @@ const en: TranslationDictionary = {
       designDecisions: "Design Decisions",
       hookSystems: "Hook Systems",
       reviewTriggers: "Review Triggers",
-      releaseTriggers: "Release Triggers",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

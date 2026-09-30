@@ -215,12 +215,6 @@ vi.mock("@/client/components/harness-review-triggers-panel", () => ({
   ),
 }));
 
-vi.mock("@/client/components/harness-release-triggers-panel", () => ({
-  HarnessReleaseTriggersPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`release-triggers-panel-${variant}`}>Release triggers</div>
-  ),
-}));
-
 vi.mock("@/client/components/harness-spec-sources-panel", () => ({
   HarnessSpecSourcesPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`spec-sources-${variant}`}>Spec sources</div>

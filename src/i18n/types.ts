@@ -280,7 +280,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       designDecisions: string;
       hookSystems: string;
       reviewTriggers: string;
-      releaseTriggers: string;
       entrixFitness: string;
       sectionGroups: {
         intent: string;

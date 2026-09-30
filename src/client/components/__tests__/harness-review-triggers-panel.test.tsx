@@ -267,7 +267,6 @@ function createHooksResponse(): HooksResponse {
         metrics: [],
       },
     ],
-    releaseTriggerFile: null,
     warnings: [],
   };
 }

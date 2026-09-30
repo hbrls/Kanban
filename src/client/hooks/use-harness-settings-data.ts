@@ -67,23 +67,6 @@ export type ReviewTriggerRuleSummary = {
   reviewLayerCount?: number;
 };
 
-export type ReleaseTriggerRuleSummary = {
-  name: string;
-  type: string;
-  severity: string;
-  action: string;
-  patterns: string[];
-  applyTo: string[];
-  paths: string[];
-  groupBy: string[];
-  baseline: string | null;
-  maxGrowthPercent: number | null;
-  minGrowthBytes: number | null;
-  patternCount: number;
-  applyToCount: number;
-  pathCount: number;
-};
-
 export type HookFileSummary = {
   name: string;
   relativePath: string;
@@ -108,12 +91,6 @@ export type HooksResponse = {
     source: string;
     ruleCount: number;
     rules: ReviewTriggerRuleSummary[];
-  } | null;
-  releaseTriggerFile: {
-    relativePath: string;
-    source: string;
-    ruleCount: number;
-    rules: ReleaseTriggerRuleSummary[];
   } | null;
   hookFiles: HookFileSummary[];
   profiles: HookRuntimeProfileSummary[];
@@ -262,12 +239,6 @@ function normalizeHooksResponse(payload: Partial<HooksResponse> | null | undefin
       ? {
         ...payload.reviewTriggerFile,
         rules: safeArray(payload.reviewTriggerFile.rules),
-      }
-      : null,
-    releaseTriggerFile: payload?.releaseTriggerFile
-      ? {
-        ...payload.releaseTriggerFile,
-        rules: safeArray(payload.releaseTriggerFile.rules),
       }
       : null,
     hookFiles: safeArray(payload?.hookFiles),
