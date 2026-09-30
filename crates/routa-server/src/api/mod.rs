@@ -21,7 +21,6 @@ pub mod graph;
 pub mod harness;
 pub(crate) mod harness_hook_preview_events;
 pub(crate) mod harness_instructions_audit;
-pub(crate) mod harness_repo_views;
 pub mod harness_templates;
 pub mod kanban;
 pub mod mcp_routes;

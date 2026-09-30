@@ -144,22 +144,6 @@ test.describe("Harness settings spec sources", () => {
       }));
     });
 
-    await page.route("**/api/harness/automations?**", async (route) => {
-      await route.fulfill(json({
-        generatedAt: "2026-03-30T00:00:00.000Z",
-        repoRoot: "/Users/phodal/ai/routa-js",
-        configFile: {
-          relativePath: "docs/harness/automations.yml",
-          source: "schema: harness-automation-v1",
-          schema: "harness-automation-v1",
-        },
-        definitions: [],
-        pendingSignals: [],
-        recentRuns: [],
-        warnings: [],
-      }));
-    });
-
     await page.route("**/api/harness/agent-hooks?**", async (route) => {
       await route.fulfill(json({
         generatedAt: "2026-03-30T00:00:00.000Z",

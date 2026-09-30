@@ -273,7 +273,6 @@ const zh: TranslationDictionary = {
       specSources: "规范来源",
       agentInstructions: "Agent 指令",
       designDecisions: "设计决策",
-      automations: "清理与纠错",
       hookSystems: "Hook 系统",
       reviewTriggers: "评审触发器",
       releaseTriggers: "发布触发器",

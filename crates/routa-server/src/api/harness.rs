@@ -19,7 +19,6 @@ use crate::api::harness_hook_preview_events::{
     parse_json_lines, to_metric_results, to_phase_results,
 };
 use crate::api::harness_instructions_audit::run_instruction_audit;
-use crate::api::harness_repo_views::get_harness_automations;
 use crate::api::repo_context::{
     extract_frontmatter, json_error, read_to_string, resolve_repo_root, RepoContextQuery,
     ResolveRepoRootOptions,
@@ -30,7 +29,6 @@ use crate::state::AppState;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/agent-hooks", get(get_agent_hooks))
-        .route("/automations", get(get_harness_automations))
         .route("/codeowners", get(get_codeowners))
         .route("/design-decisions", get(get_design_decisions))
         .route("/hooks", get(get_harness_hooks))

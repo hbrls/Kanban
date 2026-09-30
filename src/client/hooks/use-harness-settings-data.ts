@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PlanResponse, TierValue } from "@/client/components/harness-execution-plan-flow";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
-import type { HarnessAutomationResponse } from "@/core/harness/automation-types";
 import type { DesignDecisionResponse } from "@/core/harness/design-decision-types";
 import type { CodeownersResponse } from "@/core/harness/codeowners-types";
 import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
@@ -378,20 +377,6 @@ function normalizeCodeownersResponse(
   };
 }
 
-function normalizeAutomationsResponse(
-  payload: Partial<HarnessAutomationResponse> | null | undefined,
-): HarnessAutomationResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    configFile: payload?.configFile ?? null,
-    definitions: safeArray(payload?.definitions),
-    pendingSignals: safeArray(payload?.pendingSignals),
-    recentRuns: safeArray(payload?.recentRuns),
-    warnings: safeArray(payload?.warnings),
-  };
-}
-
 export function useHarnessSettingsData({
   workspaceId,
   codebaseId,
@@ -408,7 +393,6 @@ export function useHarnessSettingsData({
   const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
   const [designDecisionsState, setDesignDecisionsState] = useState<QueryState<DesignDecisionResponse>>(emptyQueryState);
   const [codeownersState, setCodeownersState] = useState<QueryState<CodeownersResponse>>(emptyQueryState);
-  const [automationsState, setAutomationsState] = useState<QueryState<HarnessAutomationResponse>>(emptyQueryState);
   const [instructionsRefreshState, setInstructionsRefreshState] = useState<InstructionRefreshState>({ contextKey: "", token: 0 });
   const instructionsContextKey = baseQuery?.toString() ?? "";
 
@@ -701,45 +685,6 @@ export function useHarnessSettingsData({
     };
   }, [baseQuery]);
 
-  useEffect(() => {
-    if (!baseQuery) {
-      setAutomationsState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchAutomations = async () => {
-      setAutomationsState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/harness/automations?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load repo-defined automations");
-        }
-        if (!cancelled) {
-          setAutomationsState({
-            loading: false,
-            error: null,
-            data: normalizeAutomationsResponse(payload as Partial<HarnessAutomationResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAutomationsState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchAutomations();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
-
   return {
     planState,
     hooksState,
@@ -748,7 +693,6 @@ export function useHarnessSettingsData({
     specSourcesState,
     designDecisionsState,
     codeownersState,
-    automationsState,
     reloadInstructions,
   };
 }

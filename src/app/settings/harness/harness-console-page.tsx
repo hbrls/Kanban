@@ -11,7 +11,6 @@ import {
   type TierValue,
 } from "@/client/components/harness-execution-plan-flow";
 import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent-instructions-panel";
-import { HarnessAutomationPanel } from "@/client/components/harness-automation-panel";
 import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
@@ -34,7 +33,6 @@ type SectionId =
   | "spec-sources"
   | "agent-instructions"
   | "design-decisions"
-  | "automations"
   | "hook-systems"
   | "review-triggers"
   | "release-triggers"
@@ -81,7 +79,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "spec-sources":
     case "agent-instructions":
     case "design-decisions":
-    case "automations":
     case "hook-systems":
     case "review-triggers":
     case "release-triggers":
@@ -196,7 +193,6 @@ export default function HarnessConsolePage() {
     specSourcesState,
     designDecisionsState,
     codeownersState,
-    automationsState,
     reloadInstructions,
   } = useHarnessSettingsData({
     workspaceId,
@@ -221,10 +217,6 @@ export default function HarnessConsolePage() {
   const hookCount = useMemo(
     () => (hooksState.data?.hookFiles?.length ?? 0) + (agentHooksState.data?.hooks?.length ?? 0),
     [hooksState.data?.hookFiles?.length, agentHooksState.data?.hooks?.length],
-  );
-  const automationRuleCount = useMemo(
-    () => automationsState.data?.definitions?.length ?? 0,
-    [automationsState.data?.definitions?.length],
   );
 
   useEffect(() => {
@@ -328,7 +320,6 @@ export default function HarnessConsolePage() {
     map.set("spec-sources", specSourcesState.data ? { label: `${specSourcesState.data.sources?.length ?? 0} sources` } : null);
     map.set("agent-instructions", instructionsState.data ? { label: instructionsState.data.fileName, tone: instructionsState.data.fallbackUsed ? "warning" : "success" } : null);
     map.set("design-decisions", designDecisionsState.data ? { label: `${designDecisionsState.data.sources?.length ?? 0} docs` } : null);
-    map.set("automations", automationsState.data ? { label: `${automationRuleCount} rules` } : null);
     map.set("hook-systems", hookCount > 0 ? { label: `${hookCount} hooks` } : null);
     map.set("review-triggers", hooksState.data?.reviewTriggerFile ? { label: `${hooksState.data.reviewTriggerFile.ruleCount} rules` } : null);
     map.set("release-triggers", hooksState.data?.releaseTriggerFile ? { label: `${hooksState.data.releaseTriggerFile.ruleCount} rules` } : null);
@@ -340,9 +331,7 @@ export default function HarnessConsolePage() {
       : null);
     return map;
   }, [
-    automationsState.data,
     designDecisionsState.data,
-    automationRuleCount,
     hookCount,
     hooksState.data,
     instructionsState.data,
@@ -356,7 +345,6 @@ export default function HarnessConsolePage() {
     { id: "spec-sources", label: t.settings.harness.specSources, shortLabel: "Specs", code: "SP", group: "intent" },
     { id: "agent-instructions", label: t.settings.harness.agentInstructions, shortLabel: "Instructions", code: "AI", group: "intent" },
     { id: "design-decisions", label: t.settings.harness.designDecisions, shortLabel: "ADR", code: "DD", group: "intent" },
-    { id: "automations", label: t.settings.harness.automations, shortLabel: "Cleanup", code: "CC", group: "flow" },
     { id: "hook-systems", label: t.settings.harness.hookSystems, shortLabel: "Hooks", code: "HK", group: "control" },
     { id: "review-triggers", label: t.settings.harness.reviewTriggers, shortLabel: "Review", code: "RV", group: "control" },
     { id: "release-triggers", label: t.settings.harness.releaseTriggers, shortLabel: "Release", code: "RL", group: "control" },
@@ -592,8 +580,6 @@ export default function HarnessConsolePage() {
         return <HarnessAgentInstructionsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={instructionsState.data} loading={instructionsState.loading} error={instructionsState.error} onAuditRerun={reloadInstructions} hideHeader />;
       case "design-decisions":
         return <HarnessDesignDecisionPanel {...sharedProps} data={designDecisionsState.data} loading={designDecisionsState.loading} error={designDecisionsState.error} hideHeader />;
-      case "automations":
-        return <HarnessAutomationPanel {...sharedProps} data={automationsState.data} loading={automationsState.loading} error={automationsState.error} hideHeader />;
       case "hook-systems":
         return (
           <div className="space-y-4">
@@ -777,7 +763,6 @@ export default function HarnessConsolePage() {
               <span>{activeWorkspaceTitle ?? "-"}</span>
             </div>
             <div className="flex items-center gap-3">
-              <span>{automationRuleCount} cleanup rules</span>
               <span>{hookCount} hooks</span>
             </div>
           </div>

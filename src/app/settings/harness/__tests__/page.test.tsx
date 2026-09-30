@@ -80,19 +80,6 @@ const mockHarnessSettingsData = {
       audit: null,
     },
   },
-  automationsState: {
-    loading: false,
-    error: null,
-    data: {
-      generatedAt: "2026-03-30T00:00:00.000Z",
-      repoRoot: "/Users/phodal/ai/routa-js",
-      configFile: null,
-      definitions: [],
-      pendingSignals: [],
-      recentRuns: [],
-      warnings: [],
-    },
-  },
   specSourcesState: {
     loading: false,
     error: null,
@@ -227,12 +214,6 @@ vi.mock("@/client/components/harness-agent-hook-panel", () => ({
   ),
 }));
 
-vi.mock("@/client/components/harness-automation-panel", () => ({
-  HarnessAutomationPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`automation-panel-${variant}`}>Cleanup &amp; correction</div>
-  ),
-}));
-
 vi.mock("@/client/components/harness-codeowners-panel", () => ({
   HarnessCodeownersPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`codeowners-panel-${variant}`}>Codeowners</div>
@@ -339,8 +320,6 @@ describe("HarnessSettingsPage", () => {
     expect(screen.getAllByText("Overview").length).toBeGreaterThan(0);
     expect(screen.getByText("Intent")).not.toBeNull();
     expect(screen.getByText("Control")).not.toBeNull();
-    expect(screen.getByText("Flow")).not.toBeNull();
-    expect(screen.getByText("Cleanup & Correction")).not.toBeNull();
   });
 
   it("uses the active codebase context by default", () => {
@@ -362,15 +341,6 @@ describe("HarnessSettingsPage", () => {
 
     expect(screen.getByTestId("hook-runtime-panel")).not.toBeNull();
     expect(screen.getByTestId("agent-hook-panel-full")).not.toBeNull();
-    expect(screen.queryByTestId("lifecycle-view")).toBeNull();
-  });
-
-  it("opens the automations tab from the section query parameter on first render", () => {
-    currentSearchParams = new URLSearchParams("section=automations");
-
-    render(<HarnessSettingsPage />);
-
-    expect(screen.getByTestId("automation-panel-full")).not.toBeNull();
     expect(screen.queryByTestId("lifecycle-view")).toBeNull();
   });
 
@@ -480,23 +450,6 @@ describe("HarnessSettingsPage", () => {
 
     expect(screen.getByTestId("spec-sources-full")).not.toBeNull();
     expect(screen.getByRole("button", { name: /Spec Sources/i })).not.toBeNull();
-  });
-
-  it("does not crash when automation data is missing definitions", () => {
-    currentSearchParams = new URLSearchParams("section=automations");
-    mockHarnessSettingsData.automationsState = {
-      loading: false,
-      error: null,
-      data: {
-        generatedAt: "2026-03-30T00:00:00.000Z",
-        repoRoot: "/Users/phodal/ai/routa-js",
-        warnings: [],
-      } as never,
-    };
-
-    render(<HarnessSettingsPage />);
-
-    expect(screen.getByTestId("automation-panel-full")).not.toBeNull();
   });
 
   it("resizes the explorer pane via the drag handle", () => {
