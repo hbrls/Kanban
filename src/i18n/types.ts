@@ -281,7 +281,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       hookSystems: string;
       reviewTriggers: string;
       releaseTriggers: string;
-      codeowners: string;
       entrixFitness: string;
       sectionGroups: {
         intent: string;

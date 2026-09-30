@@ -1,21 +1,16 @@
-import { execSync } from "child_process";
 import * as fs from "fs";
 import { promises as fsp } from "fs";
 import * as path from "path";
 import { minimatch } from "minimatch";
 import type {
-  CodeownersCorrelationReport,
   CodeownersOwner,
-  CodeownersResponse,
   CodeownersRule,
-  OwnerGroupSummary,
   OwnerKind,
   OwnershipRoutingContext,
   OwnershipMatch,
   TriggerOwnershipCorrelation,
 } from "./codeowners-types";
 import {
-  loadReviewTriggerRules,
   matchFilesForReviewTrigger,
   type ReviewTriggerRule,
 } from "./review-triggers";
@@ -136,16 +131,6 @@ function isSensitivePath(filePath: string): boolean {
   );
 }
 
-function collectTrackedFiles(repoRoot: string, warnings: string[]): string[] {
-  try {
-    const output = execSync("git ls-files", { cwd: repoRoot, encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 });
-    return output.trim().split("\n").filter((line: string) => line.length > 0);
-  } catch {
-    warnings.push("Failed to list git-tracked files. Coverage analysis may be incomplete.");
-    return [];
-  }
-}
-
 export async function loadCodeownersRules(repoRoot: string): Promise<{
   codeownersFile: string | null;
   rules: CodeownersRule[];
@@ -247,135 +232,5 @@ export function buildOwnershipRoutingContext(params: {
         .map((correlation) => correlation.triggerName),
     ),
     triggerCorrelations,
-  };
-}
-
-function buildCodeownersCorrelationReport(params: {
-  trackedFiles: string[];
-  matches: OwnershipMatch[];
-  reviewTriggerFile: string | null;
-  triggerRules: ReviewTriggerRule[];
-}): CodeownersCorrelationReport {
-  const routing = buildOwnershipRoutingContext({
-    changedFiles: params.trackedFiles,
-    matches: params.matches,
-    triggerRules: params.triggerRules,
-  });
-
-  const hotspots = routing.triggerCorrelations.flatMap((correlation) => {
-    const entries: CodeownersCorrelationReport["hotspots"] = [];
-    if (correlation.hasOwnershipGap) {
-      entries.push({
-        triggerName: correlation.triggerName,
-        reason: "Trigger-covered paths have no explicit owner coverage.",
-        samplePaths: correlation.unownedPaths.slice(0, 5),
-      });
-    }
-    if (correlation.spansMultipleOwnerGroups) {
-      entries.push({
-        triggerName: correlation.triggerName,
-        reason: "Trigger spans multiple owner groups and may need cross-team review routing.",
-        samplePaths: correlation.overlappingPaths.slice(0, 5),
-      });
-    }
-    if (correlation.overlappingPaths.length > 0) {
-      entries.push({
-        triggerName: correlation.triggerName,
-        reason: "Trigger touches overlapping ownership rules that should be shown explicitly.",
-        samplePaths: correlation.overlappingPaths.slice(0, 5),
-      });
-    }
-    return entries;
-  });
-
-  return {
-    reviewTriggerFile: params.reviewTriggerFile,
-    triggerCorrelations: routing.triggerCorrelations,
-    hotspots,
-  };
-}
-
-export async function detectCodeowners(repoRoot: string): Promise<CodeownersResponse> {
-  const warnings: string[] = [];
-  const { codeownersFile, rules, warnings: parseWarnings } = await loadCodeownersRules(repoRoot);
-
-  if (!codeownersFile) {
-    return {
-      generatedAt: new Date().toISOString(),
-      repoRoot,
-      codeownersFile: null,
-      owners: [],
-      rules: [],
-      coverage: {
-        unownedFiles: [],
-        overlappingFiles: [],
-        sensitiveUnownedFiles: [],
-      },
-      correlation: {
-        reviewTriggerFile: null,
-        triggerCorrelations: [],
-        hotspots: [],
-      },
-      warnings: parseWarnings,
-    };
-  }
-  warnings.push(...parseWarnings);
-
-  const trackedFiles = collectTrackedFiles(repoRoot, warnings);
-  const matches = resolveOwnership(trackedFiles, rules);
-  const { relativePath: reviewTriggerFile, rules: reviewTriggerRules } = await loadReviewTriggerRules(repoRoot);
-
-  const ownerCounts = new Map<string, { kind: OwnerKind; count: number }>();
-  for (const match of matches) {
-    for (const owner of match.owners) {
-      const existing = ownerCounts.get(owner.name);
-      if (existing) {
-        existing.count++;
-      } else {
-        ownerCounts.set(owner.name, { kind: owner.kind, count: 1 });
-      }
-    }
-  }
-
-  const ownerGroups: OwnerGroupSummary[] = [...ownerCounts.entries()]
-    .map(([name, { kind, count }]) => ({ name, kind, matchedFileCount: count }))
-    .sort((a, b) => b.matchedFileCount - a.matchedFileCount);
-
-  const unownedFiles = matches
-    .filter((m) => !m.covered)
-    .map((m) => m.filePath);
-
-  const overlappingFiles = matches
-    .filter((m) => m.overlap)
-    .map((m) => m.filePath);
-
-  const sensitiveUnownedFiles = unownedFiles.filter(isSensitivePath);
-
-  const MAX_REPORT_FILES = 50;
-  const correlation = buildCodeownersCorrelationReport({
-    trackedFiles,
-    matches,
-    reviewTriggerFile,
-    triggerRules: reviewTriggerRules,
-  });
-
-  return {
-    generatedAt: new Date().toISOString(),
-    repoRoot,
-    codeownersFile,
-    owners: ownerGroups,
-    rules: rules.map((r) => ({
-      pattern: r.pattern,
-      owners: r.owners.map((o) => o.name),
-      line: r.line,
-      precedence: r.precedence,
-    })),
-    coverage: {
-      unownedFiles: unownedFiles.slice(0, MAX_REPORT_FILES),
-      overlappingFiles: overlappingFiles.slice(0, MAX_REPORT_FILES),
-      sensitiveUnownedFiles,
-    },
-    correlation,
-    warnings,
   };
 }

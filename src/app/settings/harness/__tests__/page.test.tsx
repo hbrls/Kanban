@@ -85,11 +85,6 @@ const mockHarnessSettingsData = {
     error: null,
     data: createSpecSourcesData(),
   },
-  codeownersState: {
-    loading: false,
-    error: null,
-    data: null,
-  },
   reloadInstructions: vi.fn(async () => {}),
 };
 
@@ -211,12 +206,6 @@ vi.mock("@/client/components/harness-hook-runtime-panel", () => ({
 vi.mock("@/client/components/harness-agent-hook-panel", () => ({
   HarnessAgentHookPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`agent-hook-panel-${variant}`}>Agent hooks</div>
-  ),
-}));
-
-vi.mock("@/client/components/harness-codeowners-panel", () => ({
-  HarnessCodeownersPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`codeowners-panel-${variant}`}>Codeowners</div>
   ),
 }));
 

@@ -16,7 +16,6 @@ import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governan
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
 import { HarnessHookRuntimePanel } from "@/client/components/harness-hook-runtime-panel";
 import { HarnessAgentHookPanel } from "@/client/components/harness-agent-hook-panel";
-import { HarnessCodeownersPanel } from "@/client/components/harness-codeowners-panel";
 import { HarnessReviewTriggersPanel } from "@/client/components/harness-review-triggers-panel";
 import { HarnessReleaseTriggersPanel } from "@/client/components/harness-release-triggers-panel";
 import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
@@ -35,8 +34,7 @@ type SectionId =
   | "design-decisions"
   | "hook-systems"
   | "review-triggers"
-  | "release-triggers"
-  | "codeowners";
+  | "release-triggers";
 
 interface SectionDef {
   id: SectionId;
@@ -82,7 +80,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "hook-systems":
     case "review-triggers":
     case "release-triggers":
-    case "codeowners":
       return value;
     case "overview":
     default:
@@ -192,7 +189,6 @@ export default function HarnessConsolePage() {
     instructionsState,
     specSourcesState,
     designDecisionsState,
-    codeownersState,
     reloadInstructions,
   } = useHarnessSettingsData({
     workspaceId,
@@ -201,10 +197,6 @@ export default function HarnessConsolePage() {
     selectedTier,
   });
 
-  const resolvedCodeownersState = useMemo(
-    () => codeownersState ?? { loading: false, error: null, data: null },
-    [codeownersState],
-  );
   const selectedRepoLabel = activeRepoSelection?.name ?? "None";
   const unsupportedRepoMessage = getHarnessUnsupportedRepoMessage(
     planState.error,
@@ -323,19 +315,12 @@ export default function HarnessConsolePage() {
     map.set("hook-systems", hookCount > 0 ? { label: `${hookCount} hooks` } : null);
     map.set("review-triggers", hooksState.data?.reviewTriggerFile ? { label: `${hooksState.data.reviewTriggerFile.ruleCount} rules` } : null);
     map.set("release-triggers", hooksState.data?.releaseTriggerFile ? { label: `${hooksState.data.releaseTriggerFile.ruleCount} rules` } : null);
-    map.set("codeowners", resolvedCodeownersState.data
-      ? {
-          label: resolvedCodeownersState.data.codeownersFile ? "ready" : "missing",
-          tone: resolvedCodeownersState.data.codeownersFile ? "success" : "warning",
-        }
-      : null);
     return map;
   }, [
     designDecisionsState.data,
     hookCount,
     hooksState.data,
     instructionsState.data,
-    resolvedCodeownersState.data,
     specSourcesState.data,
   ]);
 
@@ -348,7 +333,6 @@ export default function HarnessConsolePage() {
     { id: "hook-systems", label: t.settings.harness.hookSystems, shortLabel: "Hooks", code: "HK", group: "control" },
     { id: "review-triggers", label: t.settings.harness.reviewTriggers, shortLabel: "Review", code: "RV", group: "control" },
     { id: "release-triggers", label: t.settings.harness.releaseTriggers, shortLabel: "Release", code: "RL", group: "control" },
-    { id: "codeowners", label: t.settings.harness.codeowners, shortLabel: "Owners", code: "CO", group: "control" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -394,7 +378,6 @@ export default function HarnessConsolePage() {
           <div className="space-y-3">
             <HarnessReviewTriggersPanel {...props} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} variant="compact" />
             <HarnessReleaseTriggersPanel {...props} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} variant="compact" />
-            <HarnessCodeownersPanel {...props} data={resolvedCodeownersState.data} loading={resolvedCodeownersState.loading} error={resolvedCodeownersState.error} variant="compact" />
           </div>
         );
       default:
@@ -416,9 +399,6 @@ export default function HarnessConsolePage() {
     activeRepoCodebaseId,
     activeRepoPath,
     reloadInstructions,
-    resolvedCodeownersState.data,
-    resolvedCodeownersState.error,
-    resolvedCodeownersState.loading,
     selectedGovernanceNodeId,
     selectedRepoLabel,
     selectedTier,
@@ -591,8 +571,6 @@ export default function HarnessConsolePage() {
         return <HarnessReviewTriggersPanel {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} hideHeader />;
       case "release-triggers":
         return <HarnessReleaseTriggersPanel {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} hideHeader />;
-      case "codeowners":
-        return <HarnessCodeownersPanel {...sharedProps} data={resolvedCodeownersState.data} loading={resolvedCodeownersState.loading} error={resolvedCodeownersState.error} hideHeader />;
       default:
         return null;
     }

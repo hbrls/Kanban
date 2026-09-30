@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PlanResponse, TierValue } from "@/client/components/harness-execution-plan-flow";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import type { DesignDecisionResponse } from "@/core/harness/design-decision-types";
-import type { CodeownersResponse } from "@/core/harness/codeowners-types";
 import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 
 export type RunnerKind = "shell" | "graph" | "sarif";
@@ -177,8 +176,6 @@ export type AgentHooksResponse = {
   warnings: string[];
 };
 
-export type { CodeownersResponse };
-
 export type QueryState<T> = {
   loading: boolean;
   error: string | null;
@@ -341,42 +338,6 @@ function normalizeDesignDecisionResponse(
   };
 }
 
-function normalizeCodeownersResponse(
-  payload: Partial<CodeownersResponse> | null | undefined,
-): CodeownersResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    codeownersFile: payload?.codeownersFile ?? null,
-    owners: safeArray(payload?.owners),
-    rules: safeArray(payload?.rules).map((rule) => ({
-      ...rule,
-      owners: safeArray(rule.owners),
-    })),
-    coverage: {
-      unownedFiles: safeArray(payload?.coverage?.unownedFiles),
-      overlappingFiles: safeArray(payload?.coverage?.overlappingFiles),
-      sensitiveUnownedFiles: safeArray(payload?.coverage?.sensitiveUnownedFiles),
-    },
-    correlation: payload?.correlation
-      ? {
-        ...payload.correlation,
-        triggerCorrelations: safeArray(payload.correlation.triggerCorrelations).map((correlation) => ({
-          ...correlation,
-          ownerGroups: safeArray(correlation.ownerGroups),
-          unownedPaths: safeArray(correlation.unownedPaths),
-          overlappingPaths: safeArray(correlation.overlappingPaths),
-        })),
-        hotspots: safeArray(payload.correlation.hotspots).map((hotspot) => ({
-          ...hotspot,
-          samplePaths: safeArray(hotspot.samplePaths),
-        })),
-      }
-      : undefined,
-    warnings: safeArray(payload?.warnings),
-  };
-}
-
 export function useHarnessSettingsData({
   workspaceId,
   codebaseId,
@@ -392,7 +353,6 @@ export function useHarnessSettingsData({
   const [agentHooksState, setAgentHooksState] = useState<QueryState<AgentHooksResponse>>(emptyQueryState);
   const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
   const [designDecisionsState, setDesignDecisionsState] = useState<QueryState<DesignDecisionResponse>>(emptyQueryState);
-  const [codeownersState, setCodeownersState] = useState<QueryState<CodeownersResponse>>(emptyQueryState);
   const [instructionsRefreshState, setInstructionsRefreshState] = useState<InstructionRefreshState>({ contextKey: "", token: 0 });
   const instructionsContextKey = baseQuery?.toString() ?? "";
 
@@ -646,45 +606,6 @@ export function useHarnessSettingsData({
     };
   }, [baseQuery]);
 
-  useEffect(() => {
-    if (!baseQuery) {
-      setCodeownersState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchCodeowners = async () => {
-      setCodeownersState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/harness/codeowners?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load CODEOWNERS");
-        }
-        if (!cancelled) {
-          setCodeownersState({
-            loading: false,
-            error: null,
-            data: normalizeCodeownersResponse(payload as Partial<CodeownersResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setCodeownersState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchCodeowners();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
-
   return {
     planState,
     hooksState,
@@ -692,7 +613,6 @@ export function useHarnessSettingsData({
     instructionsState,
     specSourcesState,
     designDecisionsState,
-    codeownersState,
     reloadInstructions,
   };
 }

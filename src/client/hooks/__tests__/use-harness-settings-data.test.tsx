@@ -113,14 +113,6 @@ describe("useHarnessSettingsData", () => {
         });
       }
 
-      if (url.startsWith("/api/harness/codeowners?")) {
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          codeownersFile: "CODEOWNERS",
-        });
-      }
-
       throw new Error(`Unhandled fetch url: ${url}`);
     });
 
@@ -167,7 +159,7 @@ describe("useHarnessSettingsData", () => {
     }));
 
     await waitFor(() => {
-      expect(result.current.codeownersState.loading).toBe(false);
+      expect(result.current.designDecisionsState.loading).toBe(false);
     });
 
     expect(result.current.planState.data?.dimensions).toEqual([]);
@@ -182,12 +174,5 @@ describe("useHarnessSettingsData", () => {
     expect(result.current.agentHooksState.data?.hooks).toEqual([]);
     expect(result.current.specSourcesState.data?.sources[0]?.children).toEqual([]);
     expect(result.current.designDecisionsState.data?.sources[0]?.artifacts).toEqual([]);
-    expect(result.current.codeownersState.data?.owners).toEqual([]);
-    expect(result.current.codeownersState.data?.rules).toEqual([]);
-    expect(result.current.codeownersState.data?.coverage).toEqual({
-      unownedFiles: [],
-      overlappingFiles: [],
-      sensitiveUnownedFiles: [],
-    });
   });
 });
