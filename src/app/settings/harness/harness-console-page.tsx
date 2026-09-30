@@ -11,7 +11,6 @@ import {
   type TierValue,
 } from "@/client/components/harness-execution-plan-flow";
 import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent-instructions-panel";
-import { HarnessArchitectureQualityPanel } from "@/client/components/harness-architecture-quality-panel";
 import { HarnessAutomationPanel } from "@/client/components/harness-automation-panel";
 import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
@@ -33,7 +32,6 @@ import { normalizeWorkspaceQueryId, resolveWorkspaceSelection } from "@/client/u
 type SectionId =
   | "overview"
   | "spec"
-  | "architecture-quality"
   | "spec-sources"
   | "agent-instructions"
   | "design-decisions"
@@ -85,7 +83,6 @@ function clamp(value: number, min: number, max: number) {
 function resolveSectionId(value: string | null | undefined): SectionId {
   switch (value) {
     case "spec":
-    case "architecture-quality":
     case "spec-sources":
     case "agent-instructions":
     case "design-decisions":
@@ -119,7 +116,6 @@ export default function HarnessConsolePage() {
   const searchParams = useSearchParams();
   const workspacesHook = useWorkspaces();
   const sectionFromUrl = resolveSectionId(searchParams.get(HARNESS_SECTION_QUERY_KEY));
-  const architectureSectionActive = sectionFromUrl === "architecture-quality";
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const urlWorkspaceId = normalizeWorkspaceQueryId(searchParams.get("workspaceId"));
   const workspaceId = resolveWorkspaceSelection(
@@ -200,7 +196,6 @@ export default function HarnessConsolePage() {
   const activeRepoCodebaseId = effectiveRepoOverride ? matchedSelectedCodebase?.id : activeCodebase?.id;
   const {
     planState,
-    architectureState,
     hooksState,
     agentHooksState,
     instructionsState,
@@ -209,15 +204,12 @@ export default function HarnessConsolePage() {
     designDecisionsState,
     codeownersState,
     automationsState,
-    reloadArchitecture,
     reloadInstructions,
   } = useHarnessSettingsData({
     workspaceId,
     codebaseId: activeRepoCodebaseId,
     repoPath: activeRepoPath,
     selectedTier,
-    enableArchitecture: architectureSectionActive,
-    preferCurrentRepoForArchitecture: workspaceId === "default" && !effectiveRepoOverride,
   });
 
   const resolvedCodeownersState = useMemo(
@@ -344,12 +336,6 @@ export default function HarnessConsolePage() {
 
   const sectionStatuses = useMemo((): Map<SectionId, SectionStatus | null> => {
     const map = new Map<SectionId, SectionStatus | null>();
-    map.set("architecture-quality", architectureState.data
-      ? {
-          label: `${architectureState.data.failedRuleCount}/${architectureState.data.ruleCount} rules`,
-          tone: architectureState.data.summaryStatus === "fail" ? "warning" : "success",
-        }
-      : null);
     map.set("spec-sources", specSourcesState.data ? { label: `${specSourcesState.data.sources?.length ?? 0} sources` } : null);
     map.set("agent-instructions", instructionsState.data ? { label: instructionsState.data.fileName, tone: instructionsState.data.fallbackUsed ? "warning" : "success" } : null);
     map.set("design-decisions", designDecisionsState.data ? { label: `${designDecisionsState.data.sources?.length ?? 0} docs` } : null);
@@ -369,7 +355,6 @@ export default function HarnessConsolePage() {
     automationsState.data,
     designDecisionsState.data,
     automationRuleCount,
-    architectureState.data,
     hookCount,
     hooksState.data,
     instructionsState.data,
@@ -381,13 +366,6 @@ export default function HarnessConsolePage() {
   const sections = useMemo((): SectionDef[] => [
     { id: "overview", label: t.settings.harness.overview, shortLabel: "Overview", code: "OV" },
     { id: "spec", label: t.nav.spec, shortLabel: t.nav.spec, code: "IB", group: "intent" },
-    {
-      id: "architecture-quality",
-      label: t.settings.harness.architectureQuality.title,
-      shortLabel: t.settings.harness.architectureQuality.navigationLabel,
-      code: "AQ",
-      group: "signal",
-    },
     { id: "spec-sources", label: t.settings.harness.specSources, shortLabel: "Specs", code: "SP", group: "intent" },
     { id: "agent-instructions", label: t.settings.harness.agentInstructions, shortLabel: "Instructions", code: "AI", group: "intent" },
     { id: "design-decisions", label: t.settings.harness.designDecisions, shortLabel: "ADR", code: "DD", group: "intent" },
@@ -628,18 +606,6 @@ export default function HarnessConsolePage() {
         return renderOverview();
       case "spec":
         return <SpecBoardPanel workspaceId={workspaceId} />;
-      case "architecture-quality":
-        return (
-          <HarnessArchitectureQualityPanel
-            repoLabel={selectedRepoLabel}
-            unsupportedMessage={unsupportedRepoMessage}
-            data={architectureState.data}
-            loading={architectureState.loading}
-            error={architectureState.error}
-            onRefresh={reloadArchitecture}
-            embedded
-          />
-        );
       case "spec-sources":
         return <HarnessSpecSourcesPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={specSourcesState.data} loading={specSourcesState.loading} error={specSourcesState.error} hideHeader />;
       case "agent-instructions":

@@ -2,7 +2,7 @@
 
 pub mod analyze;
 
-pub use analyze::{analyze_directory, AnalysisDepth, AnalysisLang, DependencyGraph};
+pub use analyze::{AnalysisDepth, AnalysisLang};
 use clap::{Args, Subcommand, ValueEnum};
 
 #[derive(Subcommand, Debug, Clone)]

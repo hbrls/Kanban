@@ -47,11 +47,6 @@ const mockHarnessSettingsData = {
       dimensions: [],
     },
   },
-  architectureState: {
-    loading: false,
-    error: null,
-    data: null,
-  },
   designDecisionsState: {
     loading: false,
     error: null,
@@ -127,7 +122,6 @@ const mockHarnessSettingsData = {
     error: null,
     data: null,
   },
-  reloadArchitecture: vi.fn(async () => {}),
   reloadInstructions: vi.fn(async () => {}),
 };
 
@@ -213,10 +207,6 @@ vi.mock("@/client/components/harness-agent-instructions-panel", () => ({
   HarnessAgentInstructionsPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`instruction-panel-${variant}`}>Instruction file</div>
   ),
-}));
-
-vi.mock("@/client/components/harness-architecture-quality-panel", () => ({
-  HarnessArchitectureQualityPanel: () => <div data-testid="architecture-quality-panel">Architecture quality</div>,
 }));
 
 vi.mock("@/client/components/harness-design-decision-panel", () => ({
@@ -355,7 +345,6 @@ describe("HarnessSettingsPage", () => {
     routerPushMock.mockReset();
     currentSearchParams = new URLSearchParams();
     window.localStorage.clear();
-    mockHarnessSettingsData.reloadArchitecture.mockClear();
     mockHarnessSettingsData.reloadInstructions.mockClear();
     useHarnessSettingsDataMock.mockReset();
     useHarnessSettingsDataMock.mockReturnValue(mockHarnessSettingsData);
@@ -386,7 +375,6 @@ describe("HarnessSettingsPage", () => {
     expect(screen.getByText("Intent")).not.toBeNull();
     expect(screen.getByText("Control")).not.toBeNull();
     expect(screen.getByText("Flow")).not.toBeNull();
-    expect(screen.getByText("Signal")).not.toBeNull();
     expect(screen.getByText("Cleanup & Correction")).not.toBeNull();
   });
 
@@ -398,8 +386,6 @@ describe("HarnessSettingsPage", () => {
       codebaseId: "cb-1",
       repoPath: "/Users/phodal/ai/routa-js",
       selectedTier: "normal",
-      enableArchitecture: false,
-      preferCurrentRepoForArchitecture: true,
     });
     expect(window.localStorage.getItem("routa.repoSelection.harness.default")).toBeNull();
   });
@@ -421,22 +407,6 @@ describe("HarnessSettingsPage", () => {
 
     expect(screen.getByTestId("automation-panel-full")).not.toBeNull();
     expect(screen.queryByTestId("lifecycle-view")).toBeNull();
-  });
-
-  it("opens the architecture tab from the section query parameter and enables architecture loading", () => {
-    currentSearchParams = new URLSearchParams("section=architecture-quality");
-
-    render(<HarnessSettingsPage />);
-
-    expect(screen.getByTestId("architecture-quality-panel")).not.toBeNull();
-    expect(useHarnessSettingsDataMock).toHaveBeenCalledWith({
-      workspaceId: "default",
-      codebaseId: "cb-1",
-      repoPath: "/Users/phodal/ai/routa-js",
-      selectedTier: "normal",
-      enableArchitecture: true,
-      preferCurrentRepoForArchitecture: true,
-    });
   });
 
   it("updates the section query parameter when opening another section", () => {
@@ -479,8 +449,6 @@ describe("HarnessSettingsPage", () => {
       codebaseId: undefined,
       repoPath: "/Users/phodal/ai/codex",
       selectedTier: "normal",
-      enableArchitecture: false,
-      preferCurrentRepoForArchitecture: false,
     });
     expect(window.localStorage.getItem("routa.repoSelection.harness.default")).toContain("/Users/phodal/ai/codex");
   });
