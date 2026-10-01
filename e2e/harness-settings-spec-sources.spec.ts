@@ -91,18 +91,6 @@ test.describe("Harness settings spec sources", () => {
       }));
     });
 
-    await page.route("**/api/harness/instructions?**", async (route) => {
-      await route.fulfill(json({
-        generatedAt: "2026-03-30T00:00:00.000Z",
-        repoRoot: "/Users/phodal/ai/routa-js",
-        fileName: "AGENTS.md",
-        relativePath: "AGENTS.md",
-        source: "# Routa.js",
-        fallbackUsed: false,
-        audit: null,
-      }));
-    });
-
     await page.route("**/api/harness/spec-sources?**", async (route) => {
       await route.fulfill(json({
         generatedAt: "2026-03-30T00:00:00.000Z",
@@ -122,6 +110,14 @@ test.describe("Harness settings spec sources", () => {
       }));
     });
 
+    const instructionRequests: string[] = [];
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/api/harness/instructions")) {
+        instructionRequests.push(url);
+      }
+    });
+
     await page.goto(`${BASE_URL}/settings/harness?workspaceId=default&section=spec-sources`);
 
     await expect(page.getByTestId("spec-sources-full")).toBeVisible({ timeout: 15_000 });
@@ -130,5 +126,6 @@ test.describe("Harness settings spec sources", () => {
     await page.getByRole("button", { name: "需求定义" }).click();
 
     await expect(page.getByTestId("spec-sources-compact")).toBeVisible({ timeout: 15_000 });
+    expect(instructionRequests).toEqual([]);
   });
 });

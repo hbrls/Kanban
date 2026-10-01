@@ -104,11 +104,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
           releaseUnavailable: "仓库未检测到 release / publish workflow，暂时无法进入发布上下文。",
         },
         detailSections: {
-          build: {
-            instructionSourceTitle: "指令来源",
-            contextTitle: "上下文",
-            contextItem: "此节点由指令面板支撑",
-          },
           thinking: {
             specSourcesTitle: "规格来源",
             specSourcesItem: "检测 AI 编码规格工具和方法论框架",
@@ -121,7 +116,7 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
             highlightedNodesClickable: "高亮节点可点击。不可用节点会直接说明缺失的信号。",
             selectNodePreview: "选择一个节点（编码、本地验证、变更门禁、评审、交付、发布）以预览匹配的上下文面板。",
             connectedPanelsTitle: "关联面板",
-            connectedPanelsItems: ["指令文件 - CLAUDE.md", "Entrix Fitness", "评审触发器", "仓库信号"],
+            connectedPanelsItems: ["Entrix Fitness", "评审触发器", "仓库信号"],
           },
         },
         nodeLabels: {
@@ -140,8 +135,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
         clues: {
           thinkingNote: "Spec / 需求边界",
           buildNote: "代码实现 / 约束执行",
-          buildNotePrefix: "受",
-          buildNoteSuffix: "规范约束",
           testNote: "测试 / 回归 / smoke",
           precommitNote: "pre-push / Entrix Fitness",
           reviewNote: "规则策略 / 人工 review",

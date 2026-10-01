@@ -276,7 +276,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       overview: string;
       governanceLoop: string;
       specSources: string;
-      agentInstructions: string;
       entrixFitness: string;
       sectionGroups: {
         intent: string;

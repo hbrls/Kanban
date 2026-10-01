@@ -103,11 +103,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
           releaseUnavailable: string;
         };
         detailSections: {
-          build: {
-            instructionSourceTitle: string;
-            contextTitle: string;
-            contextItem: string;
-          };
           thinking: {
             specSourcesTitle: string;
             specSourcesItem: string;
@@ -139,8 +134,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
         clues: {
           thinkingNote: string;
           buildNote: string;
-          buildNotePrefix: string;
-          buildNoteSuffix: string;
           testNote: string;
           precommitNote: string;
           reviewNote: string;

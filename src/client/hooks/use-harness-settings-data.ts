@@ -1,36 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PlanResponse, TierValue } from "@/client/components/harness-execution-plan-flow";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 
 export type RunnerKind = "shell" | "graph" | "sarif";
-
-export type InstructionsResponse = {
-  generatedAt: string;
-  repoRoot: string;
-  fileName: string;
-  relativePath: string;
-  source: string;
-  fallbackUsed: boolean;
-  audit: {
-    status: "ok" | "heuristic" | "error";
-    provider: string;
-    generatedAt: string;
-    durationMs: number;
-    totalScore: number | null;
-    overall: "通过" | "有条件通过" | "不通过" | null;
-    oneSentence: string | null;
-    principles: {
-      routing: number | null;
-      protection: number | null;
-      reflection: number | null;
-      verification: number | null;
-    };
-    error?: string;
-  } | null;
-};
 
 export type QueryState<T> = {
   loading: boolean;
@@ -43,11 +18,6 @@ type HarnessSettingsDataArgs = {
   codebaseId?: string;
   repoPath?: string;
   selectedTier: TierValue;
-};
-
-type InstructionRefreshState = {
-  contextKey: string;
-  token: number;
 };
 
 function buildHarnessQuery(workspaceId?: string, codebaseId?: string, repoPath?: string) {
@@ -108,20 +78,6 @@ function normalizePlanResponse(payload: Partial<PlanResponse> | null | undefined
   };
 }
 
-function normalizeInstructionsResponse(
-  payload: Partial<InstructionsResponse> | null | undefined,
-): InstructionsResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    fileName: payload?.fileName ?? "",
-    relativePath: payload?.relativePath ?? "",
-    source: payload?.source ?? "",
-    fallbackUsed: Boolean(payload?.fallbackUsed),
-    audit: payload?.audit ?? null,
-  };
-}
-
 function normalizeSpecDetectionResponse(
   payload: Partial<SpecDetectionResponse> | null | undefined,
 ): SpecDetectionResponse {
@@ -153,10 +109,7 @@ export function useHarnessSettingsData({
   const baseQuery = useMemo(() => (hasRepoContext ? buildHarnessQuery(workspaceId, codebaseId, repoPath) : null), [codebaseId, hasRepoContext, repoPath, workspaceId]);
 
   const [planState, setPlanState] = useState<QueryState<PlanResponse>>(emptyQueryState);
-  const [instructionsState, setInstructionsState] = useState<QueryState<InstructionsResponse>>(emptyQueryState);
   const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
-  const [instructionsRefreshState, setInstructionsRefreshState] = useState<InstructionRefreshState>({ contextKey: "", token: 0 });
-  const instructionsContextKey = baseQuery?.toString() ?? "";
 
   useEffect(() => {
     if (!baseQuery) {
@@ -202,58 +155,6 @@ export function useHarnessSettingsData({
 
   useEffect(() => {
     if (!baseQuery) {
-      setInstructionsState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchInstructions = async () => {
-      setInstructionsState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const query = new URLSearchParams(baseQuery);
-        const includeAudit = (
-          instructionsRefreshState.contextKey === instructionsContextKey &&
-          instructionsRefreshState.token > 0
-        );
-        query.set("includeAudit", includeAudit ? "1" : "0");
-        const response = await desktopAwareFetch(`/api/harness/instructions?${query.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load guidance document");
-        }
-        if (!cancelled) {
-          setInstructionsState({
-            loading: false,
-            error: null,
-            data: normalizeInstructionsResponse(payload as Partial<InstructionsResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setInstructionsState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchInstructions();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery, instructionsContextKey, instructionsRefreshState]);
-
-  const reloadInstructions = useCallback(() => {
-    setInstructionsRefreshState((current) => ({
-      contextKey: instructionsContextKey,
-      token: current.contextKey === instructionsContextKey ? current.token + 1 : 1,
-    }));
-  }, [instructionsContextKey]);
-
-  useEffect(() => {
-    if (!baseQuery) {
       setSpecSourcesState(emptyQueryState());
       return;
     }
@@ -293,8 +194,6 @@ export function useHarnessSettingsData({
 
   return {
     planState,
-    instructionsState,
     specSourcesState,
-    reloadInstructions,
   };
 }

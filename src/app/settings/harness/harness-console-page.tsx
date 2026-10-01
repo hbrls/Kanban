@@ -10,7 +10,6 @@ import {
   HarnessExecutionPlanFlow,
   type TierValue,
 } from "@/client/components/harness-execution-plan-flow";
-import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent-instructions-panel";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
 import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
@@ -24,8 +23,7 @@ import { normalizeWorkspaceQueryId, resolveWorkspaceSelection } from "@/client/u
 type SectionId =
   | "overview"
   | "spec"
-  | "spec-sources"
-  | "agent-instructions";
+  | "spec-sources";
 
 interface SectionDef {
   id: SectionId;
@@ -44,7 +42,6 @@ type SectionStatus = {
 
 const GOVERNANCE_NODE_SECTION_MAP: Partial<Record<string, SectionId>> = {
   thinking: "spec-sources",
-  build: "agent-instructions",
 };
 
 const DEFAULT_EXPLORER_WIDTH = 240;
@@ -64,7 +61,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
   switch (value) {
     case "spec":
     case "spec-sources":
-    case "agent-instructions":
       return value;
     case "overview":
     default:
@@ -169,9 +165,7 @@ export default function HarnessConsolePage() {
   const activeRepoCodebaseId = effectiveRepoOverride ? matchedSelectedCodebase?.id : activeCodebase?.id;
   const {
     planState,
-    instructionsState,
     specSourcesState,
-    reloadInstructions,
   } = useHarnessSettingsData({
     workspaceId,
     codebaseId: activeRepoCodebaseId,
@@ -283,10 +277,8 @@ export default function HarnessConsolePage() {
   const sectionStatuses = useMemo((): Map<SectionId, SectionStatus | null> => {
     const map = new Map<SectionId, SectionStatus | null>();
     map.set("spec-sources", specSourcesState.data ? { label: `${specSourcesState.data.sources?.length ?? 0} sources` } : null);
-    map.set("agent-instructions", instructionsState.data ? { label: instructionsState.data.fileName, tone: instructionsState.data.fallbackUsed ? "warning" : "success" } : null);
     return map;
   }, [
-    instructionsState.data,
     specSourcesState.data,
   ]);
 
@@ -294,7 +286,6 @@ export default function HarnessConsolePage() {
     { id: "overview", label: t.settings.harness.overview, shortLabel: "Overview", code: "OV" },
     { id: "spec", label: t.nav.spec, shortLabel: t.nav.spec, code: "IB", group: "intent" },
     { id: "spec-sources", label: t.settings.harness.specSources, shortLabel: "Specs", code: "SP", group: "intent" },
-    { id: "agent-instructions", label: t.settings.harness.agentInstructions, shortLabel: "Instructions", code: "AI", group: "intent" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -324,8 +315,6 @@ export default function HarnessConsolePage() {
     switch (selectedGovernanceNodeId) {
       case "thinking":
         return <HarnessSpecSourcesPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={specSourcesState.data} loading={specSourcesState.loading} error={specSourcesState.error} variant="compact" />;
-      case "build":
-        return <HarnessAgentInstructionsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={instructionsState.data} loading={instructionsState.loading} error={instructionsState.error} onAuditRerun={reloadInstructions} variant="compact" />;
       case "lint":
       case "precommit":
         return <HarnessExecutionPlanFlow loading={planState.loading} error={planState.error} plan={planState.data} repoLabel={selectedRepoLabel} selectedTier={selectedTier} onTierChange={setSelectedTier} unsupportedMessage={unsupportedRepoMessage} variant="compact" />;
@@ -337,15 +326,11 @@ export default function HarnessConsolePage() {
         return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
     }
   }, [
-    instructionsState.data,
-    instructionsState.error,
-    instructionsState.loading,
     planState.data,
     planState.error,
     planState.loading,
     activeRepoCodebaseId,
     activeRepoPath,
-    reloadInstructions,
     selectedGovernanceNodeId,
     selectedRepoLabel,
     selectedTier,
@@ -388,8 +373,6 @@ export default function HarnessConsolePage() {
             repoPath={activeRepoPath}
             planError={planState.error}
             unsupportedMessage={unsupportedRepoMessage}
-            instructionsData={instructionsState.data}
-            instructionsError={instructionsState.error}
             selectedNodeId={selectedGovernanceNodeId}
             onSelectedNodeChange={handleGovernanceNodeClick}
             contextPanel={null}
@@ -499,8 +482,6 @@ export default function HarnessConsolePage() {
         return <SpecBoardPanel workspaceId={workspaceId} />;
       case "spec-sources":
         return <HarnessSpecSourcesPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={specSourcesState.data} loading={specSourcesState.loading} error={specSourcesState.error} hideHeader />;
-      case "agent-instructions":
-        return <HarnessAgentInstructionsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={instructionsState.data} loading={instructionsState.loading} error={instructionsState.error} onAuditRerun={reloadInstructions} hideHeader />;
       default:
         return null;
     }

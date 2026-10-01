@@ -33,25 +33,11 @@ const mockHarnessSettingsData = {
       dimensions: [],
     },
   },
-  instructionsState: {
-    loading: false,
-    error: null,
-    data: {
-      generatedAt: "2026-03-29T00:00:00.000Z",
-      repoRoot: "/Users/phodal/ai/routa-js",
-      fileName: "CLAUDE.md",
-      relativePath: "CLAUDE.md",
-      source: "# Routa.js",
-      fallbackUsed: false,
-      audit: null,
-    },
-  },
   specSourcesState: {
     loading: false,
     error: null,
     data: createSpecSourcesData(),
   },
-  reloadInstructions: vi.fn(async () => {}),
 };
 
 const localStorageMock = (() => {
@@ -130,12 +116,6 @@ vi.mock("@/client/components/repo-picker", () => ({
 
 vi.mock("@/client/components/harness-execution-plan-flow", () => ({
   HarnessExecutionPlanFlow: () => <div data-testid="execution-plan-flow" />,
-}));
-
-vi.mock("@/client/components/harness-agent-instructions-panel", () => ({
-  HarnessAgentInstructionsPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`instruction-panel-${variant}`}>Instruction file</div>
-  ),
 }));
 
 vi.mock("@/client/components/harness-governance-loop-graph", () => ({
@@ -218,7 +198,6 @@ describe("HarnessSettingsPage", () => {
     routerPushMock.mockReset();
     currentSearchParams = new URLSearchParams();
     window.localStorage.clear();
-    mockHarnessSettingsData.reloadInstructions.mockClear();
     useHarnessSettingsDataMock.mockReset();
     useHarnessSettingsDataMock.mockReturnValue(mockHarnessSettingsData);
     mockHarnessSettingsData.specSourcesState = {
@@ -236,7 +215,7 @@ describe("HarnessSettingsPage", () => {
     expect(screen.getByTestId("workspace-switcher")).not.toBeNull();
     expect(screen.queryByTestId("harness-console-bottom-panel")).toBeNull();
     expect(screen.queryByPlaceholderText("Search sections")).toBeNull();
-    expect(screen.getByText("CLAUDE.md")).not.toBeNull();
+    expect(screen.queryByText("CLAUDE.md")).toBeNull();
     expect(screen.queryByText("Workbench Context")).toBeNull();
     expect(screen.queryByText("Quick Actions")).toBeNull();
     expect(screen.queryByRole("button", { name: "Open context" })).toBeNull();
@@ -279,6 +258,16 @@ describe("HarnessSettingsPage", () => {
     expect(screen.getByTestId("lifecycle-view")).not.toBeNull();
     expect(screen.queryByTestId("hook-runtime-panel")).toBeNull();
     expect(screen.queryByTestId("agent-hook-panel-full")).toBeNull();
+  });
+
+  it("falls back to the overview section for removed agent-instructions urls", () => {
+    currentSearchParams = new URLSearchParams("section=agent-instructions");
+
+    render(<HarnessSettingsPage />);
+
+    expect(screen.getByTestId("lifecycle-view")).not.toBeNull();
+    expect(screen.queryByText("Agent Instructions")).toBeNull();
+    expect(screen.queryByText("Instructions")).toBeNull();
   });
 
   it("updates the section query parameter when opening another section", () => {

@@ -266,12 +266,11 @@ const zh: TranslationDictionary = {
       summaryFocusLabel: "关注点",
       summaryFocusValue: "按阶段组织反馈闭环",
       pageDescription:
-        "把 Spec Sources、Instruction file、Hook systems、Review triggers、Entrix Fitness 与 CI/CD 串成一张仓库治理总览。",
+        "把 Spec Sources、Hook systems、Review triggers、Entrix Fitness 与 CI/CD 串成一张仓库治理总览。",
       repositoryLabel: "仓库",
       overview: "概览",
       governanceLoop: "治理闭环",
       specSources: "规范来源",
-      agentInstructions: "Agent 指令",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

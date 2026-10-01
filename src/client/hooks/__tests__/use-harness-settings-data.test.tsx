@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useHarnessSettingsData } from "../use-harness-settings-data";
@@ -25,35 +25,6 @@ describe("useHarnessSettingsData", () => {
           scope: "local",
           metricCount: 31,
           hardGateCount: 13,
-        });
-      }
-
-      if (url.startsWith("/api/harness/instructions?")) {
-        const includeAudit = new URL(`http://localhost${url}`).searchParams.get("includeAudit");
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          fileName: "AGENTS.md",
-          relativePath: "AGENTS.md",
-          source: "# AGENTS",
-          fallbackUsed: true,
-          audit: includeAudit === "1"
-            ? {
-              status: "heuristic",
-              provider: "codex",
-              generatedAt: "2026-03-31T00:00:01.000Z",
-              durationMs: 200,
-              totalScore: 12,
-              overall: "有条件通过",
-              oneSentence: "heuristic",
-              principles: {
-                routing: 3,
-                protection: 3,
-                reflection: 3,
-                verification: 3,
-              },
-            }
-            : null,
         });
       }
 
@@ -84,34 +55,6 @@ describe("useHarnessSettingsData", () => {
     vi.unstubAllGlobals();
   });
 
-  it("re-runs instructions with audit enabled without reloading the plan", async () => {
-    const { result } = renderHook(() => useHarnessSettingsData({
-      workspaceId: "default",
-      repoPath: "/repo",
-      selectedTier: "normal",
-    }));
-
-    await waitFor(() => {
-      expect(result.current.instructionsState.loading).toBe(false);
-      expect(result.current.instructionsState.data?.audit).toBeNull();
-    });
-
-    const initialPlanCalls = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/fitness/plan?")).length;
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/harness/instructions?") && String(url).includes("includeAudit=0"))).toBe(true);
-
-    act(() => {
-      result.current.reloadInstructions();
-    });
-
-    await waitFor(() => {
-      expect(result.current.instructionsState.data?.audit?.status).toBe("heuristic");
-    });
-
-    const planCallsAfterRerun = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/fitness/plan?")).length;
-    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/harness/instructions?") && String(url).includes("includeAudit=1"))).toBe(true);
-    expect(planCallsAfterRerun).toBe(initialPlanCalls);
-  });
-
   it("normalizes sparse harness payloads before exposing panel state", async () => {
     const { result } = renderHook(() => useHarnessSettingsData({
       workspaceId: "default",
@@ -130,5 +73,19 @@ describe("useHarnessSettingsData", () => {
       sarif: 0,
     });
     expect(result.current.specSourcesState.data?.sources[0]?.children).toEqual([]);
+  });
+
+  it("does not request harness instructions for the harness console", async () => {
+    renderHook(() => useHarnessSettingsData({
+      workspaceId: "default",
+      repoPath: "/repo",
+      selectedTier: "normal",
+    }));
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/harness/spec-sources?"))).toBe(true);
+    });
+
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/harness/instructions"))).toBe(false);
   });
 });

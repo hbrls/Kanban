@@ -19,7 +19,6 @@ pub mod git;
 pub mod github;
 pub mod graph;
 pub mod harness;
-pub(crate) mod harness_instructions_audit;
 pub mod harness_templates;
 pub mod kanban;
 pub mod mcp_routes;

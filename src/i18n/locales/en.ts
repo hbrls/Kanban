@@ -270,12 +270,11 @@ const en: TranslationDictionary = {
       summaryFocusLabel: "Focus",
       summaryFocusValue: "Stage-driven feedback loops",
       pageDescription:
-        "Connect Spec Sources, instruction files, hook systems, review triggers, Entrix fitness, and CI/CD into one governance map.",
+        "Connect Spec Sources, hook systems, review triggers, Entrix fitness, and CI/CD into one governance map.",
       repositoryLabel: "Repository",
       overview: "Overview",
       governanceLoop: "Governance Loop",
       specSources: "Spec Sources",
-      agentInstructions: "Agent Instructions",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

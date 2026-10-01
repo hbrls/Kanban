@@ -104,11 +104,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
           releaseUnavailable: "No release / publish workflow detected in this repository.",
         },
         detailSections: {
-          build: {
-            instructionSourceTitle: "Instruction source",
-            contextTitle: "Context",
-            contextItem: "This node is supported by the instructions panel",
-          },
           thinking: {
             specSourcesTitle: "Spec Sources",
             specSourcesItem: "Detects AI Coding spec tools and methodology frameworks",
@@ -121,7 +116,7 @@ export const enExtended: ExtendedTranslationDictionarySections = {
             highlightedNodesClickable: "Highlighted nodes are clickable. Unavailable nodes explain missing signals directly.",
             selectNodePreview: "Select a node (coding, local verification, change gate, review, delivery, release) to preview the matching context panel.",
             connectedPanelsTitle: "Connected panels",
-            connectedPanelsItems: ["Instruction file - CLAUDE.md", "Entrix Fitness", "Review triggers", "Repo signals"],
+            connectedPanelsItems: ["Entrix Fitness", "Review triggers", "Repo signals"],
           },
         },
         nodeLabels: {
@@ -140,8 +135,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
         clues: {
           thinkingNote: "Spec / requirements boundary",
           buildNote: "Implementation / constraint execution",
-          buildNotePrefix: "Constrained by",
-          buildNoteSuffix: "constraint",
           testNote: "Test / regression / smoke",
           precommitNote: "pre-push / Entrix Fitness",
           reviewNote: "Policy / human review",

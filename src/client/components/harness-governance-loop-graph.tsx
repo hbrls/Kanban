@@ -13,12 +13,6 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { HarnessUnsupportedState } from "@/client/components/harness-support-state";
-import type { InstructionsResponse } from "@/client/hooks/use-harness-settings-data";
-
-type InstructionSummary = {
-  fileName: string;
-  fallbackUsed: boolean;
-};
 
 type LoopDetailSection = {
   title: string;
@@ -29,8 +23,6 @@ type HarnessGovernanceLoopGraphProps = {
   repoPath?: string;
   planError: string | null;
   unsupportedMessage?: string | null;
-  instructionsData?: InstructionsResponse | null;
-  instructionsError?: string | null;
   selectedNodeId?: string | null;
   onSelectedNodeChange?: (nodeId: string) => void;
   contextPanel?: ReactNode;
@@ -276,13 +268,11 @@ function buildEdge(
 }
 
 function buildGraph(args: {
-  instructionSummary: InstructionSummary | null;
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
   g: TranslationDictionary["harness"]["governanceLoop"]["graph"];
 }) {
   const {
-    instructionSummary,
     selectedNodeId,
     onSelectNode,
     g,
@@ -359,9 +349,7 @@ function buildGraph(args: {
       layer: "internal",
       title: g.nodeLabels.build,
       tone: getLayerTone("internal"),
-      note: instructionSummary
-        ? `${g.clues.buildNotePrefix} ${instructionSummary.fileName} ${g.clues.buildNoteSuffix}`
-        : g.clues.buildNote,
+      note: g.clues.buildNote,
       active: true,
       ...buildSelectionState("build", true),
     }),
@@ -491,21 +479,14 @@ function buildGraph(args: {
 
 function buildDetailSections(args: {
   selectedNodeId: string | null;
-  instructionSummary: InstructionSummary | null;
   g: TranslationDictionary["harness"]["governanceLoop"]["graph"];
 }) {
   const {
     selectedNodeId,
-    instructionSummary,
     g,
   } = args;
 
   switch (selectedNodeId) {
-    case "build":
-      return [
-        { title: g.detailSections.build.instructionSourceTitle, items: [instructionSummary?.fileName ?? "AGENTS.md"] },
-        { title: g.detailSections.build.contextTitle, items: [g.detailSections.build.contextItem] },
-      ] satisfies LoopDetailSection[];
     case "thinking":
       return [
         { title: g.detailSections.thinking.specSourcesTitle, items: [g.detailSections.thinking.specSourcesItem] },
@@ -524,8 +505,6 @@ export function HarnessGovernanceLoopGraph({
   repoPath,
   planError,
   unsupportedMessage,
-  instructionsData,
-  instructionsError,
   selectedNodeId,
   onSelectedNodeChange,
   contextPanel,
@@ -534,19 +513,9 @@ export function HarnessGovernanceLoopGraph({
   const hasContext = Boolean(repoPath);
   const [internalSelectedNodeId, setInternalSelectedNodeId] = useState("build");
   const activeSelectedNodeId = selectedNodeId !== undefined ? selectedNodeId : internalSelectedNodeId;
-  const instructionSummary = useMemo(() => {
-    if (!instructionsData) {
-      return null;
-    }
-    return {
-      fileName: instructionsData.fileName,
-      fallbackUsed: instructionsData.fallbackUsed,
-    } satisfies InstructionSummary;
-  }, [instructionsData]);
 
   const graph = useMemo(
     () => buildGraph({
-      instructionSummary,
       selectedNodeId: activeSelectedNodeId,
       onSelectNode: (nodeId) => {
         if (onSelectedNodeChange) {
@@ -557,20 +526,19 @@ export function HarnessGovernanceLoopGraph({
       },
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph],
+    [activeSelectedNodeId, onSelectedNodeChange, t.harness.governanceLoop.graph],
   );
 
   const graphIssues = [...new Set(
-    [planError, instructionsError]
+    [planError]
       .filter((issue): issue is string => Boolean(issue)),
   )];
   const detailSections = useMemo(
     () => buildDetailSections({
       selectedNodeId: activeSelectedNodeId,
-      instructionSummary,
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, instructionSummary, t.harness.governanceLoop.graph],
+    [activeSelectedNodeId, t.harness.governanceLoop.graph],
   );
 
   return (

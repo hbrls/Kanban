@@ -48,7 +48,6 @@ describe("HarnessGovernanceLoopGraph", () => {
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
         planError={null}
-        instructionsData={null}
       />,
     );
 
@@ -68,7 +67,6 @@ describe("HarnessGovernanceLoopGraph", () => {
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
         planError={null}
-        instructionsData={null}
         selectedNodeId="build"
         onSelectedNodeChange={onSelectedNodeChange}
       />,
@@ -88,7 +86,6 @@ describe("HarnessGovernanceLoopGraph", () => {
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
         planError={null}
-        instructionsData={null}
         selectedNodeId="test"
         onSelectedNodeChange={onSelectedNodeChange}
       />,
@@ -112,7 +109,6 @@ describe("HarnessGovernanceLoopGraph", () => {
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
         planError={null}
-        instructionsData={null}
         selectedNodeId="thinking"
         onSelectedNodeChange={onSelectedNodeChange}
       />,
