@@ -14,8 +14,6 @@ import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent
 import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
-import { HarnessHookRuntimePanel } from "@/client/components/harness-hook-runtime-panel";
-import { HarnessAgentHookPanel } from "@/client/components/harness-agent-hook-panel";
 import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
 import { getHarnessUnsupportedRepoMessage } from "@/client/components/harness-support-state";
 import { SpecBoardPanel } from "@/app/workspace/[workspaceId]/spec/spec-page-client";
@@ -29,8 +27,7 @@ type SectionId =
   | "spec"
   | "spec-sources"
   | "agent-instructions"
-  | "design-decisions"
-  | "hook-systems";
+  | "design-decisions";
 
 interface SectionDef {
   id: SectionId;
@@ -72,7 +69,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "spec-sources":
     case "agent-instructions":
     case "design-decisions":
-    case "hook-systems":
       return value;
     case "overview":
     default:
@@ -177,8 +173,6 @@ export default function HarnessConsolePage() {
   const activeRepoCodebaseId = effectiveRepoOverride ? matchedSelectedCodebase?.id : activeCodebase?.id;
   const {
     planState,
-    hooksState,
-    agentHooksState,
     instructionsState,
     specSourcesState,
     designDecisionsState,
@@ -198,10 +192,6 @@ export default function HarnessConsolePage() {
   const hasArchitectureOrAdrSignal = useMemo(
     () => (designDecisionsState.data?.sources?.length ?? 0) > 0,
     [designDecisionsState.data],
-  );
-  const hookCount = useMemo(
-    () => (hooksState.data?.hookFiles?.length ?? 0) + (agentHooksState.data?.hooks?.length ?? 0),
-    [hooksState.data?.hookFiles?.length, agentHooksState.data?.hooks?.length],
   );
 
   useEffect(() => {
@@ -305,11 +295,9 @@ export default function HarnessConsolePage() {
     map.set("spec-sources", specSourcesState.data ? { label: `${specSourcesState.data.sources?.length ?? 0} sources` } : null);
     map.set("agent-instructions", instructionsState.data ? { label: instructionsState.data.fileName, tone: instructionsState.data.fallbackUsed ? "warning" : "success" } : null);
     map.set("design-decisions", designDecisionsState.data ? { label: `${designDecisionsState.data.sources?.length ?? 0} docs` } : null);
-    map.set("hook-systems", hookCount > 0 ? { label: `${hookCount} hooks` } : null);
     return map;
   }, [
     designDecisionsState.data,
-    hookCount,
     instructionsState.data,
     specSourcesState.data,
   ]);
@@ -320,7 +308,6 @@ export default function HarnessConsolePage() {
     { id: "spec-sources", label: t.settings.harness.specSources, shortLabel: "Specs", code: "SP", group: "intent" },
     { id: "agent-instructions", label: t.settings.harness.agentInstructions, shortLabel: "Instructions", code: "AI", group: "intent" },
     { id: "design-decisions", label: t.settings.harness.designDecisions, shortLabel: "ADR", code: "DD", group: "intent" },
-    { id: "hook-systems", label: t.settings.harness.hookSystems, shortLabel: "Hooks", code: "HK", group: "control" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -420,8 +407,6 @@ export default function HarnessConsolePage() {
             repoPath={activeRepoPath}
             planError={planState.error}
             unsupportedMessage={unsupportedRepoMessage}
-            hooksData={hooksState.data}
-            hooksError={hooksState.error}
             instructionsData={instructionsState.data}
             instructionsError={instructionsState.error}
             designDecisionNodeEnabled={hasArchitectureOrAdrSignal}
@@ -538,13 +523,6 @@ export default function HarnessConsolePage() {
         return <HarnessAgentInstructionsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={instructionsState.data} loading={instructionsState.loading} error={instructionsState.error} onAuditRerun={reloadInstructions} hideHeader />;
       case "design-decisions":
         return <HarnessDesignDecisionPanel {...sharedProps} data={designDecisionsState.data} loading={designDecisionsState.loading} error={designDecisionsState.error} hideHeader />;
-      case "hook-systems":
-        return (
-          <div className="space-y-4">
-            <HarnessHookRuntimePanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} embedded />
-            <HarnessAgentHookPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={agentHooksState.data} loading={agentHooksState.loading} error={agentHooksState.error} embedded />
-          </div>
-        );
       default:
         return null;
     }
@@ -710,13 +688,8 @@ export default function HarnessConsolePage() {
 
           {activeSection !== "overview" ? renderGovernanceBottomPanel() : null}
 
-          <div className="flex h-6 shrink-0 items-center justify-between bg-desktop-accent px-3 text-[10px] text-desktop-accent-text">
-            <div className="flex items-center gap-3">
-              <span>{activeWorkspaceTitle ?? "-"}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span>{hookCount} hooks</span>
-            </div>
+          <div className="flex h-6 shrink-0 items-center bg-desktop-accent px-3 text-[10px] text-desktop-accent-text">
+            <span>{activeWorkspaceTitle ?? "-"}</span>
           </div>
         </div>
       </div>

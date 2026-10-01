@@ -28,19 +28,6 @@ describe("useHarnessSettingsData", () => {
         });
       }
 
-      if (url.startsWith("/api/harness/hooks?")) {
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          hooksDir: "/repo/.husky",
-          configFile: null,
-          reviewTriggerFile: {
-            relativePath: "docs/fitness/review-triggers.yaml",
-            source: "review_triggers: []",
-          },
-        });
-      }
-
       if (url.startsWith("/api/harness/instructions?")) {
         const includeAudit = new URL(`http://localhost${url}`).searchParams.get("includeAudit");
         return okJson({
@@ -67,14 +54,6 @@ describe("useHarnessSettingsData", () => {
               },
             }
             : null,
-        });
-      }
-
-      if (url.startsWith("/api/harness/agent-hooks?")) {
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          configFile: null,
         });
       }
 
@@ -121,7 +100,7 @@ describe("useHarnessSettingsData", () => {
     vi.unstubAllGlobals();
   });
 
-  it("re-runs instructions with audit enabled without reloading hook runtime", async () => {
+  it("re-runs instructions with audit enabled without reloading the plan", async () => {
     const { result } = renderHook(() => useHarnessSettingsData({
       workspaceId: "default",
       repoPath: "/repo",
@@ -133,7 +112,7 @@ describe("useHarnessSettingsData", () => {
       expect(result.current.instructionsState.data?.audit).toBeNull();
     });
 
-    const initialHookCalls = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/harness/hooks?")).length;
+    const initialPlanCalls = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/fitness/plan?")).length;
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/harness/instructions?") && String(url).includes("includeAudit=0"))).toBe(true);
 
     act(() => {
@@ -144,9 +123,9 @@ describe("useHarnessSettingsData", () => {
       expect(result.current.instructionsState.data?.audit?.status).toBe("heuristic");
     });
 
-    const hookCallsAfterRerun = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/harness/hooks?")).length;
+    const planCallsAfterRerun = fetchMock.mock.calls.filter(([url]) => String(url).startsWith("/api/fitness/plan?")).length;
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/harness/instructions?") && String(url).includes("includeAudit=1"))).toBe(true);
-    expect(hookCallsAfterRerun).toBe(initialHookCalls);
+    expect(planCallsAfterRerun).toBe(initialPlanCalls);
   });
 
   it("normalizes sparse harness payloads before exposing panel state", async () => {
@@ -166,10 +145,6 @@ describe("useHarnessSettingsData", () => {
       graph: 0,
       sarif: 0,
     });
-    expect(result.current.hooksState.data?.hookFiles).toEqual([]);
-    expect(result.current.hooksState.data?.profiles).toEqual([]);
-    expect(result.current.hooksState.data?.reviewTriggerFile?.source).toBe("review_triggers: []");
-    expect(result.current.agentHooksState.data?.hooks).toEqual([]);
     expect(result.current.specSourcesState.data?.sources[0]?.children).toEqual([]);
     expect(result.current.designDecisionsState.data?.sources[0]?.artifacts).toEqual([]);
   });

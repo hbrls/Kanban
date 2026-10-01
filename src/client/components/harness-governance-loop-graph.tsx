@@ -13,20 +13,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { HarnessUnsupportedState } from "@/client/components/harness-support-state";
-import type {
-  HooksResponse,
-  InstructionsResponse,
-} from "@/client/hooks/use-harness-settings-data";
-
-type HookPhase = "submodule" | "fitness" | "fitness-fast" | "review";
-
-type HookSummary = {
-  hookCount: number;
-  profileCount: number;
-  mappedMetricCount: number;
-  phaseCount: number;
-  phaseLabels: string[];
-};
+import type { InstructionsResponse } from "@/client/hooks/use-harness-settings-data";
 
 type InstructionSummary = {
   fileName: string;
@@ -42,8 +29,6 @@ type HarnessGovernanceLoopGraphProps = {
   repoPath?: string;
   planError: string | null;
   unsupportedMessage?: string | null;
-  hooksData?: HooksResponse | null;
-  hooksError?: string | null;
   instructionsData?: InstructionsResponse | null;
   instructionsError?: string | null;
   designDecisionNodeEnabled?: boolean;
@@ -75,13 +60,6 @@ const LOOP_EDGE_COLORS = {
   external: "#f59e0b",
   feedback: "#059669",
 } as const;
-
-const PHASE_LABELS: Record<HookPhase, string> = {
-  submodule: "submodule",
-  fitness: "fitness",
-  "fitness-fast": "fitness-fast",
-  review: "review",
-};
 
 function getNodeToneClasses(tone: LoopTone) {
   switch (tone) {
@@ -299,7 +277,6 @@ function buildEdge(
 }
 
 function buildGraph(args: {
-  hookSummary: HookSummary | null;
   instructionSummary: InstructionSummary | null;
   designDecisionNodeEnabled?: boolean;
   selectedNodeId: string | null;
@@ -307,7 +284,6 @@ function buildGraph(args: {
   g: TranslationDictionary["harness"]["governanceLoop"]["graph"];
 }) {
   const {
-    hookSummary,
     instructionSummary,
     designDecisionNodeEnabled,
     selectedNodeId,
@@ -423,9 +399,7 @@ function buildGraph(args: {
       layer: "commit",
       title: g.nodeLabels.precommit,
       tone: getLayerTone("commit"),
-      note: hookSummary
-        ? g.detailChips.prePushPhases.replace("{count}", String(hookSummary.phaseCount))
-        : g.clues.precommitNote,
+      note: g.clues.precommitNote,
       active: true,
       ...buildSelectionState("precommit", true),
     }),
@@ -578,8 +552,6 @@ export function HarnessGovernanceLoopGraph({
   planError,
   designDecisionNodeEnabled,
   unsupportedMessage,
-  hooksData,
-  hooksError,
   instructionsData,
   instructionsError,
   selectedNodeId,
@@ -590,21 +562,6 @@ export function HarnessGovernanceLoopGraph({
   const hasContext = Boolean(repoPath);
   const [internalSelectedNodeId, setInternalSelectedNodeId] = useState("build");
   const activeSelectedNodeId = selectedNodeId !== undefined ? selectedNodeId : internalSelectedNodeId;
-  const hookSummary = useMemo(() => {
-    if (!hooksData) {
-      return null;
-    }
-    const uniquePhases = new Set(
-      (hooksData.profiles ?? []).flatMap((profile) => profile.phases ?? []).filter((phase): phase is HookPhase => phase in PHASE_LABELS),
-    );
-    return {
-      hookCount: hooksData.hookFiles?.length ?? 0,
-      profileCount: hooksData.profiles?.length ?? 0,
-      mappedMetricCount: (hooksData.profiles ?? []).reduce((sum, profile) => sum + (profile.metrics?.length ?? 0), 0),
-      phaseCount: uniquePhases.size,
-      phaseLabels: [...uniquePhases].map((phase) => PHASE_LABELS[phase]).filter(Boolean),
-    } satisfies HookSummary;
-  }, [hooksData]);
   const instructionSummary = useMemo(() => {
     if (!instructionsData) {
       return null;
@@ -617,7 +574,6 @@ export function HarnessGovernanceLoopGraph({
 
   const graph = useMemo(
     () => buildGraph({
-      hookSummary,
       instructionSummary,
       designDecisionNodeEnabled,
       selectedNodeId: activeSelectedNodeId,
@@ -630,11 +586,11 @@ export function HarnessGovernanceLoopGraph({
       },
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, designDecisionNodeEnabled, hookSummary, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph],
+    [activeSelectedNodeId, designDecisionNodeEnabled, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph],
   );
 
   const graphIssues = [...new Set(
-    [planError, hooksError, instructionsError]
+    [planError, instructionsError]
       .filter((issue): issue is string => Boolean(issue)),
   )];
   const detailSections = useMemo(

@@ -24,7 +24,6 @@ type HarnessLifecycleViewProps = {
   dimensionCount?: number;
   metricCount?: number;
   hardGateCount?: number;
-  hookCount?: number;
   workflowCount?: number;
 };
 

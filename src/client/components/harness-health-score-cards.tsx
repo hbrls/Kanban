@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslation } from "@/i18n";
-import { RefreshCw, TriangleAlert, Zap, ArrowUp, ArrowDown, CircleCheck } from "lucide-react";
+import { RefreshCw, TriangleAlert, ArrowUp, ArrowDown, CircleCheck } from "lucide-react";
 
 
 type StatCardProps = {
@@ -98,7 +98,6 @@ type HarnessHealthScoreCardsProps = {
   dimensionCount: number;
   metricCount: number;
   hardGateCount: number;
-  hookCount?: number;
   workflowCount?: number;
   fitnessScore?: number;
 };
@@ -107,7 +106,6 @@ export function HarnessHealthScoreCards({
   dimensionCount,
   metricCount,
   hardGateCount,
-  hookCount = 0,
   workflowCount = 0,
   fitnessScore,
 }: HarnessHealthScoreCardsProps) {
@@ -132,15 +130,6 @@ export function HarnessHealthScoreCards({
         color="amber"
         icon={
           <TriangleAlert className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"/>
-        }
-      />
-      <StatCard
-        label={t.settings.harness.healthCards.hooks || "Hook Systems"}
-        value={hookCount}
-        description="runtime hooks"
-        color="blue"
-        icon={
-          <Zap className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"/>
         }
       />
       <StatCard

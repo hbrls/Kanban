@@ -18,14 +18,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
       confidenceMedium: string;
       confidenceLow: string;
     };
-    agentHook: {
-      loadingHooks: string;
-      noAgentHookData: string;
-    };
-    hookRuntime: {
-      loadingHookRuntime: string;
-      noHookRuntimeData: string;
-    };
     specSources: {
       title: string;
       scanningSources: string;
@@ -108,69 +100,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
       tierNormal: string;
       tierDeep: string;
     };
-    hookWorkbench: {
-      inspector: string;
-      lifecycle: string;
-      hookMap: string;
-      selectHookToInspect: string;
-      noHookSelected: string;
-      pipeline: string;
-      hookTaskOutput: string;
-      tasks: string;
-      hardGates: string;
-      tabBasic: string;
-      tabInputs: string;
-      tabTasks: string;
-      tabSource: string;
-      labelLifecycle: string;
-      labelRunSide: string;
-      labelBlocking: string;
-      labelCwd: string;
-      labelBypass: string;
-      labelSourcePath: string;
-      noHookFile: string;
-      command: string;
-      noCommandDetected: string;
-      runtimePhases: string;
-      argvTemplate: string;
-      noArgvPayload: string;
-      stdinTemplate: string;
-      noStdinPayload: string;
-      environment: string;
-      resolved: string;
-      unresolved: string;
-      hardGate: string;
-      noRuntimeMetricsYet: string;
-      runtimeManifest: string;
-      rawHook: string;
-      reviewTriggers: string;
-      noRawHookFileFound: string;
-      noReviewTriggerFileFound: string;
-      noRuntimeProfileBound: string;
-      noHookMetadataFound: string;
-      enabled: string;
-      partial: string;
-      missing: string;
-      phases: string;
-      reviewGate: string;
-    };
-    agentHookWorkbench: {
-      lifecycle: string;
-      events: string;
-      blocking: string;
-      pipeline: string;
-      eventHookOutcome: string;
-      hooks: string;
-      selectEventToInspect: string;
-      noEventSelected: string;
-      inspector: string;
-      eventDetails: string;
-      warnings: string;
-      noHooksConfigured: string;
-      hook: string;
-      hookSystems: string;
-      workbenchTitle: string;
-    };
     governanceLoop: {
       graph: {
         nodeLayers: {
@@ -189,9 +118,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
           productionUnavailable: string;
           metricsUnavailable: string;
           releaseUnavailable: string;
-        };
-        detailChips: {
-          prePushPhases: string;
         };
         detailSections: {
           build: {

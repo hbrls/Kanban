@@ -273,7 +273,6 @@ const zh: TranslationDictionary = {
       specSources: "规范来源",
       agentInstructions: "Agent 指令",
       designDecisions: "设计决策",
-      hookSystems: "Hook 系统",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",
@@ -287,7 +286,6 @@ const zh: TranslationDictionary = {
       healthCards: {
         fitnessScore: "健康评分",
         hardGates: "硬性门禁",
-        hooks: "Hook 系统",
         cicd: "CI/CD",
       },
     },

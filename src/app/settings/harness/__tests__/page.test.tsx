@@ -52,21 +52,6 @@ const mockHarnessSettingsData = {
       warnings: [],
     },
   },
-  hooksState: {
-    loading: false,
-    error: null,
-    data: {
-      profiles: [],
-      hookFiles: [],
-    },
-  },
-  agentHooksState: {
-    loading: false,
-    error: null,
-    data: {
-      hooks: [],
-    },
-  },
   instructionsState: {
     loading: false,
     error: null,
@@ -199,16 +184,6 @@ vi.mock("@/client/components/harness-lifecycle-view", () => ({
   ),
 }));
 
-vi.mock("@/client/components/harness-hook-runtime-panel", () => ({
-  HarnessHookRuntimePanel: () => <div data-testid="hook-runtime-panel" />,
-}));
-
-vi.mock("@/client/components/harness-agent-hook-panel", () => ({
-  HarnessAgentHookPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`agent-hook-panel-${variant}`}>Agent hooks</div>
-  ),
-}));
-
 vi.mock("@/client/components/harness-spec-sources-panel", () => ({
   HarnessSpecSourcesPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`spec-sources-${variant}`}>Spec sources</div>
@@ -296,7 +271,8 @@ describe("HarnessSettingsPage", () => {
     expect(screen.queryByText("hard gates: 1")).toBeNull();
     expect(screen.getAllByText("Overview").length).toBeGreaterThan(0);
     expect(screen.getByText("Intent")).not.toBeNull();
-    expect(screen.getByText("Control")).not.toBeNull();
+    expect(screen.queryByText("Control")).toBeNull();
+    expect(screen.queryByText("Hook Systems")).toBeNull();
   });
 
   it("uses the active codebase context by default", () => {
@@ -312,13 +288,22 @@ describe("HarnessSettingsPage", () => {
   });
 
   it("opens the tab from the section query parameter on first render", () => {
+    currentSearchParams = new URLSearchParams("section=spec-sources");
+
+    render(<HarnessSettingsPage />);
+
+    expect(screen.getByTestId("spec-sources-full")).not.toBeNull();
+    expect(screen.queryByTestId("lifecycle-view")).toBeNull();
+  });
+
+  it("falls back to the overview section for removed hook-systems urls", () => {
     currentSearchParams = new URLSearchParams("section=hook-systems");
 
     render(<HarnessSettingsPage />);
 
-    expect(screen.getByTestId("hook-runtime-panel")).not.toBeNull();
-    expect(screen.getByTestId("agent-hook-panel-full")).not.toBeNull();
-    expect(screen.queryByTestId("lifecycle-view")).toBeNull();
+    expect(screen.getByTestId("lifecycle-view")).not.toBeNull();
+    expect(screen.queryByTestId("hook-runtime-panel")).toBeNull();
+    expect(screen.queryByTestId("agent-hook-panel-full")).toBeNull();
   });
 
   it("updates the section query parameter when opening another section", () => {

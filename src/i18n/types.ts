@@ -278,7 +278,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       specSources: string;
       agentInstructions: string;
       designDecisions: string;
-      hookSystems: string;
       entrixFitness: string;
       sectionGroups: {
         intent: string;
@@ -292,7 +291,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       healthCards: {
         fitnessScore: string;
         hardGates: string;
-        hooks: string;
         cicd: string;
       };
     };

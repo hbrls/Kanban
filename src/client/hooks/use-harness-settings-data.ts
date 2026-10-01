@@ -8,51 +8,6 @@ import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 
 export type RunnerKind = "shell" | "graph" | "sarif";
 
-export type HookMetricSummary = {
-  name: string;
-  command: string;
-  description: string;
-  hardGate: boolean;
-  resolved: boolean;
-  sourceFile?: string;
-};
-
-export type HookRuntimeProfileSummary = {
-  name: string;
-  phases: string[];
-  fallbackMetrics: string[];
-  metrics: HookMetricSummary[];
-  hooks: string[];
-};
-
-export type HookFileSummary = {
-  name: string;
-  relativePath: string;
-  source: string;
-  triggerCommand: string;
-  kind: "runtime-profile" | "shell-command";
-  runtimeProfileName?: string;
-  skipEnvVar?: string;
-};
-
-export type HooksResponse = {
-  generatedAt: string;
-  repoRoot: string;
-  hooksDir: string;
-  configFile: {
-    relativePath: string;
-    source: string;
-    schema?: string;
-  } | null;
-  reviewTriggerFile: {
-    relativePath: string;
-    source: string;
-  } | null;
-  hookFiles: HookFileSummary[];
-  profiles: HookRuntimeProfileSummary[];
-  warnings: string[];
-};
-
 export type InstructionsResponse = {
   generatedAt: string;
   repoRoot: string;
@@ -76,37 +31,6 @@ export type InstructionsResponse = {
     };
     error?: string;
   } | null;
-};
-
-export type AgentHookConfigSummary = {
-  event: string;
-  matcher?: string;
-  type: string;
-  command?: string;
-  url?: string;
-  prompt?: string;
-  timeout: number;
-  blocking: boolean;
-  description?: string;
-  source?: string;
-};
-
-export type AgentHooksResponse = {
-  generatedAt: string;
-  repoRoot: string;
-  configFile: {
-    relativePath: string;
-    source: string;
-    schema?: string;
-  } | null;
-  configFiles?: Array<{
-    relativePath: string;
-    source: string;
-    schema?: string;
-    provider?: string;
-  }>;
-  hooks: AgentHookConfigSummary[];
-  warnings: string[];
 };
 
 export type QueryState<T> = {
@@ -185,19 +109,6 @@ function normalizePlanResponse(payload: Partial<PlanResponse> | null | undefined
   };
 }
 
-function normalizeHooksResponse(payload: Partial<HooksResponse> | null | undefined): HooksResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    hooksDir: payload?.hooksDir ?? "",
-    configFile: payload?.configFile ?? null,
-    reviewTriggerFile: payload?.reviewTriggerFile ?? null,
-    hookFiles: safeArray(payload?.hookFiles),
-    profiles: safeArray(payload?.profiles),
-    warnings: safeArray(payload?.warnings),
-  };
-}
-
 function normalizeInstructionsResponse(
   payload: Partial<InstructionsResponse> | null | undefined,
 ): InstructionsResponse {
@@ -209,19 +120,6 @@ function normalizeInstructionsResponse(
     source: payload?.source ?? "",
     fallbackUsed: Boolean(payload?.fallbackUsed),
     audit: payload?.audit ?? null,
-  };
-}
-
-function normalizeAgentHooksResponse(
-  payload: Partial<AgentHooksResponse> | null | undefined,
-): AgentHooksResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    configFile: payload?.configFile ?? null,
-    configFiles: safeArray(payload?.configFiles),
-    hooks: safeArray(payload?.hooks),
-    warnings: safeArray(payload?.warnings),
   };
 }
 
@@ -270,9 +168,7 @@ export function useHarnessSettingsData({
   const baseQuery = useMemo(() => (hasRepoContext ? buildHarnessQuery(workspaceId, codebaseId, repoPath) : null), [codebaseId, hasRepoContext, repoPath, workspaceId]);
 
   const [planState, setPlanState] = useState<QueryState<PlanResponse>>(emptyQueryState);
-  const [hooksState, setHooksState] = useState<QueryState<HooksResponse>>(emptyQueryState);
   const [instructionsState, setInstructionsState] = useState<QueryState<InstructionsResponse>>(emptyQueryState);
-  const [agentHooksState, setAgentHooksState] = useState<QueryState<AgentHooksResponse>>(emptyQueryState);
   const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
   const [designDecisionsState, setDesignDecisionsState] = useState<QueryState<DesignDecisionResponse>>(emptyQueryState);
   const [instructionsRefreshState, setInstructionsRefreshState] = useState<InstructionRefreshState>({ contextKey: "", token: 0 });
@@ -322,45 +218,6 @@ export function useHarnessSettingsData({
 
   useEffect(() => {
     if (!baseQuery) {
-      setHooksState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchHooks = async () => {
-      setHooksState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/harness/hooks?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load hook runtime");
-        }
-        if (!cancelled) {
-          setHooksState({
-            loading: false,
-            error: null,
-            data: normalizeHooksResponse(payload as Partial<HooksResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setHooksState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchHooks();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
-
-  useEffect(() => {
-    if (!baseQuery) {
       setInstructionsState(emptyQueryState());
       return;
     }
@@ -403,45 +260,6 @@ export function useHarnessSettingsData({
       cancelled = true;
     };
   }, [baseQuery, instructionsContextKey, instructionsRefreshState]);
-
-  useEffect(() => {
-    if (!baseQuery) {
-      setAgentHooksState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchAgentHooks = async () => {
-      setAgentHooksState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/harness/agent-hooks?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load agent hooks");
-        }
-        if (!cancelled) {
-          setAgentHooksState({
-            loading: false,
-            error: null,
-            data: normalizeAgentHooksResponse(payload as Partial<AgentHooksResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setAgentHooksState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchAgentHooks();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
 
   const reloadInstructions = useCallback(() => {
     setInstructionsRefreshState((current) => ({
@@ -530,8 +348,6 @@ export function useHarnessSettingsData({
 
   return {
     planState,
-    hooksState,
-    agentHooksState,
     instructionsState,
     specSourcesState,
     designDecisionsState,

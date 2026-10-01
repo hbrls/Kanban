@@ -277,7 +277,6 @@ const en: TranslationDictionary = {
       specSources: "Spec Sources",
       agentInstructions: "Agent Instructions",
       designDecisions: "Design Decisions",
-      hookSystems: "Hook Systems",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",
@@ -291,7 +290,6 @@ const en: TranslationDictionary = {
       healthCards: {
         fitnessScore: "Fitness Score",
         hardGates: "Hard Gates",
-        hooks: "Hook Systems",
         cicd: "CI/CD",
       },
     },

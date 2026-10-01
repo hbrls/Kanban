@@ -91,19 +91,6 @@ test.describe("Harness settings spec sources", () => {
       }));
     });
 
-    await page.route("**/api/harness/hooks?**", async (route) => {
-      await route.fulfill(json({
-        generatedAt: "2026-03-30T00:00:00.000Z",
-        repoRoot: "/Users/phodal/ai/routa-js",
-        hooksDir: ".claude/hooks",
-        configFile: null,
-        reviewTriggerFile: null,
-        hookFiles: [],
-        profiles: [],
-        warnings: [],
-      }));
-    });
-
     await page.route("**/api/harness/instructions?**", async (route) => {
       await route.fulfill(json({
         generatedAt: "2026-03-30T00:00:00.000Z",
@@ -140,16 +127,6 @@ test.describe("Harness settings spec sources", () => {
             ],
           },
         ],
-        warnings: [],
-      }));
-    });
-
-    await page.route("**/api/harness/agent-hooks?**", async (route) => {
-      await route.fulfill(json({
-        generatedAt: "2026-03-30T00:00:00.000Z",
-        repoRoot: "/Users/phodal/ai/routa-js",
-        configFile: null,
-        hooks: [],
         warnings: [],
       }));
     });
