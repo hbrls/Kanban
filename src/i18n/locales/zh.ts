@@ -270,7 +270,7 @@ const zh: TranslationDictionary = {
       repositoryLabel: "仓库",
       overview: "概览",
       governanceLoop: "治理闭环",
-      specSources: "规范来源",
+      
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

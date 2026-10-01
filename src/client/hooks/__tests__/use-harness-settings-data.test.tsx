@@ -28,23 +28,6 @@ describe("useHarnessSettingsData", () => {
         });
       }
 
-      if (url.startsWith("/api/harness/spec-sources?")) {
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          sources: [
-            {
-              kind: "framework",
-              system: "kiro",
-              rootPath: ".kiro/specs",
-              confidence: "high",
-              status: "artifacts-present",
-              evidence: ["found .kiro/specs"],
-            },
-          ],
-        });
-      }
-
       throw new Error(`Unhandled fetch url: ${url}`);
     });
 
@@ -63,7 +46,7 @@ describe("useHarnessSettingsData", () => {
     }));
 
     await waitFor(() => {
-      expect(result.current.specSourcesState.loading).toBe(false);
+      expect(result.current.planState.loading).toBe(false);
     });
 
     expect(result.current.planState.data?.dimensions).toEqual([]);
@@ -72,10 +55,9 @@ describe("useHarnessSettingsData", () => {
       graph: 0,
       sarif: 0,
     });
-    expect(result.current.specSourcesState.data?.sources[0]?.children).toEqual([]);
   });
 
-  it("does not request harness instructions for the harness console", async () => {
+  it("does not request harness spec sources for the harness console", async () => {
     renderHook(() => useHarnessSettingsData({
       workspaceId: "default",
       repoPath: "/repo",
@@ -83,9 +65,11 @@ describe("useHarnessSettingsData", () => {
     }));
 
     await waitFor(() => {
-      expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/harness/spec-sources?"))).toBe(true);
+      expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/fitness/plan?"))).toBe(true);
     });
 
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/harness/spec-sources"))).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/harness/spec-sources/file"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/harness/instructions"))).toBe(false);
   });
 });

@@ -109,7 +109,27 @@ describe("HarnessGovernanceLoopGraph", () => {
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
         planError={null}
-        selectedNodeId="thinking"
+        selectedNodeId="build"
+        onSelectedNodeChange={onSelectedNodeChange}
+      />,
+    );
+
+    const buildNode = screen.getByRole("button", {
+      name: /Internal loop Implementation/i,
+    });
+
+    fireEvent.keyDown(buildNode, { key: "ArrowRight" });
+    expect(onSelectedNodeChange).toHaveBeenCalledWith("test");
+  });
+
+  it("keeps the Requirements phase non-interactive without spec sources details", () => {
+    const onSelectedNodeChange = vi.fn();
+
+    render(
+      <HarnessGovernanceLoopGraph
+        repoPath="/Users/phodal/ai/routa-js"
+        planError={null}
+        selectedNodeId="build"
         onSelectedNodeChange={onSelectedNodeChange}
       />,
     );
@@ -118,7 +138,12 @@ describe("HarnessGovernanceLoopGraph", () => {
       name: /Internal loop Requirements/i,
     });
 
+    fireEvent.click(thinkingNode);
     fireEvent.keyDown(thinkingNode, { key: "ArrowRight" });
-    expect(onSelectedNodeChange).toHaveBeenCalledWith("build");
+    expect(onSelectedNodeChange).toHaveBeenCalledTimes(0);
+
+    expect(screen.queryByText("Spec Sources")).toBeNull();
+    expect(screen.queryByText("Evidence model")).toBeNull();
+    expect(screen.queryByText("artifacts-present")).toBeNull();
   });
 });

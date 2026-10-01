@@ -279,7 +279,6 @@ function buildGraph(args: {
   } = args;
 
   const selectableNodeIds = new Set([
-    "thinking",
     "build",
     "test",
     "precommit",
@@ -288,8 +287,7 @@ function buildGraph(args: {
   ]);
 
   const navigationGraph: Record<string, Partial<Record<"up" | "down" | "left" | "right", string>>> = {
-    thinking: { right: "build" },
-    build: { left: "thinking", right: "test", down: "review" },
+    build: { right: "test", down: "review" },
     test: { left: "build", down: "precommit" },
     precommit: { up: "test", left: "review" },
     review: { up: "build", right: "precommit", left: "post-commit" },
@@ -341,8 +339,8 @@ function buildGraph(args: {
       title: g.nodeLabels.thinking,
       tone: getLayerTone("internal"),
       note: g.clues.thinkingNote,
-      active: true,
-      ...buildSelectionState("thinking", true),
+      active: false,
+      ...buildSelectionState("thinking", false),
     }),
     buildNode("build", col2X, internalRowY, {
       nodeId: "build",
@@ -478,27 +476,16 @@ function buildGraph(args: {
 }
 
 function buildDetailSections(args: {
-  selectedNodeId: string | null;
   g: TranslationDictionary["harness"]["governanceLoop"]["graph"];
 }) {
   const {
-    selectedNodeId,
     g,
   } = args;
 
-  switch (selectedNodeId) {
-    case "thinking":
-      return [
-        { title: g.detailSections.thinking.specSourcesTitle, items: [g.detailSections.thinking.specSourcesItem] },
-        { title: g.detailSections.thinking.frameworksTitle, items: g.detailSections.thinking.frameworksItems },
-        { title: g.detailSections.thinking.evidenceModelTitle, items: g.detailSections.thinking.evidenceModelItems },
-      ] satisfies LoopDetailSection[];
-    default:
-      return [
-        { title: g.detailSections.default.connectedPanelsTitle, items: [g.detailSections.default.highlightedNodesClickable, g.detailSections.default.selectNodePreview] },
-        { title: g.detailSections.default.connectedPanelsTitle, items: g.detailSections.default.connectedPanelsItems },
-      ] satisfies LoopDetailSection[];
-  }
+  return [
+    { title: g.detailSections.default.connectedPanelsTitle, items: [g.detailSections.default.highlightedNodesClickable, g.detailSections.default.selectNodePreview] },
+    { title: g.detailSections.default.connectedPanelsTitle, items: g.detailSections.default.connectedPanelsItems },
+  ] satisfies LoopDetailSection[];
 }
 
 export function HarnessGovernanceLoopGraph({
@@ -535,10 +522,9 @@ export function HarnessGovernanceLoopGraph({
   )];
   const detailSections = useMemo(
     () => buildDetailSections({
-      selectedNodeId: activeSelectedNodeId,
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, t.harness.governanceLoop.graph],
+    [t.harness.governanceLoop.graph],
   );
 
   return (

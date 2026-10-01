@@ -12,7 +12,6 @@ import {
 } from "@/client/components/harness-execution-plan-flow";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
-import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
 import { getHarnessUnsupportedRepoMessage } from "@/client/components/harness-support-state";
 import { SpecBoardPanel } from "@/app/workspace/[workspaceId]/spec/spec-page-client";
 import { useHarnessSettingsData } from "@/client/hooks/use-harness-settings-data";
@@ -22,8 +21,7 @@ import { normalizeWorkspaceQueryId, resolveWorkspaceSelection } from "@/client/u
 
 type SectionId =
   | "overview"
-  | "spec"
-  | "spec-sources";
+  | "spec";
 
 interface SectionDef {
   id: SectionId;
@@ -32,17 +30,6 @@ interface SectionDef {
   code: string;
   group?: "intent" | "control" | "flow" | "signal";
 }
-
-type SectionStatusTone = "neutral" | "success" | "warning";
-
-type SectionStatus = {
-  label: string;
-  tone?: SectionStatusTone;
-};
-
-const GOVERNANCE_NODE_SECTION_MAP: Partial<Record<string, SectionId>> = {
-  thinking: "spec-sources",
-};
 
 const DEFAULT_EXPLORER_WIDTH = 240;
 const MIN_EXPLORER_WIDTH = 220;
@@ -60,22 +47,10 @@ function clamp(value: number, min: number, max: number) {
 function resolveSectionId(value: string | null | undefined): SectionId {
   switch (value) {
     case "spec":
-    case "spec-sources":
       return value;
     case "overview":
     default:
       return DEFAULT_SECTION;
-  }
-}
-
-function sectionStatusClass(tone: SectionStatusTone = "neutral") {
-  switch (tone) {
-    case "success":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-    case "warning":
-      return "border-amber-200 bg-amber-50 text-amber-800";
-    default:
-      return "border-desktop-border bg-desktop-bg-primary text-desktop-text-secondary";
   }
 }
 
@@ -165,7 +140,6 @@ export default function HarnessConsolePage() {
   const activeRepoCodebaseId = effectiveRepoOverride ? matchedSelectedCodebase?.id : activeCodebase?.id;
   const {
     planState,
-    specSourcesState,
   } = useHarnessSettingsData({
     workspaceId,
     codebaseId: activeRepoCodebaseId,
@@ -274,18 +248,9 @@ export default function HarnessConsolePage() {
     document.addEventListener("mouseup", handleMouseUp);
   }
 
-  const sectionStatuses = useMemo((): Map<SectionId, SectionStatus | null> => {
-    const map = new Map<SectionId, SectionStatus | null>();
-    map.set("spec-sources", specSourcesState.data ? { label: `${specSourcesState.data.sources?.length ?? 0} sources` } : null);
-    return map;
-  }, [
-    specSourcesState.data,
-  ]);
-
   const sections = useMemo((): SectionDef[] => [
     { id: "overview", label: t.settings.harness.overview, shortLabel: "Overview", code: "OV" },
     { id: "spec", label: t.nav.spec, shortLabel: t.nav.spec, code: "IB", group: "intent" },
-    { id: "spec-sources", label: t.settings.harness.specSources, shortLabel: "Specs", code: "SP", group: "intent" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -303,18 +268,11 @@ export default function HarnessConsolePage() {
     })).filter((group) => group.sections.length > 0);
   }, [sections, t]);
 
-  const selectedGovernanceSection = selectedGovernanceNodeId
-    ? (GOVERNANCE_NODE_SECTION_MAP[selectedGovernanceNodeId] ?? null)
-    : null;
-
   const governanceContextPanel = useMemo(() => {
     if (selectedGovernanceNodeId === null) {
       return null;
     }
-    const props = { repoLabel: selectedRepoLabel, unsupportedMessage: unsupportedRepoMessage };
     switch (selectedGovernanceNodeId) {
-      case "thinking":
-        return <HarnessSpecSourcesPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={specSourcesState.data} loading={specSourcesState.loading} error={specSourcesState.error} variant="compact" />;
       case "lint":
       case "precommit":
         return <HarnessExecutionPlanFlow loading={planState.loading} error={planState.error} plan={planState.data} repoLabel={selectedRepoLabel} selectedTier={selectedTier} onTierChange={setSelectedTier} unsupportedMessage={unsupportedRepoMessage} variant="compact" />;
@@ -329,16 +287,10 @@ export default function HarnessConsolePage() {
     planState.data,
     planState.error,
     planState.loading,
-    activeRepoCodebaseId,
-    activeRepoPath,
     selectedGovernanceNodeId,
     selectedRepoLabel,
     selectedTier,
-    specSourcesState.data,
-    specSourcesState.error,
-    specSourcesState.loading,
     unsupportedRepoMessage,
-    workspaceId,
   ]);
 
   function renderOverview() {
@@ -430,15 +382,6 @@ export default function HarnessConsolePage() {
 
             <div className="flex items-center gap-2 text-[10px] text-desktop-text-secondary">
               {selectedGovernanceNodeId ? <span>node: {selectedGovernanceNodeId}</span> : null}
-              {selectedGovernanceSection ? (
-                <button
-                  type="button"
-                  className="desktop-btn desktop-btn-secondary"
-                  onClick={() => openSection(selectedGovernanceSection)}
-                >
-                  Open full view
-                </button>
-              ) : null}
               <button
                 type="button"
                 className="desktop-btn desktop-btn-secondary"
@@ -470,18 +413,11 @@ export default function HarnessConsolePage() {
   }
 
   function renderSectionContent(sectionId: SectionId) {
-    const sharedProps = {
-      repoLabel: selectedRepoLabel,
-      unsupportedMessage: unsupportedRepoMessage,
-    };
-
     switch (sectionId) {
       case "overview":
         return renderOverview();
       case "spec":
         return <SpecBoardPanel workspaceId={workspaceId} />;
-      case "spec-sources":
-        return <HarnessSpecSourcesPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={specSourcesState.data} loading={specSourcesState.loading} error={specSourcesState.error} hideHeader />;
       default:
         return null;
     }
@@ -489,7 +425,6 @@ export default function HarnessConsolePage() {
 
   function renderExplorerSectionButton(section: SectionDef) {
     const isActive = activeSection === section.id;
-    const status = sectionStatuses.get(section.id) ?? null;
     return (
       <button
         key={section.id}
@@ -502,11 +437,6 @@ export default function HarnessConsolePage() {
         }`}
       >
         <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-desktop-text-primary">{section.label}</span>
-        {status ? (
-          <span className={`ml-2 shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium ${sectionStatusClass(status.tone)}`}>
-            {status.label}
-          </span>
-        ) : null}
       </button>
     );
   }

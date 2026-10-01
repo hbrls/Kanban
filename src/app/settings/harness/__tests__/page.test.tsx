@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 import HarnessSettingsPage from "../page";
 
 const repoPickerMock = vi.fn();
@@ -10,18 +9,6 @@ const routerReplaceMock = vi.fn();
 const routerPushMock = vi.fn();
 const useHarnessSettingsDataMock = vi.fn();
 let currentSearchParams = new URLSearchParams();
-
-function createSpecSourcesData(
-  overrides: Partial<SpecDetectionResponse> = {},
-): SpecDetectionResponse {
-  return {
-    generatedAt: "2026-03-30T00:00:00.000Z",
-    repoRoot: "/Users/phodal/ai/routa-js",
-    sources: [],
-    warnings: [],
-    ...overrides,
-  };
-}
 
 const mockHarnessSettingsData = {
   planState: {
@@ -32,11 +19,6 @@ const mockHarnessSettingsData = {
       hardGateCount: 1,
       dimensions: [],
     },
-  },
-  specSourcesState: {
-    loading: false,
-    error: null,
-    data: createSpecSourcesData(),
   },
 };
 
@@ -133,15 +115,8 @@ vi.mock("@/client/components/harness-lifecycle-view", () => ({
   }) => (
     <div data-testid="lifecycle-view">
       <div data-testid="selected-node-id">{selectedNodeId ?? ""}</div>
-      <button type="button" onClick={() => onSelectedNodeChange?.("thinking")}>select-thinking</button>
       <button type="button" onClick={() => onSelectedNodeChange?.("release")}>select-release</button>
     </div>
-  ),
-}));
-
-vi.mock("@/client/components/harness-spec-sources-panel", () => ({
-  HarnessSpecSourcesPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`spec-sources-${variant}`}>Spec sources</div>
   ),
 }));
 
@@ -200,11 +175,6 @@ describe("HarnessSettingsPage", () => {
     window.localStorage.clear();
     useHarnessSettingsDataMock.mockReset();
     useHarnessSettingsDataMock.mockReturnValue(mockHarnessSettingsData);
-    mockHarnessSettingsData.specSourcesState = {
-      loading: false,
-      error: null,
-      data: createSpecSourcesData(),
-    };
   });
 
   it("renders the console workbench at /settings/harness without overview side panels", () => {
@@ -241,13 +211,14 @@ describe("HarnessSettingsPage", () => {
     expect(window.localStorage.getItem("routa.repoSelection.harness.default")).toBeNull();
   });
 
-  it("opens the tab from the section query parameter on first render", () => {
+  it("falls back to the overview section for removed spec-sources urls", () => {
     currentSearchParams = new URLSearchParams("section=spec-sources");
 
     render(<HarnessSettingsPage />);
 
-    expect(screen.getByTestId("spec-sources-full")).not.toBeNull();
-    expect(screen.queryByTestId("lifecycle-view")).toBeNull();
+    expect(screen.getByTestId("lifecycle-view")).not.toBeNull();
+    expect(screen.queryByTestId("spec-sources-full")).toBeNull();
+    expect(screen.queryByTestId("spec-sources-compact")).toBeNull();
   });
 
   it("falls back to the overview section for removed hook-systems urls", () => {
@@ -268,16 +239,6 @@ describe("HarnessSettingsPage", () => {
     expect(screen.getByTestId("lifecycle-view")).not.toBeNull();
     expect(screen.queryByText("Agent Instructions")).toBeNull();
     expect(screen.queryByText("Instructions")).toBeNull();
-  });
-
-  it("updates the section query parameter when opening another section", () => {
-    currentSearchParams = new URLSearchParams("workspaceId=default");
-
-    render(<HarnessSettingsPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /Spec Sources/i }));
-
-    expect(routerReplaceMock).toHaveBeenCalledWith("/settings/harness?workspaceId=default&section=spec-sources");
   });
 
   it("renders the spec board from the section query parameter", () => {
@@ -315,32 +276,14 @@ describe("HarnessSettingsPage", () => {
   });
 
   it("opens the bottom panel with compact context when clicking a lifecycle node", () => {
-    mockHarnessSettingsData.specSourcesState = {
-      loading: false,
-      error: null,
-      data: createSpecSourcesData({
-        sources: [
-          {
-            kind: "framework",
-            system: "bmad",
-            rootPath: "docs",
-            confidence: "low",
-            status: "legacy",
-            evidence: ["docs/prd.md"],
-            children: [{ type: "prd", path: "docs/prd.md" }],
-          },
-        ],
-      }),
-    };
-
     render(<HarnessSettingsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "select-thinking" }));
+    fireEvent.click(screen.getByRole("button", { name: "select-release" }));
 
     const bottomPanel = screen.getByTestId("harness-console-bottom-panel");
     expect(bottomPanel).not.toBeNull();
-    expect(screen.getByTestId("selected-node-id").textContent).toBe("thinking");
-    expect(within(bottomPanel).getByTestId("spec-sources-compact")).not.toBeNull();
+    expect(screen.getByTestId("selected-node-id").textContent).toBe("release");
+    expect(within(bottomPanel).queryByTestId("spec-sources-compact")).toBeNull();
   });
 
   it("falls back to the overview section for removed design-decisions urls", () => {
@@ -371,7 +314,7 @@ describe("HarnessSettingsPage", () => {
   it("shows the overview context panel inline without resize controls", () => {
     render(<HarnessSettingsPage />);
 
-    fireEvent.click(screen.getByRole("button", { name: "select-thinking" }));
+    fireEvent.click(screen.getByRole("button", { name: "select-release" }));
 
     const bottomPanel = screen.getByTestId("harness-console-bottom-panel");
 

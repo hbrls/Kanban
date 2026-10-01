@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PlanResponse, TierValue } from "@/client/components/harness-execution-plan-flow";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
-import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 
 export type RunnerKind = "shell" | "graph" | "sarif";
 
@@ -78,27 +77,6 @@ function normalizePlanResponse(payload: Partial<PlanResponse> | null | undefined
   };
 }
 
-function normalizeSpecDetectionResponse(
-  payload: Partial<SpecDetectionResponse> | null | undefined,
-): SpecDetectionResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    sources: safeArray(payload?.sources).map((source) => ({
-      ...source,
-      evidence: safeArray(source.evidence),
-      children: safeArray(source.children),
-      features: Array.isArray(source.features)
-        ? source.features.map((feature) => ({
-          ...feature,
-          documents: safeArray(feature.documents),
-        }))
-        : undefined,
-    })),
-    warnings: safeArray(payload?.warnings),
-  };
-}
-
 export function useHarnessSettingsData({
   workspaceId,
   codebaseId,
@@ -109,7 +87,6 @@ export function useHarnessSettingsData({
   const baseQuery = useMemo(() => (hasRepoContext ? buildHarnessQuery(workspaceId, codebaseId, repoPath) : null), [codebaseId, hasRepoContext, repoPath, workspaceId]);
 
   const [planState, setPlanState] = useState<QueryState<PlanResponse>>(emptyQueryState);
-  const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
 
   useEffect(() => {
     if (!baseQuery) {
@@ -153,47 +130,7 @@ export function useHarnessSettingsData({
     };
   }, [baseQuery, selectedTier]);
 
-  useEffect(() => {
-    if (!baseQuery) {
-      setSpecSourcesState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchSpecSources = async () => {
-      setSpecSourcesState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/harness/spec-sources?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load spec sources");
-        }
-        if (!cancelled) {
-          setSpecSourcesState({
-            loading: false,
-            error: null,
-            data: normalizeSpecDetectionResponse(payload as Partial<SpecDetectionResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setSpecSourcesState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchSpecSources();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
-
   return {
     planState,
-    specSourcesState,
   };
 }

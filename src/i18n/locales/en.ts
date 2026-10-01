@@ -274,7 +274,7 @@ const en: TranslationDictionary = {
       repositoryLabel: "Repository",
       overview: "Overview",
       governanceLoop: "Governance Loop",
-      specSources: "Spec Sources",
+      
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

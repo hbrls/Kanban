@@ -28,7 +28,7 @@ type HarnessLifecycleViewProps = {
 
 // Define node areas based on the SVG layout (approximate coordinates)
 const LIFECYCLE_NODES: LifecycleNodeData[] = [
-  { nodeId: "thinking", title: "需求定义", x: 28, y: 62, width: 170, height: 216, connected: true },
+  { nodeId: "thinking", title: "需求定义", x: 28, y: 62, width: 170, height: 216 },
   { nodeId: "build", title: "编码实现", x: 212, y: 62, width: 170, height: 216, connected: true },
   { nodeId: "test", title: "本地验证", x: 396, y: 62, width: 170, height: 216, connected: true },
   { nodeId: "commit", title: "主干集成", x: 580, y: 62, width: 170, height: 216, partiallyConnected: true },
@@ -41,7 +41,6 @@ const LIFECYCLE_NODES: LifecycleNodeData[] = [
 ];
 
 const SELECTABLE_NODE_IDS = new Set([
-  "thinking",
   "build",
   "test",
   "precommit",

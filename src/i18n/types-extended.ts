@@ -2,48 +2,6 @@ import type { TailTranslationDictionarySections } from "./types-tail";
 
 export interface ExtendedTranslationDictionarySections extends TailTranslationDictionarySections {
   harness: {
-    specSources: {
-      title: string;
-      scanningSources: string;
-      noSourcesDetected: string;
-      noSourcesWithFrameworks: string;
-      nativeTools: string;
-      frameworks: string;
-      integrations: string;
-      legacy: string;
-      kindNativeTool: string;
-      kindFramework: string;
-      kindIntegration: string;
-      statusHasSpecs: string;
-      statusInstalledOnly: string;
-      statusArchived: string;
-      statusLegacyLabel: string;
-      typeRequirements: string;
-      typeDesign: string;
-      typeTasks: string;
-      typeBugfix: string;
-      typeSpec: string;
-      typeProposal: string;
-      typePlan: string;
-      typePrd: string;
-      typeArchitecture: string;
-      typeEpic: string;
-      typeStory: string;
-      typeContext: string;
-      typeConfig: string;
-      typeOther: string;
-      docsCount: string;
-      docsSingular: string;
-      specCount: string;
-      specSingular: string;
-      qoderIntegration: string;
-      integrationDetected: string;
-      previewFile: string;
-      previewLoading: string;
-      previewClose: string;
-      previewError: string;
-      previewNotFound: string;
-    };
     executionPlan: {
       dimensionsAndMetricsSubtitle: string;
       tierLabel: string;
@@ -103,14 +61,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
           releaseUnavailable: string;
         };
         detailSections: {
-          thinking: {
-            specSourcesTitle: string;
-            specSourcesItem: string;
-            frameworksTitle: string;
-            frameworksItems: string[];
-            evidenceModelTitle: string;
-            evidenceModelItems: string[];
-          };
           default: {
             highlightedNodesClickable: string;
             selectNodePreview: string;

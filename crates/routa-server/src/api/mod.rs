@@ -18,7 +18,6 @@ pub mod fitness;
 pub mod git;
 pub mod github;
 pub mod graph;
-pub mod harness;
 pub mod harness_templates;
 pub mod kanban;
 pub mod mcp_routes;
@@ -85,7 +84,6 @@ pub fn api_router(state: AppState) -> Router<AppState> {
         .nest("/api/mcp-servers", mcp_servers::router())
         .nest("/api/github", github::router())
         .nest("/api/graph", graph::router())
-        .nest("/api/harness", harness::router())
         .nest("/api/harness/templates", harness_templates::router())
         .nest("/api/webhooks", webhooks::router())
         .nest("/api/background-tasks", background_tasks::router())
