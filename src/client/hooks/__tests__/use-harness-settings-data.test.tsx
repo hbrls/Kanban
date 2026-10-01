@@ -74,22 +74,6 @@ describe("useHarnessSettingsData", () => {
         });
       }
 
-      if (url.startsWith("/api/harness/design-decisions?")) {
-        return okJson({
-          generatedAt: "2026-03-31T00:00:00.000Z",
-          repoRoot: "/repo",
-          sources: [
-            {
-              kind: "canonical-doc",
-              label: "Architecture",
-              rootPath: "docs",
-              confidence: "high",
-              status: "documents-present",
-            },
-          ],
-        });
-      }
-
       throw new Error(`Unhandled fetch url: ${url}`);
     });
 
@@ -136,7 +120,7 @@ describe("useHarnessSettingsData", () => {
     }));
 
     await waitFor(() => {
-      expect(result.current.designDecisionsState.loading).toBe(false);
+      expect(result.current.specSourcesState.loading).toBe(false);
     });
 
     expect(result.current.planState.data?.dimensions).toEqual([]);
@@ -146,6 +130,5 @@ describe("useHarnessSettingsData", () => {
       sarif: 0,
     });
     expect(result.current.specSourcesState.data?.sources[0]?.children).toEqual([]);
-    expect(result.current.designDecisionsState.data?.sources[0]?.artifacts).toEqual([]);
   });
 });

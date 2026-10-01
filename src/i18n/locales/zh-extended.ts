@@ -3,22 +3,6 @@ import { zhTail } from "./zh-tail";
 
 export const zhExtended: ExtendedTranslationDictionarySections = {
   harness: {
-    designDecision: {
-      loadingAdrs: "正在加载架构契约和 ADR\u2026",
-      title: "设计决策",
-      noDecisionsAvailable: "此仓库目前没有可用的架构契约或 ADR 决策。",
-      canonicalDocs: "规范文档",
-      decisionRecords: "决策记录",
-      showingCompact: "紧凑模式下显示 {total} 个架构决策来源中的 {visible} 个。",
-      statusCanonical: "规范",
-      statusAccepted: "已接受",
-      statusSuperseded: "已替代",
-      statusDeprecated: "已弃用",
-      statusUnknown: "未知",
-      confidenceHigh: "高",
-      confidenceMedium: "中",
-      confidenceLow: "低",
-    },
     specSources: {
       title: "规格来源",
       scanningSources: "正在扫描规格来源...",
@@ -113,7 +97,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
           phase: "阶段",
         },
         nodeNotes: {
-          codingUnavailable: "暂未接入 ADR / 设计决策来源（docs/ARCHITECTURE.md 或 docs/adr）",
           commitUnavailable: "暂未接入 trunk merge / 主干集成信号，当前没有对应上下文面板。",
           stagingUnavailable: "暂未接入 staging / 预发验证信号，当前没有可展示的验证面板。",
           productionUnavailable: "暂未接入 production runtime / 真实流量信号，当前没有运行时上下文。",
@@ -134,14 +117,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
             evidenceModelTitle: "证据模型",
             evidenceModelItems: ["制品存在", "仅安装", "已归档", "遗留"],
           },
-          coding: {
-            designDecisionTitle: "设计决策证据",
-            designDecisionItem: "ADR / 架构决策文件",
-            evidenceLocationsTitle: "证据位置",
-            evidenceLocationsItems: ["docs/ARCHITECTURE.md", "docs/adr/*.md"],
-            relatedSurface: "相关面板",
-            relatedItems: ["规格来源面板", "构建 / 编码流水线"],
-          },
           default: {
             highlightedNodesClickable: "高亮节点可点击。不可用节点会直接说明缺失的信号。",
             selectNodePreview: "选择一个节点（编码、本地验证、变更门禁、评审、交付、发布）以预览匹配的上下文面板。",
@@ -151,7 +126,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
         },
         nodeLabels: {
           thinking: "需求定义",
-          coding: "设计决策",
           build: "编码实现",
           test: "本地验证",
           precommit: "变更门禁",
@@ -165,7 +139,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
         },
         clues: {
           thinkingNote: "Spec / 需求边界",
-          codingNote: "ADR / 设计取舍",
           buildNote: "代码实现 / 约束执行",
           buildNotePrefix: "受",
           buildNoteSuffix: "规范约束",
@@ -180,7 +153,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
           metricsNote: "监控 / 反馈闭环",
         },
         edgeLabels: {
-          clarify: "澄清",
           implement: "实现",
           validate: "验证",
           sendForReview: "送审",

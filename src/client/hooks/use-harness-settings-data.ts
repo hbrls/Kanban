@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PlanResponse, TierValue } from "@/client/components/harness-execution-plan-flow";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
-import type { DesignDecisionResponse } from "@/core/harness/design-decision-types";
 import type { SpecDetectionResponse } from "@/core/harness/spec-detector-types";
 
 export type RunnerKind = "shell" | "graph" | "sarif";
@@ -144,20 +143,6 @@ function normalizeSpecDetectionResponse(
   };
 }
 
-function normalizeDesignDecisionResponse(
-  payload: Partial<DesignDecisionResponse> | null | undefined,
-): DesignDecisionResponse {
-  return {
-    generatedAt: payload?.generatedAt ?? "",
-    repoRoot: payload?.repoRoot ?? "",
-    sources: safeArray(payload?.sources).map((source) => ({
-      ...source,
-      artifacts: safeArray(source.artifacts),
-    })),
-    warnings: safeArray(payload?.warnings),
-  };
-}
-
 export function useHarnessSettingsData({
   workspaceId,
   codebaseId,
@@ -170,7 +155,6 @@ export function useHarnessSettingsData({
   const [planState, setPlanState] = useState<QueryState<PlanResponse>>(emptyQueryState);
   const [instructionsState, setInstructionsState] = useState<QueryState<InstructionsResponse>>(emptyQueryState);
   const [specSourcesState, setSpecSourcesState] = useState<QueryState<SpecDetectionResponse>>(emptyQueryState);
-  const [designDecisionsState, setDesignDecisionsState] = useState<QueryState<DesignDecisionResponse>>(emptyQueryState);
   const [instructionsRefreshState, setInstructionsRefreshState] = useState<InstructionRefreshState>({ contextKey: "", token: 0 });
   const instructionsContextKey = baseQuery?.toString() ?? "";
 
@@ -307,50 +291,10 @@ export function useHarnessSettingsData({
     };
   }, [baseQuery]);
 
-  useEffect(() => {
-    if (!baseQuery) {
-      setDesignDecisionsState(emptyQueryState());
-      return;
-    }
-
-    let cancelled = false;
-    const fetchDesignDecisions = async () => {
-      setDesignDecisionsState((current) => ({ ...current, loading: true, error: null }));
-      try {
-        const response = await desktopAwareFetch(`/api/harness/design-decisions?${baseQuery.toString()}`);
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(typeof payload?.details === "string" ? payload.details : "Failed to load design decisions");
-        }
-        if (!cancelled) {
-          setDesignDecisionsState({
-            loading: false,
-            error: null,
-            data: normalizeDesignDecisionResponse(payload as Partial<DesignDecisionResponse>),
-          });
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setDesignDecisionsState({
-            loading: false,
-            error: error instanceof Error ? error.message : String(error),
-            data: null,
-          });
-        }
-      }
-    };
-
-    void fetchDesignDecisions();
-    return () => {
-      cancelled = true;
-    };
-  }, [baseQuery]);
-
   return {
     planState,
     instructionsState,
     specSourcesState,
-    designDecisionsState,
     reloadInstructions,
   };
 }

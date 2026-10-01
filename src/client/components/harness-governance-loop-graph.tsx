@@ -31,7 +31,6 @@ type HarnessGovernanceLoopGraphProps = {
   unsupportedMessage?: string | null;
   instructionsData?: InstructionsResponse | null;
   instructionsError?: string | null;
-  designDecisionNodeEnabled?: boolean;
   selectedNodeId?: string | null;
   onSelectedNodeChange?: (nodeId: string) => void;
   contextPanel?: ReactNode;
@@ -278,23 +277,19 @@ function buildEdge(
 
 function buildGraph(args: {
   instructionSummary: InstructionSummary | null;
-  designDecisionNodeEnabled?: boolean;
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
   g: TranslationDictionary["harness"]["governanceLoop"]["graph"];
 }) {
   const {
     instructionSummary,
-    designDecisionNodeEnabled,
     selectedNodeId,
     onSelectNode,
     g,
   } = args;
 
-  const hasCodingNode = Boolean(designDecisionNodeEnabled);
   const selectableNodeIds = new Set([
     "thinking",
-    ...(hasCodingNode ? ["coding"] : []),
     "build",
     "test",
     "precommit",
@@ -303,11 +298,8 @@ function buildGraph(args: {
   ]);
 
   const navigationGraph: Record<string, Partial<Record<"up" | "down" | "left" | "right", string>>> = {
-    thinking: { right: hasCodingNode ? "coding" : "build" },
-    ...(hasCodingNode ? {
-      coding: { left: "thinking", right: "build" },
-    } : {}),
-    build: { left: hasCodingNode ? "coding" : "thinking", right: "test", down: "review" },
+    thinking: { right: "build" },
+    build: { left: "thinking", right: "test", down: "review" },
     test: { left: "build", down: "precommit" },
     precommit: { up: "test", left: "review" },
     review: { up: "build", right: "precommit", left: "post-commit" },
@@ -362,19 +354,7 @@ function buildGraph(args: {
       active: true,
       ...buildSelectionState("thinking", true),
     }),
-    buildNode("coding", col2X, internalRowY, {
-      nodeId: "coding",
-      layer: "internal",
-      title: g.nodeLabels.coding,
-      tone: getLayerTone("internal"),
-      note: g.clues.codingNote,
-      active: hasCodingNode,
-      unavailableReason: hasCodingNode
-        ? undefined
-        : g.nodeNotes.codingUnavailable,
-      ...buildSelectionState("coding", hasCodingNode),
-    }),
-    buildNode("build", col3X, internalRowY, {
+    buildNode("build", col2X, internalRowY, {
       nodeId: "build",
       layer: "internal",
       title: g.nodeLabels.build,
@@ -385,7 +365,7 @@ function buildGraph(args: {
       active: true,
       ...buildSelectionState("build", true),
     }),
-    buildNode("test", col4X, internalRowY, {
+    buildNode("test", col3X, internalRowY, {
       nodeId: "test",
       layer: "internal",
       title: g.nodeLabels.test,
@@ -474,8 +454,7 @@ function buildGraph(args: {
   ];
 
   const edges: Edge[] = [
-    buildEdge("thinking-coding", "thinking", "coding", "source-right", "target-left", g.edgeLabels.clarify, LOOP_EDGE_COLORS.neutral),
-    buildEdge("coding-build", "coding", "build", "source-right", "target-left", g.edgeLabels.implement, LOOP_EDGE_COLORS.internal),
+    buildEdge("thinking-build", "thinking", "build", "source-right", "target-left", g.edgeLabels.implement, LOOP_EDGE_COLORS.internal),
     buildEdge("build-test", "build", "test", "source-right", "target-left", g.edgeLabels.validate, LOOP_EDGE_COLORS.internal),
 
     buildEdge("precommit-review", "precommit", "review", "source-left", "target-right", g.edgeLabels.sendForReview, LOOP_EDGE_COLORS.internal),
@@ -533,12 +512,6 @@ function buildDetailSections(args: {
         { title: g.detailSections.thinking.frameworksTitle, items: g.detailSections.thinking.frameworksItems },
         { title: g.detailSections.thinking.evidenceModelTitle, items: g.detailSections.thinking.evidenceModelItems },
       ] satisfies LoopDetailSection[];
-    case "coding":
-      return [
-        { title: g.detailSections.coding.designDecisionTitle, items: [g.detailSections.coding.designDecisionItem] },
-        { title: g.detailSections.coding.evidenceLocationsTitle, items: g.detailSections.coding.evidenceLocationsItems },
-        { title: g.detailSections.coding.relatedSurface, items: g.detailSections.coding.relatedItems },
-      ] satisfies LoopDetailSection[];
     default:
       return [
         { title: g.detailSections.default.connectedPanelsTitle, items: [g.detailSections.default.highlightedNodesClickable, g.detailSections.default.selectNodePreview] },
@@ -550,7 +523,6 @@ function buildDetailSections(args: {
 export function HarnessGovernanceLoopGraph({
   repoPath,
   planError,
-  designDecisionNodeEnabled,
   unsupportedMessage,
   instructionsData,
   instructionsError,
@@ -575,7 +547,6 @@ export function HarnessGovernanceLoopGraph({
   const graph = useMemo(
     () => buildGraph({
       instructionSummary,
-      designDecisionNodeEnabled,
       selectedNodeId: activeSelectedNodeId,
       onSelectNode: (nodeId) => {
         if (onSelectedNodeChange) {
@@ -586,7 +557,7 @@ export function HarnessGovernanceLoopGraph({
       },
       g: t.harness.governanceLoop.graph,
     }),
-    [activeSelectedNodeId, designDecisionNodeEnabled, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph],
+    [activeSelectedNodeId, instructionSummary, onSelectedNodeChange, t.harness.governanceLoop.graph],
   );
 
   const graphIssues = [...new Set(

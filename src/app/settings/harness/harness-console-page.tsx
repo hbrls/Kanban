@@ -11,7 +11,6 @@ import {
   type TierValue,
 } from "@/client/components/harness-execution-plan-flow";
 import { HarnessAgentInstructionsPanel } from "@/client/components/harness-agent-instructions-panel";
-import { HarnessDesignDecisionPanel } from "@/client/components/harness-design-decision-panel";
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
 import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
@@ -26,8 +25,7 @@ type SectionId =
   | "overview"
   | "spec"
   | "spec-sources"
-  | "agent-instructions"
-  | "design-decisions";
+  | "agent-instructions";
 
 interface SectionDef {
   id: SectionId;
@@ -46,7 +44,6 @@ type SectionStatus = {
 
 const GOVERNANCE_NODE_SECTION_MAP: Partial<Record<string, SectionId>> = {
   thinking: "spec-sources",
-  coding: "design-decisions",
   build: "agent-instructions",
 };
 
@@ -68,7 +65,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "spec":
     case "spec-sources":
     case "agent-instructions":
-    case "design-decisions":
       return value;
     case "overview":
     default:
@@ -175,7 +171,6 @@ export default function HarnessConsolePage() {
     planState,
     instructionsState,
     specSourcesState,
-    designDecisionsState,
     reloadInstructions,
   } = useHarnessSettingsData({
     workspaceId,
@@ -187,11 +182,6 @@ export default function HarnessConsolePage() {
   const selectedRepoLabel = activeRepoSelection?.name ?? "None";
   const unsupportedRepoMessage = getHarnessUnsupportedRepoMessage(
     planState.error,
-    designDecisionsState.error,
-  );
-  const hasArchitectureOrAdrSignal = useMemo(
-    () => (designDecisionsState.data?.sources?.length ?? 0) > 0,
-    [designDecisionsState.data],
   );
 
   useEffect(() => {
@@ -294,10 +284,8 @@ export default function HarnessConsolePage() {
     const map = new Map<SectionId, SectionStatus | null>();
     map.set("spec-sources", specSourcesState.data ? { label: `${specSourcesState.data.sources?.length ?? 0} sources` } : null);
     map.set("agent-instructions", instructionsState.data ? { label: instructionsState.data.fileName, tone: instructionsState.data.fallbackUsed ? "warning" : "success" } : null);
-    map.set("design-decisions", designDecisionsState.data ? { label: `${designDecisionsState.data.sources?.length ?? 0} docs` } : null);
     return map;
   }, [
-    designDecisionsState.data,
     instructionsState.data,
     specSourcesState.data,
   ]);
@@ -307,7 +295,6 @@ export default function HarnessConsolePage() {
     { id: "spec", label: t.nav.spec, shortLabel: t.nav.spec, code: "IB", group: "intent" },
     { id: "spec-sources", label: t.settings.harness.specSources, shortLabel: "Specs", code: "SP", group: "intent" },
     { id: "agent-instructions", label: t.settings.harness.agentInstructions, shortLabel: "Instructions", code: "AI", group: "intent" },
-    { id: "design-decisions", label: t.settings.harness.designDecisions, shortLabel: "ADR", code: "DD", group: "intent" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -337,8 +324,6 @@ export default function HarnessConsolePage() {
     switch (selectedGovernanceNodeId) {
       case "thinking":
         return <HarnessSpecSourcesPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={specSourcesState.data} loading={specSourcesState.loading} error={specSourcesState.error} variant="compact" />;
-      case "coding":
-        return <HarnessDesignDecisionPanel {...props} data={designDecisionsState.data} loading={designDecisionsState.loading} error={designDecisionsState.error} variant="compact" />;
       case "build":
         return <HarnessAgentInstructionsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...props} data={instructionsState.data} loading={instructionsState.loading} error={instructionsState.error} onAuditRerun={reloadInstructions} variant="compact" />;
       case "lint":
@@ -352,9 +337,6 @@ export default function HarnessConsolePage() {
         return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
     }
   }, [
-    designDecisionsState.data,
-    designDecisionsState.error,
-    designDecisionsState.loading,
     instructionsState.data,
     instructionsState.error,
     instructionsState.loading,
@@ -400,7 +382,6 @@ export default function HarnessConsolePage() {
             selectedNodeId={selectedGovernanceNodeId}
             onSelectedNodeChange={handleGovernanceNodeClick}
             contextPanel={null}
-            designDecisionNodeEnabled={hasArchitectureOrAdrSignal}
           />
         ) : (
           <HarnessGovernanceLoopGraph
@@ -409,7 +390,6 @@ export default function HarnessConsolePage() {
             unsupportedMessage={unsupportedRepoMessage}
             instructionsData={instructionsState.data}
             instructionsError={instructionsState.error}
-            designDecisionNodeEnabled={hasArchitectureOrAdrSignal}
             selectedNodeId={selectedGovernanceNodeId}
             onSelectedNodeChange={handleGovernanceNodeClick}
             contextPanel={null}
@@ -521,8 +501,6 @@ export default function HarnessConsolePage() {
         return <HarnessSpecSourcesPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={specSourcesState.data} loading={specSourcesState.loading} error={specSourcesState.error} hideHeader />;
       case "agent-instructions":
         return <HarnessAgentInstructionsPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={instructionsState.data} loading={instructionsState.loading} error={instructionsState.error} onAuditRerun={reloadInstructions} hideHeader />;
-      case "design-decisions":
-        return <HarnessDesignDecisionPanel {...sharedProps} data={designDecisionsState.data} loading={designDecisionsState.loading} error={designDecisionsState.error} hideHeader />;
       default:
         return null;
     }

@@ -3,22 +3,6 @@ import { enTail } from "./en-tail";
 
 export const enExtended: ExtendedTranslationDictionarySections = {
   harness: {
-    designDecision: {
-      loadingAdrs: "Loading architecture contract and ADRs\u2026",
-      title: "Design Decisions",
-      noDecisionsAvailable: "No architecture contract or ADR decisions are currently available for this repository.",
-      canonicalDocs: "Canonical docs",
-      decisionRecords: "Decision records",
-      showingCompact: "Showing {visible} of {total} architecture decision sources in compact mode.",
-      statusCanonical: "Canonical",
-      statusAccepted: "Accepted",
-      statusSuperseded: "Superseded",
-      statusDeprecated: "Deprecated",
-      statusUnknown: "Unknown",
-      confidenceHigh: "high",
-      confidenceMedium: "medium",
-      confidenceLow: "low",
-    },
     specSources: {
       title: "Spec Sources",
       scanningSources: "Scanning for spec sources...",
@@ -113,7 +97,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
           phase: "Phase",
         },
         nodeNotes: {
-          codingUnavailable: "No ADR / design decision source connected (docs/ARCHITECTURE.md or docs/adr)",
           commitUnavailable: "No trunk merge / integration signal connected; no context panel available.",
           stagingUnavailable: "No staging / pre-release signal connected; no verification panel available.",
           productionUnavailable: "No production runtime / live traffic signal connected; no runtime context available.",
@@ -134,14 +117,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
             evidenceModelTitle: "Evidence model",
             evidenceModelItems: ["artifacts-present", "installed-only", "archived", "legacy"],
           },
-          coding: {
-            designDecisionTitle: "Design decision evidence",
-            designDecisionItem: "ADR / architecture decision files",
-            evidenceLocationsTitle: "Evidence locations",
-            evidenceLocationsItems: ["docs/ARCHITECTURE.md", "docs/adr/*.md"],
-            relatedSurface: "Related surface",
-            relatedItems: ["Spec Sources panel", "Build / coding pipeline"],
-          },
           default: {
             highlightedNodesClickable: "Highlighted nodes are clickable. Unavailable nodes explain missing signals directly.",
             selectNodePreview: "Select a node (coding, local verification, change gate, review, delivery, release) to preview the matching context panel.",
@@ -151,7 +126,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
         },
         nodeLabels: {
           thinking: "Requirements",
-          coding: "Design decisions",
           build: "Implementation",
           test: "Local verification",
           precommit: "Change gates",
@@ -165,7 +139,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
         },
         clues: {
           thinkingNote: "Spec / requirements boundary",
-          codingNote: "ADR / design trade-offs",
           buildNote: "Implementation / constraint execution",
           buildNotePrefix: "Constrained by",
           buildNoteSuffix: "constraint",
@@ -180,7 +153,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
           metricsNote: "Monitoring / feedback loop",
         },
         edgeLabels: {
-          clarify: "Clarify",
           implement: "Implement",
           validate: "Validate",
           sendForReview: "Review",

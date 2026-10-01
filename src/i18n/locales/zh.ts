@@ -272,7 +272,6 @@ const zh: TranslationDictionary = {
       governanceLoop: "治理闭环",
       specSources: "规范来源",
       agentInstructions: "Agent 指令",
-      designDecisions: "设计决策",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

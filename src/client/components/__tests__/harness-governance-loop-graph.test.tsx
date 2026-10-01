@@ -43,7 +43,7 @@ vi.mock("@xyflow/react", () => ({
 import { HarnessGovernanceLoopGraph } from "../harness-governance-loop-graph";
 
 describe("HarnessGovernanceLoopGraph", () => {
-  it("shows unavailable reasons for non-interactive stages instead of plain disabled placeholders", () => {
+  it("renders the governance flow without a coding design-decision node", () => {
     render(
       <HarnessGovernanceLoopGraph
         repoPath="/Users/phodal/ai/routa-js"
@@ -52,15 +52,13 @@ describe("HarnessGovernanceLoopGraph", () => {
       />,
     );
 
-    expect(screen.getByText("No ADR / design decision source connected (docs/ARCHITECTURE.md or docs/adr)")).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /Internal loop Design decisions/i })).toBeNull();
+    expect(screen.queryByText("No ADR / design decision source connected (docs/ARCHITECTURE.md or docs/adr)")).toBeNull();
     expect(screen.getByText("No release / publish workflow detected in this repository.")).not.toBeNull();
-
-    const designDecisionNode = screen.getByRole("button", {
-      name: /Internal loop Design decisions, ADR \/ design trade-offs/i,
-    });
-    expect(designDecisionNode.getAttribute("aria-disabled")).toBe("true");
-    expect(designDecisionNode.getAttribute("aria-describedby")).toBe("governance-unavailable-reason-coding");
     expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+
+    expect(screen.getByRole("button", { name: /Internal loop Implementation/i })).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Internal loop Requirements/i })).not.toBeNull();
   });
 
   it("keeps available stages selectable through the governance flow", () => {
@@ -104,6 +102,27 @@ describe("HarnessGovernanceLoopGraph", () => {
     expect(onSelectedNodeChange).toHaveBeenCalledTimes(0);
 
     fireEvent.keyDown(testNode, { key: "ArrowLeft" });
+    expect(onSelectedNodeChange).toHaveBeenCalledWith("build");
+  });
+
+  it("navigates directly from Requirements to Implementation with ArrowRight", () => {
+    const onSelectedNodeChange = vi.fn();
+
+    render(
+      <HarnessGovernanceLoopGraph
+        repoPath="/Users/phodal/ai/routa-js"
+        planError={null}
+        instructionsData={null}
+        selectedNodeId="thinking"
+        onSelectedNodeChange={onSelectedNodeChange}
+      />,
+    );
+
+    const thinkingNode = screen.getByRole("button", {
+      name: /Internal loop Requirements/i,
+    });
+
+    fireEvent.keyDown(thinkingNode, { key: "ArrowRight" });
     expect(onSelectedNodeChange).toHaveBeenCalledWith("build");
   });
 });

@@ -33,25 +33,6 @@ const mockHarnessSettingsData = {
       dimensions: [],
     },
   },
-  designDecisionsState: {
-    loading: false,
-    error: null,
-    data: {
-      generatedAt: "2026-03-30T00:00:00.000Z",
-      repoRoot: "/Users/phodal/ai/routa-js",
-      sources: [
-        {
-          kind: "canonical-doc",
-          label: "Architecture",
-          rootPath: "docs",
-          confidence: "high",
-          status: "documents-present",
-          artifacts: [],
-        },
-      ],
-      warnings: [],
-    },
-  },
   instructionsState: {
     loading: false,
     error: null,
@@ -154,12 +135,6 @@ vi.mock("@/client/components/harness-execution-plan-flow", () => ({
 vi.mock("@/client/components/harness-agent-instructions-panel", () => ({
   HarnessAgentInstructionsPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
     <div data-testid={`instruction-panel-${variant}`}>Instruction file</div>
-  ),
-}));
-
-vi.mock("@/client/components/harness-design-decision-panel", () => ({
-  HarnessDesignDecisionPanel: ({ variant = "full" }: { variant?: "full" | "compact" }) => (
-    <div data-testid={`design-decision-panel-${variant}`}>Design decisions</div>
   ),
 }));
 
@@ -379,39 +354,14 @@ describe("HarnessSettingsPage", () => {
     expect(within(bottomPanel).getByTestId("spec-sources-compact")).not.toBeNull();
   });
 
-  it("does not crash when design decision data is missing sources during spec sources render", () => {
-    currentSearchParams = new URLSearchParams("section=spec-sources");
-    mockHarnessSettingsData.designDecisionsState = {
-      loading: false,
-      error: null,
-      data: {
-        generatedAt: "2026-03-30T00:00:00.000Z",
-        repoRoot: "/Users/phodal/ai/routa-js",
-        warnings: [],
-      } as never,
-    };
-    mockHarnessSettingsData.specSourcesState = {
-      loading: false,
-      error: null,
-      data: createSpecSourcesData({
-        sources: [
-          {
-            kind: "framework",
-            system: "bmad",
-            rootPath: "docs",
-            confidence: "low",
-            status: "legacy",
-            evidence: ["docs/prd.md"],
-            children: [{ type: "prd", path: "docs/prd.md" }],
-          },
-        ],
-      }),
-    };
+  it("falls back to the overview section for removed design-decisions urls", () => {
+    currentSearchParams = new URLSearchParams("section=design-decisions");
 
     render(<HarnessSettingsPage />);
 
-    expect(screen.getByTestId("spec-sources-full")).not.toBeNull();
-    expect(screen.getByRole("button", { name: /Spec Sources/i })).not.toBeNull();
+    expect(screen.getByTestId("lifecycle-view")).not.toBeNull();
+    expect(screen.queryByTestId("design-decision-panel-full")).toBeNull();
+    expect(screen.queryByTestId("design-decision-panel-compact")).toBeNull();
   });
 
   it("resizes the explorer pane via the drag handle", () => {

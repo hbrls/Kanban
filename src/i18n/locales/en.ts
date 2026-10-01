@@ -276,7 +276,6 @@ const en: TranslationDictionary = {
       governanceLoop: "Governance Loop",
       specSources: "Spec Sources",
       agentInstructions: "Agent Instructions",
-      designDecisions: "Design Decisions",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

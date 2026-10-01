@@ -20,7 +20,6 @@ type HarnessLifecycleViewProps = {
   selectedNodeId?: string | null;
   onSelectedNodeChange?: (nodeId: string) => void;
   contextPanel?: ReactNode;
-  designDecisionNodeEnabled?: boolean;
   dimensionCount?: number;
   metricCount?: number;
   hardGateCount?: number;
@@ -30,21 +29,19 @@ type HarnessLifecycleViewProps = {
 // Define node areas based on the SVG layout (approximate coordinates)
 const LIFECYCLE_NODES: LifecycleNodeData[] = [
   { nodeId: "thinking", title: "需求定义", x: 28, y: 62, width: 170, height: 216, connected: true },
-  { nodeId: "coding", title: "设计决策", x: 212, y: 62, width: 170, height: 216, connected: true },
-  { nodeId: "build", title: "编码实现", x: 396, y: 62, width: 170, height: 216, connected: true },
-  { nodeId: "test", title: "本地验证", x: 580, y: 62, width: 170, height: 216, connected: true },
-  { nodeId: "commit", title: "主干集成", x: 764, y: 62, width: 170, height: 216, partiallyConnected: true },
-  { nodeId: "review", title: "代码评审", x: 948, y: 62, width: 170, height: 216, connected: true },
-  { nodeId: "precommit", title: "变更门禁", x: 1132, y: 62, width: 170, height: 216, connected: true },
-  { nodeId: "release", title: "制品发布", x: 1316, y: 62, width: 170, height: 216, connected: true },
-  { nodeId: "staging", title: "预生产验证", x: 1500, y: 62, width: 170, height: 216, partiallyConnected: true },
-  { nodeId: "production", title: "生产运行", x: 1684, y: 62, width: 170, height: 216, partiallyConnected: true },
-  { nodeId: "observability", title: "监控演进", x: 1868, y: 62, width: 170, height: 216, connected: false },
+  { nodeId: "build", title: "编码实现", x: 212, y: 62, width: 170, height: 216, connected: true },
+  { nodeId: "test", title: "本地验证", x: 396, y: 62, width: 170, height: 216, connected: true },
+  { nodeId: "commit", title: "主干集成", x: 580, y: 62, width: 170, height: 216, partiallyConnected: true },
+  { nodeId: "review", title: "代码评审", x: 764, y: 62, width: 170, height: 216, connected: true },
+  { nodeId: "precommit", title: "变更门禁", x: 948, y: 62, width: 170, height: 216, connected: true },
+  { nodeId: "release", title: "制品发布", x: 1132, y: 62, width: 170, height: 216, connected: true },
+  { nodeId: "staging", title: "预生产验证", x: 1316, y: 62, width: 170, height: 216, partiallyConnected: true },
+  { nodeId: "production", title: "生产运行", x: 1500, y: 62, width: 170, height: 216, partiallyConnected: true },
+  { nodeId: "observability", title: "监控演进", x: 1684, y: 62, width: 170, height: 216, connected: false },
 ];
 
 const SELECTABLE_NODE_IDS = new Set([
   "thinking",
-  "coding",
   "build",
   "test",
   "precommit",
@@ -56,7 +53,6 @@ export function HarnessLifecycleView({
   selectedNodeId,
   onSelectedNodeChange,
   contextPanel,
-  designDecisionNodeEnabled = true,
 }: HarnessLifecycleViewProps) {
   const activeSelectedNodeId = selectedNodeId ?? null;
 
@@ -68,13 +64,8 @@ export function HarnessLifecycleView({
   };
 
   const selectableNodes = useMemo(() => {
-    return LIFECYCLE_NODES.filter((node) => {
-      if (node.nodeId === "coding" && !designDecisionNodeEnabled) {
-        return false;
-      }
-      return SELECTABLE_NODE_IDS.has(node.nodeId);
-    });
-  }, [designDecisionNodeEnabled]);
+    return LIFECYCLE_NODES.filter((node) => SELECTABLE_NODE_IDS.has(node.nodeId));
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -85,7 +76,7 @@ export function HarnessLifecycleView({
             <Image
               src="/harness-lifecycle-view.svg"
               alt="Harness Lifecycle View"
-              width={2048}
+              width={1864}
               height={320}
               className="w-full h-auto"
               priority
@@ -93,7 +84,7 @@ export function HarnessLifecycleView({
 
             {/* Overlay interactive hotspots */}
             <svg
-              viewBox="0 0 2048 320"
+              viewBox="0 0 1864 320"
               className="absolute inset-0 w-full h-full pointer-events-none"
             >
               {selectableNodes.map((node) => (

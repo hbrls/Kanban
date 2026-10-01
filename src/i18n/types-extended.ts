@@ -2,22 +2,6 @@ import type { TailTranslationDictionarySections } from "./types-tail";
 
 export interface ExtendedTranslationDictionarySections extends TailTranslationDictionarySections {
   harness: {
-    designDecision: {
-      loadingAdrs: string;
-      title: string;
-      noDecisionsAvailable: string;
-      canonicalDocs: string;
-      decisionRecords: string;
-      showingCompact: string;
-      statusCanonical: string;
-      statusAccepted: string;
-      statusSuperseded: string;
-      statusDeprecated: string;
-      statusUnknown: string;
-      confidenceHigh: string;
-      confidenceMedium: string;
-      confidenceLow: string;
-    };
     specSources: {
       title: string;
       scanningSources: string;
@@ -112,7 +96,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
           phase: string;
         };
         nodeNotes: {
-          codingUnavailable: string;
           commitUnavailable: string;
           stagingUnavailable: string;
           productionUnavailable: string;
@@ -133,14 +116,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
             evidenceModelTitle: string;
             evidenceModelItems: string[];
           };
-          coding: {
-            designDecisionTitle: string;
-            designDecisionItem: string;
-            evidenceLocationsTitle: string;
-            evidenceLocationsItems: string[];
-            relatedSurface: string;
-            relatedItems: string[];
-          };
           default: {
             highlightedNodesClickable: string;
             selectNodePreview: string;
@@ -150,7 +125,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
         };
         nodeLabels: {
           thinking: string;
-          coding: string;
           build: string;
           test: string;
           precommit: string;
@@ -164,7 +138,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
         };
         clues: {
           thinkingNote: string;
-          codingNote: string;
           buildNote: string;
           buildNotePrefix: string;
           buildNoteSuffix: string;
@@ -179,7 +152,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
           metricsNote: string;
         };
         edgeLabels: {
-          clarify: string;
           implement: string;
           validate: string;
           sendForReview: string;
