@@ -190,7 +190,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     advancedGroupTools: string;
     advancedGroupOther: string;
     records: string;
-    spec: string;
   };
 
   canvas: {
@@ -674,45 +673,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
   };
 
   // Agents
-  specBoard: {
-    status: string;
-    kind: string;
-    severity: string;
-    area: string;
-    date: string;
-    reportedBy: string;
-    github: string;
-    githubLinked: string;
-    connectedIssues: string;
-    description: string;
-    file: string;
-    issueLinks: string;
-    linkedFrom: string;
-    noLinkedIssues: string;
-    noBacklinks: string;
-    selectIssue: string;
-    selectIssueBody: string;
-    noIssues: string;
-    failedToLoad: string;
-    githubStateUnknown: string;
-    families: string;
-    members: string;
-    relations: string;
-    sameFamily: string;
-    featureFootprint: string;
-    pages: string;
-    apis: string;
-    noSurfaceHits: string;
-    surfaceMapUnavailable: string;
-    body: string;
-    expandBranch: string;
-    collapseBranch: string;
-    statusOpen: string;
-    statusInvestigating: string;
-    statusResolved: string;
-    statusWontfix: string;
-  };
-
   agents: {
     title: string;
     agentName: string;

@@ -17,7 +17,6 @@ path = "src/lib.rs"
 routa-core = { version = "0.19.0", path = "../routa-core", features = ["axum"] }
 
 # Feature trace & session analysis
-feature-trace = { path = "../feature-trace" }
 trace-parser = { path = "../trace-parser" }
 
 # Web framework

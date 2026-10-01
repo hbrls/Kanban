@@ -13,30 +13,24 @@ import {
 import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governance-loop-graph";
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
 import { getHarnessUnsupportedRepoMessage } from "@/client/components/harness-support-state";
-import { SpecBoardPanel } from "@/app/workspace/[workspaceId]/spec/spec-page-client";
 import { useHarnessSettingsData } from "@/client/hooks/use-harness-settings-data";
 import { useCodebases, useWorkspaces } from "@/client/hooks/use-workspaces";
 import { loadRepoSelection, saveRepoSelection } from "@/client/utils/repo-selection-storage";
 import { normalizeWorkspaceQueryId, resolveWorkspaceSelection } from "@/client/utils/workspace-id";
 
 type SectionId =
-  | "overview"
-  | "spec";
+  | "overview";
 
 interface SectionDef {
   id: SectionId;
   label: string;
   shortLabel: string;
   code: string;
-  group?: "intent" | "control" | "flow" | "signal";
 }
 
 const DEFAULT_EXPLORER_WIDTH = 240;
 const MIN_EXPLORER_WIDTH = 220;
 const MAX_EXPLORER_WIDTH = 460;
-const DEFAULT_BOTTOM_PANEL_HEIGHT = 280;
-const MIN_BOTTOM_PANEL_HEIGHT = 180;
-const MAX_BOTTOM_PANEL_HEIGHT = 520;
 const HARNESS_SECTION_QUERY_KEY = "section";
 const DEFAULT_SECTION: SectionId = "overview";
 
@@ -45,13 +39,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function resolveSectionId(value: string | null | undefined): SectionId {
-  switch (value) {
-    case "spec":
-      return value;
-    case "overview":
-    default:
-      return DEFAULT_SECTION;
-  }
+  return value === "overview" ? "overview" : DEFAULT_SECTION;
 }
 
 export default function HarnessConsolePage() {
@@ -159,18 +147,14 @@ export default function HarnessConsolePage() {
     saveRepoSelection("harness", workspaceId, selectedRepoOverrideState.selection);
   }, [selectedRepoOverrideState, workspaceId]);
 
-  const [openTabs, setOpenTabs] = useState<SectionId[]>(
-    sectionFromUrl === DEFAULT_SECTION ? [DEFAULT_SECTION] : [DEFAULT_SECTION, sectionFromUrl],
-  );
+  const [openTabs, setOpenTabs] = useState<SectionId[]>([DEFAULT_SECTION]);
   const [governanceView, setGovernanceView] = useState<"lifecycle" | "loop">("lifecycle");
   const [selectedGovernanceNodeId, setSelectedGovernanceNodeId] = useState<string | null>(null);
   const [bottomPanelTab, setBottomPanelTab] = useState<"context" | "plan">("context");
   const [showBottomPanel, setShowBottomPanel] = useState(false);
   const [explorerWidth, setExplorerWidth] = useState(DEFAULT_EXPLORER_WIDTH);
-  const [bottomPanelHeight, setBottomPanelHeight] = useState(DEFAULT_BOTTOM_PANEL_HEIGHT);
 
   const activeSection = sectionFromUrl;
-  const showSectionTabs = activeSection !== "spec";
   const visibleTabs = useMemo(() => (
     openTabs.includes(activeSection) ? openTabs : [...openTabs, activeSection]
   ), [activeSection, openTabs]);
@@ -185,16 +169,6 @@ export default function HarnessConsolePage() {
   function openSection(id: SectionId) {
     setOpenTabs((current) => (current.includes(id) ? current : [...current, id]));
     replaceSectionInUrl(id);
-  }
-
-  function closeTab(id: SectionId) {
-    const remaining: SectionId[] = visibleTabs.filter((tabId): tabId is SectionId => tabId !== id);
-    const nextTabs: SectionId[] = remaining.length > 0 ? remaining : ["overview"];
-    setOpenTabs(nextTabs);
-    if (activeSection === id) {
-      const nextSection = nextTabs[nextTabs.length - 1] ?? DEFAULT_SECTION;
-      replaceSectionInUrl(nextSection);
-    }
   }
 
   function openBottomPanel(tab: "context" | "plan") {
@@ -226,47 +200,9 @@ export default function HarnessConsolePage() {
     document.addEventListener("mouseup", handleMouseUp);
   }
 
-  function handleBottomPanelResizeStart(event: React.MouseEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const startY = event.clientY;
-    const startHeight = bottomPanelHeight;
-    const resizeInlinePanel = activeSection === "overview";
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = resizeInlinePanel
-        ? moveEvent.clientY - startY
-        : startY - moveEvent.clientY;
-      setBottomPanelHeight(clamp(startHeight + deltaY, MIN_BOTTOM_PANEL_HEIGHT, MAX_BOTTOM_PANEL_HEIGHT));
-    };
-
-    const handleMouseUp = () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  }
-
   const sections = useMemo((): SectionDef[] => [
     { id: "overview", label: t.settings.harness.overview, shortLabel: "Overview", code: "OV" },
-    { id: "spec", label: t.nav.spec, shortLabel: t.nav.spec, code: "IB", group: "intent" },
   ], [t]);
-
-  const groupedSections = useMemo(() => {
-    const groupOrder = ["intent", "control", "flow", "signal"] as const;
-    const groupLabels = {
-      intent: t.settings.harness.sectionGroups.intent,
-      control: t.settings.harness.sectionGroups.control,
-      flow: t.settings.harness.sectionGroups.flow,
-      signal: t.settings.harness.sectionGroups.signal,
-    } as const;
-    return groupOrder.map((groupId) => ({
-      id: groupId,
-      label: groupLabels[groupId],
-      sections: sections.filter((section) => section.group === groupId),
-    })).filter((group) => group.sections.length > 0);
-  }, [sections, t]);
 
   const governanceContextPanel = useMemo(() => {
     if (selectedGovernanceNodeId === null) {
@@ -330,7 +266,7 @@ export default function HarnessConsolePage() {
             contextPanel={null}
           />
         )}
-        {activeSection === "overview" ? renderGovernanceBottomPanel() : null}
+        {renderGovernanceBottomPanel()}
       </div>
     );
   }
@@ -340,27 +276,11 @@ export default function HarnessConsolePage() {
       return null;
     }
 
-    const inlineOverviewPanel = activeSection === "overview";
-    const panelBorderClass = inlineOverviewPanel
-      ? "border border-desktop-border"
-      : "border-t border-desktop-border";
-    const panelStyle = inlineOverviewPanel ? undefined : { height: `${bottomPanelHeight}px` };
-
     return (
       <div className="flex flex-col">
-        {inlineOverviewPanel ? null : (
-          <div
-            role="separator"
-            aria-label="Resize bottom panel"
-            data-testid="harness-console-bottom-resizer"
-            className="h-1 shrink-0 cursor-row-resize bg-desktop-border/60 transition-colors hover:bg-desktop-accent"
-            onMouseDown={handleBottomPanelResizeStart}
-          />
-        )}
         <div
-          className={`flex shrink-0 flex-col bg-desktop-bg-secondary ${panelBorderClass}`}
+          className="flex shrink-0 flex-col border border-desktop-border bg-desktop-bg-secondary"
           data-testid="harness-console-bottom-panel"
-          style={panelStyle}
         >
           <div className="flex h-9 items-center justify-between border-b border-desktop-border px-3">
             <div className="flex items-center gap-1">
@@ -392,7 +312,7 @@ export default function HarnessConsolePage() {
             </div>
           </div>
 
-          <div className={inlineOverviewPanel ? "p-3" : "min-h-0 flex-1 overflow-y-auto p-3 desktop-scrollbar-thin"}>
+          <div className="p-3">
             {bottomPanelTab === "context" ? governanceContextPanel : null}
             {bottomPanelTab === "plan" ? (
               <HarnessExecutionPlanFlow
@@ -416,8 +336,6 @@ export default function HarnessConsolePage() {
     switch (sectionId) {
       case "overview":
         return renderOverview();
-      case "spec":
-        return <SpecBoardPanel workspaceId={workspaceId} />;
       default:
         return null;
     }
@@ -441,37 +359,35 @@ export default function HarnessConsolePage() {
     );
   }
 
-  const titleBarRight = activeSection === "spec"
-    ? null
-    : (
-      <div className="flex items-center gap-2">
-        <RepoPicker
-          value={activeRepoSelection}
-          onChange={(selection) => {
-            setSelectedRepoOverrideState({ workspaceId, selection });
-            if (!selection) {
-              setSelectedCodebaseId("");
-              return;
-            }
-            const matchedCodebase = codebases.find((codebase) => (
-              codebase.repoPath === selection.path
-              && (selection.branch ? (codebase.branch ?? "") === selection.branch : true)
-            )) ?? codebases.find((codebase) => codebase.repoPath === selection.path)
-              ?? codebases.find((codebase) => (
-                (codebase.label ?? codebase.repoPath.split("/").pop() ?? codebase.repoPath) === selection.name
-              ));
-            setSelectedCodebaseId(matchedCodebase?.id ?? "");
-          }}
-          pathDisplay="hidden"
-          additionalRepos={codebases.map((codebase) => ({
-            name: codebase.label ?? codebase.repoPath.split("/").pop() ?? codebase.repoPath,
-            path: codebase.repoPath,
-            branch: codebase.branch ?? "",
-          }))}
-        />
-        <button type="button" className="desktop-btn desktop-btn-secondary" onClick={() => openBottomPanel("plan")}>Plan</button>
-      </div>
-    );
+  const titleBarRight = (
+    <div className="flex items-center gap-2">
+      <RepoPicker
+        value={activeRepoSelection}
+        onChange={(selection) => {
+          setSelectedRepoOverrideState({ workspaceId, selection });
+          if (!selection) {
+            setSelectedCodebaseId("");
+            return;
+          }
+          const matchedCodebase = codebases.find((codebase) => (
+            codebase.repoPath === selection.path
+            && (selection.branch ? (codebase.branch ?? "") === selection.branch : true)
+          )) ?? codebases.find((codebase) => codebase.repoPath === selection.path)
+            ?? codebases.find((codebase) => (
+              (codebase.label ?? codebase.repoPath.split("/").pop() ?? codebase.repoPath) === selection.name
+            ));
+          setSelectedCodebaseId(matchedCodebase?.id ?? "");
+        }}
+        pathDisplay="hidden"
+        additionalRepos={codebases.map((codebase) => ({
+          name: codebase.label ?? codebase.repoPath.split("/").pop() ?? codebase.repoPath,
+          path: codebase.repoPath,
+          branch: codebase.branch ?? "",
+        }))}
+      />
+      <button type="button" className="desktop-btn desktop-btn-secondary" onClick={() => openBottomPanel("plan")}>Plan</button>
+    </div>
+  );
 
   return (
     <DesktopAppShell
@@ -511,16 +427,8 @@ export default function HarnessConsolePage() {
           <div className="flex-1 overflow-y-auto px-2 py-3 desktop-scrollbar-thin">
             <div className="space-y-3">
               <div className="space-y-1">
-                {renderExplorerSectionButton(sections[0] as SectionDef)}
+                {sections.map((section) => renderExplorerSectionButton(section))}
               </div>
-              {groupedSections.map((group) => (
-                <div key={group.id} className="space-y-1">
-                  <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-desktop-text-secondary">
-                    {group.label}
-                  </div>
-                  {group.sections.map((section) => renderExplorerSectionButton(section))}
-                </div>
-              ))}
             </div>
           </div>
         </aside>
@@ -534,48 +442,32 @@ export default function HarnessConsolePage() {
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {showSectionTabs ? (
-            <div className="flex h-9 shrink-0 items-center justify-between border-b border-desktop-border bg-desktop-bg-secondary px-2">
-              <div className="flex h-full items-center overflow-x-auto desktop-scrollbar-thin" data-testid="harness-console-tabs">
-                {visibleTabs.map((tabId) => {
-                  const section = sections.find((item) => item.id === tabId);
-                  if (!section) {
-                    return null;
-                  }
-                  const isActive = activeSection === tabId;
-                  return (
-                    <div key={tabId} className={`group flex h-full shrink-0 items-center border-r border-desktop-border ${isActive ? "bg-desktop-bg-primary" : "bg-desktop-bg-secondary"}`}>
-                      <button
-                        type="button"
-                        onClick={() => openSection(tabId)}
-                        className={`h-full border-b-2 px-3 text-[11px] font-medium ${isActive ? "border-desktop-accent text-desktop-text-primary" : "border-transparent text-desktop-text-secondary hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"}`}
-                      >
-                        {section.shortLabel}
-                      </button>
-                      {tabId !== "overview" ? (
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            closeTab(tabId);
-                          }}
-                          className="mr-1 rounded px-1 py-0.5 text-[10px] text-desktop-text-secondary opacity-0 transition-opacity hover:bg-desktop-bg-active hover:text-desktop-text-primary group-hover:opacity-100"
-                        >
-                          x
-                        </button>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+          <div className="flex h-9 shrink-0 items-center justify-between border-b border-desktop-border bg-desktop-bg-secondary px-2">
+            <div className="flex h-full items-center overflow-x-auto desktop-scrollbar-thin" data-testid="harness-console-tabs">
+              {visibleTabs.map((tabId) => {
+                const section = sections.find((item) => item.id === tabId);
+                if (!section) {
+                  return null;
+                }
+                const isActive = activeSection === tabId;
+                return (
+                  <div key={tabId} className={`group flex h-full shrink-0 items-center border-r border-desktop-border ${isActive ? "bg-desktop-bg-primary" : "bg-desktop-bg-secondary"}`}>
+                    <button
+                      type="button"
+                      onClick={() => openSection(tabId)}
+                      className={`h-full border-b-2 px-3 text-[11px] font-medium ${isActive ? "border-desktop-accent text-desktop-text-primary" : "border-transparent text-desktop-text-secondary hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"}`}
+                    >
+                      {section.shortLabel}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          ) : null}
-
-          <div className={`min-h-0 flex-1 overflow-y-auto bg-desktop-bg-primary ${activeSection === "spec" ? "p-3" : "p-4"} desktop-scrollbar`}>
-            {renderSectionContent(activeSection)}
           </div>
 
-          {activeSection !== "overview" ? renderGovernanceBottomPanel() : null}
+          <div className="min-h-0 flex-1 overflow-y-auto bg-desktop-bg-primary p-4 desktop-scrollbar">
+            {renderSectionContent(activeSection)}
+          </div>
 
           <div className="flex h-6 shrink-0 items-center bg-desktop-accent px-3 text-[10px] text-desktop-accent-text">
             <span>{activeWorkspaceTitle ?? "-"}</span>

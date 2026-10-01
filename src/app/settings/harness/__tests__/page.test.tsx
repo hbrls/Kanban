@@ -120,12 +120,6 @@ vi.mock("@/client/components/harness-lifecycle-view", () => ({
   ),
 }));
 
-vi.mock("@/app/workspace/[workspaceId]/spec/spec-page-client", () => ({
-  SpecBoardPanel: ({ workspaceId }: { workspaceId: string }) => (
-    <div data-testid="spec-board-panel" data-workspace-id={workspaceId}>Spec board panel</div>
-  ),
-}));
-
 vi.mock("@/client/components/harness-support-state", () => ({
   HarnessUnsupportedState: ({ className }: { className?: string }) => <div className={className} data-testid="unsupported-state" />,
   getHarnessUnsupportedRepoMessage: () => null,
@@ -194,7 +188,7 @@ describe("HarnessSettingsPage", () => {
     expect(screen.queryByText("metrics: 2")).toBeNull();
     expect(screen.queryByText("hard gates: 1")).toBeNull();
     expect(screen.getAllByText("Overview").length).toBeGreaterThan(0);
-    expect(screen.getByText("Intent")).not.toBeNull();
+    expect(screen.queryByText("Intent")).toBeNull();
     expect(screen.queryByText("Control")).toBeNull();
     expect(screen.queryByText("Hook Systems")).toBeNull();
   });
@@ -241,24 +235,16 @@ describe("HarnessSettingsPage", () => {
     expect(screen.queryByText("Instructions")).toBeNull();
   });
 
-  it("renders the spec board from the section query parameter", () => {
+  it("falls back to the overview section for removed spec board urls", () => {
     currentSearchParams = new URLSearchParams("workspaceId=default&section=spec");
 
     render(<HarnessSettingsPage />);
 
-    const panel = screen.getByTestId("spec-board-panel");
-    expect(panel).not.toBeNull();
-    expect(panel.getAttribute("data-workspace-id")).toBe("default");
-  });
-
-  it("opens the spec section and preserves workspace id in the url", () => {
-    currentSearchParams = new URLSearchParams("workspaceId=default");
-
-    render(<HarnessSettingsPage />);
-
-    fireEvent.click(screen.getByRole("button", { name: /^Spec$/i }));
-
-    expect(routerReplaceMock).toHaveBeenCalledWith("/settings/harness?workspaceId=default&section=spec");
+    expect(screen.getByTestId("lifecycle-view")).not.toBeNull();
+    expect(screen.queryByTestId("spec-board-panel")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Spec$/i })).toBeNull();
+    expect(screen.getByTestId("repo-picker")).not.toBeNull();
+    expect(screen.getByTestId("harness-console-tabs")).not.toBeNull();
   });
 
   it("persists an explicit repo override from the picker", () => {
