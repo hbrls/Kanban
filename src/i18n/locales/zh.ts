@@ -274,7 +274,6 @@ const zh: TranslationDictionary = {
       agentInstructions: "Agent 指令",
       designDecisions: "设计决策",
       hookSystems: "Hook 系统",
-      reviewTriggers: "评审触发器",
       entrixFitness: "Entrix Fitness",
       sectionGroups: {
         intent: "Intent",

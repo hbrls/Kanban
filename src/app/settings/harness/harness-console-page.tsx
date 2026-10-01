@@ -16,7 +16,6 @@ import { HarnessGovernanceLoopGraph } from "@/client/components/harness-governan
 import { HarnessLifecycleView } from "@/client/components/harness-lifecycle-view";
 import { HarnessHookRuntimePanel } from "@/client/components/harness-hook-runtime-panel";
 import { HarnessAgentHookPanel } from "@/client/components/harness-agent-hook-panel";
-import { HarnessReviewTriggersPanel } from "@/client/components/harness-review-triggers-panel";
 import { HarnessSpecSourcesPanel } from "@/client/components/harness-spec-sources-panel";
 import { getHarnessUnsupportedRepoMessage } from "@/client/components/harness-support-state";
 import { SpecBoardPanel } from "@/app/workspace/[workspaceId]/spec/spec-page-client";
@@ -31,8 +30,7 @@ type SectionId =
   | "spec-sources"
   | "agent-instructions"
   | "design-decisions"
-  | "hook-systems"
-  | "review-triggers";
+  | "hook-systems";
 
 interface SectionDef {
   id: SectionId;
@@ -53,7 +51,6 @@ const GOVERNANCE_NODE_SECTION_MAP: Partial<Record<string, SectionId>> = {
   thinking: "spec-sources",
   coding: "design-decisions",
   build: "agent-instructions",
-  review: "review-triggers",
 };
 
 const DEFAULT_EXPLORER_WIDTH = 240;
@@ -76,7 +73,6 @@ function resolveSectionId(value: string | null | undefined): SectionId {
     case "agent-instructions":
     case "design-decisions":
     case "hook-systems":
-    case "review-triggers":
       return value;
     case "overview":
     default:
@@ -310,12 +306,10 @@ export default function HarnessConsolePage() {
     map.set("agent-instructions", instructionsState.data ? { label: instructionsState.data.fileName, tone: instructionsState.data.fallbackUsed ? "warning" : "success" } : null);
     map.set("design-decisions", designDecisionsState.data ? { label: `${designDecisionsState.data.sources?.length ?? 0} docs` } : null);
     map.set("hook-systems", hookCount > 0 ? { label: `${hookCount} hooks` } : null);
-    map.set("review-triggers", hooksState.data?.reviewTriggerFile ? { label: `${hooksState.data.reviewTriggerFile.ruleCount} rules` } : null);
     return map;
   }, [
     designDecisionsState.data,
     hookCount,
-    hooksState.data,
     instructionsState.data,
     specSourcesState.data,
   ]);
@@ -327,7 +321,6 @@ export default function HarnessConsolePage() {
     { id: "agent-instructions", label: t.settings.harness.agentInstructions, shortLabel: "Instructions", code: "AI", group: "intent" },
     { id: "design-decisions", label: t.settings.harness.designDecisions, shortLabel: "ADR", code: "DD", group: "intent" },
     { id: "hook-systems", label: t.settings.harness.hookSystems, shortLabel: "Hooks", code: "HK", group: "control" },
-    { id: "review-triggers", label: t.settings.harness.reviewTriggers, shortLabel: "Review", code: "RV", group: "control" },
   ], [t]);
 
   const groupedSections = useMemo(() => {
@@ -368,8 +361,6 @@ export default function HarnessConsolePage() {
       case "commit":
       case "post-commit":
         return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
-      case "review":
-        return <HarnessReviewTriggersPanel {...props} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} variant="compact" />;
       default:
         return <div className="p-3 text-[11px] text-desktop-text-secondary">选择 Lifecycle 节点查看对应组件的上下文视图。</div>;
     }
@@ -377,9 +368,6 @@ export default function HarnessConsolePage() {
     designDecisionsState.data,
     designDecisionsState.error,
     designDecisionsState.loading,
-    hooksState.data,
-    hooksState.error,
-    hooksState.loading,
     instructionsState.data,
     instructionsState.error,
     instructionsState.loading,
@@ -557,8 +545,6 @@ export default function HarnessConsolePage() {
             <HarnessAgentHookPanel workspaceId={workspaceId} codebaseId={activeRepoCodebaseId} repoPath={activeRepoPath} {...sharedProps} data={agentHooksState.data} loading={agentHooksState.loading} error={agentHooksState.error} embedded />
           </div>
         );
-      case "review-triggers":
-        return <HarnessReviewTriggersPanel {...sharedProps} data={hooksState.data} loading={hooksState.loading} error={hooksState.error} hideHeader />;
       default:
         return null;
     }

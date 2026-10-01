@@ -279,7 +279,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
       agentInstructions: string;
       designDecisions: string;
       hookSystems: string;
-      reviewTriggers: string;
       entrixFitness: string;
       sectionGroups: {
         intent: string;

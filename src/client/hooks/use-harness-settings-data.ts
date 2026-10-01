@@ -25,48 +25,6 @@ export type HookRuntimeProfileSummary = {
   hooks: string[];
 };
 
-export type ReviewTriggerBoundarySummary = {
-  name: string;
-  paths: string[];
-};
-
-export type ReviewTriggerLayerSummary = {
-  confidenceThreshold?: number | null;
-  specialistId?: string | null;
-  provider?: string | null;
-  model?: string | null;
-  context?: string[];
-  contextCount?: number;
-};
-
-export type ReviewTriggerRuleSummary = {
-  name: string;
-  type: string;
-  severity: string;
-  action: string;
-  paths: string[];
-  evidencePaths: string[];
-  boundaries: ReviewTriggerBoundarySummary[];
-  directories: string[];
-  pathCount: number;
-  evidencePathCount: number;
-  boundaryCount: number;
-  directoryCount: number;
-  minBoundaries: number | null;
-  maxFiles: number | null;
-  maxAddedLines: number | null;
-  maxDeletedLines: number | null;
-  confidenceThreshold?: number | null;
-  fallbackAction?: string | null;
-  specialistId?: string | null;
-  provider?: string | null;
-  model?: string | null;
-  context?: string[];
-  contextCount?: number;
-  reviewLayers?: ReviewTriggerLayerSummary[];
-  reviewLayerCount?: number;
-};
-
 export type HookFileSummary = {
   name: string;
   relativePath: string;
@@ -89,8 +47,6 @@ export type HooksResponse = {
   reviewTriggerFile: {
     relativePath: string;
     source: string;
-    ruleCount: number;
-    rules: ReviewTriggerRuleSummary[];
   } | null;
   hookFiles: HookFileSummary[];
   profiles: HookRuntimeProfileSummary[];
@@ -235,12 +191,7 @@ function normalizeHooksResponse(payload: Partial<HooksResponse> | null | undefin
     repoRoot: payload?.repoRoot ?? "",
     hooksDir: payload?.hooksDir ?? "",
     configFile: payload?.configFile ?? null,
-    reviewTriggerFile: payload?.reviewTriggerFile
-      ? {
-        ...payload.reviewTriggerFile,
-        rules: safeArray(payload.reviewTriggerFile.rules),
-      }
-      : null,
+    reviewTriggerFile: payload?.reviewTriggerFile ?? null,
     hookFiles: safeArray(payload?.hookFiles),
     profiles: safeArray(payload?.profiles),
     warnings: safeArray(payload?.warnings),

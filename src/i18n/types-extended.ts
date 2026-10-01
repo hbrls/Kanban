@@ -171,49 +171,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
       hookSystems: string;
       workbenchTitle: string;
     };
-    reviewTriggers: {
-      title: string;
-      description: string;
-      hideDetails: string;
-      showDetails: string;
-      loadingPolicies: string;
-      noYamlFile: string;
-      yamlLoadedNoEntries: string;
-      risk: string;
-      confidence: string;
-      complexity: string;
-      routing: string;
-      noRules: string;
-      coreEnginePaths: string;
-      noHighRiskTriggers: string;
-      evidenceGap: string;
-      noEvidenceTriggers: string;
-      changeSize: string;
-      noBoundaryTriggers: string;
-      routeAvailable: string;
-      routeIncomplete: string;
-      rulesCount: string;
-      profilesCount: string;
-      compactHooks: string;
-      compactRouting: string;
-      compactWatchPaths: string;
-      compactEvidencePaths: string;
-      compactBoundaries: string;
-      compactThresholds: string;
-      compactDirectories: string;
-      detailFallbackMetrics: string;
-      detailTriggerCommand: string;
-      detailReviewActions: string;
-      detailPhases: string;
-      detailAction: string;
-      detailFallbackAction: string;
-      detailProvider: string;
-      detailModel: string;
-      detailSpecialist: string;
-      detailContext: string;
-      detailReviewLayers: string;
-      detailReviewLayer: string;
-    };
     governanceLoop: {
       graph: {
         nodeLayers: {

@@ -20,8 +20,6 @@ function createHooksResponse(): HooksResponse {
     reviewTriggerFile: {
       relativePath: "docs/fitness/review-triggers.yaml",
       source: "review_triggers: []",
-      ruleCount: 0,
-      rules: [],
     },
     hookFiles: [
       {

@@ -37,7 +37,6 @@ describe("useHarnessSettingsData", () => {
           reviewTriggerFile: {
             relativePath: "docs/fitness/review-triggers.yaml",
             source: "review_triggers: []",
-            ruleCount: 0,
           },
         });
       }
@@ -169,7 +168,7 @@ describe("useHarnessSettingsData", () => {
     });
     expect(result.current.hooksState.data?.hookFiles).toEqual([]);
     expect(result.current.hooksState.data?.profiles).toEqual([]);
-    expect(result.current.hooksState.data?.reviewTriggerFile?.rules).toEqual([]);
+    expect(result.current.hooksState.data?.reviewTriggerFile?.source).toBe("review_triggers: []");
     expect(result.current.agentHooksState.data?.hooks).toEqual([]);
     expect(result.current.specSourcesState.data?.sources[0]?.children).toEqual([]);
     expect(result.current.designDecisionsState.data?.sources[0]?.artifacts).toEqual([]);

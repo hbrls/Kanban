@@ -506,74 +506,9 @@ fn load_review_trigger_config_source(repo_root: &Path) -> Value {
     }
 
     let source = std::fs::read_to_string(&config_path).unwrap_or_default();
-    let parsed = serde_yaml::from_str::<serde_yaml::Value>(&source).unwrap_or_default();
-    let rules = parsed
-        .get("review_triggers")
-        .and_then(serde_yaml::Value::as_sequence)
-        .map(|rules| {
-            rules
-                .iter()
-                .filter_map(serde_yaml::Value::as_mapping)
-                .map(|rule| {
-                    let boundaries = rule
-                        .get(serde_yaml::Value::String("boundaries".to_string()))
-                        .and_then(serde_yaml::Value::as_mapping)
-                        .map(|mapping| {
-                            mapping
-                                .iter()
-                                .filter_map(|(name, paths)| {
-                                    let name = name.as_str()?.trim();
-                                    if name.is_empty() {
-                                        return None;
-                                    }
-                                    Some(json!({
-                                        "name": name,
-                                        "paths": normalize_yaml_string_list(Some(paths)),
-                                    }))
-                                })
-                                .collect::<Vec<_>>()
-                        })
-                        .unwrap_or_default();
-                    let paths =
-                        normalize_yaml_string_list(rule.get(serde_yaml::Value::String("paths".to_string())));
-                    let evidence_paths = normalize_yaml_string_list(
-                        rule.get(serde_yaml::Value::String("evidence_paths".to_string())),
-                    );
-                    let directories = normalize_yaml_string_list(
-                        rule.get(serde_yaml::Value::String("directories".to_string())),
-                    );
-                    let path_count = paths.len();
-                    let evidence_path_count = evidence_paths.len();
-                    let boundary_count = boundaries.len();
-                    let directory_count = directories.len();
-                    json!({
-                        "name": yaml_str(rule.get(serde_yaml::Value::String("name".to_string()))).unwrap_or("unknown"),
-                        "type": yaml_str(rule.get(serde_yaml::Value::String("type".to_string()))).unwrap_or("unknown"),
-                        "severity": yaml_str(rule.get(serde_yaml::Value::String("severity".to_string()))).unwrap_or("medium"),
-                        "action": yaml_str(rule.get(serde_yaml::Value::String("action".to_string()))).unwrap_or("require_human_review"),
-                        "paths": paths,
-                        "evidencePaths": evidence_paths,
-                        "boundaries": boundaries,
-                        "directories": directories,
-                        "pathCount": path_count,
-                        "evidencePathCount": evidence_path_count,
-                        "boundaryCount": boundary_count,
-                        "directoryCount": directory_count,
-                        "minBoundaries": yaml_i64(rule.get(serde_yaml::Value::String("min_boundaries".to_string()))),
-                        "maxFiles": yaml_i64(rule.get(serde_yaml::Value::String("max_files".to_string()))),
-                        "maxAddedLines": yaml_i64(rule.get(serde_yaml::Value::String("max_added_lines".to_string()))),
-                        "maxDeletedLines": yaml_i64(rule.get(serde_yaml::Value::String("max_deleted_lines".to_string()))),
-                    })
-                })
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-
     json!({
         "relativePath": "docs/fitness/review-triggers.yaml",
         "source": source,
-        "ruleCount": rules.len(),
-        "rules": rules,
     })
 }
 
