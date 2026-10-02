@@ -1,5 +1,0 @@
-src/**
-scripts/**
-tsconfig.json
-*.tsbuildinfo
-out/**/*.map
