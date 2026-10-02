@@ -29,7 +29,6 @@ const TRAY_WORKSPACE_KANBAN_ID: &str = "tray:workspace:kanban";
 const TRAY_WORKSPACE_TEAM_ID: &str = "tray:workspace:team";
 const TRAY_MESSAGES_ID: &str = "tray:messages";
 const TRAY_SETTINGS_AGENTS_ID: &str = "tray:settings:agents";
-const TRAY_SETTINGS_WEBHOOKS_ID: &str = "tray:settings:webhooks";
 const TRAY_QUIT_ID: &str = "tray:quit";
 
 #[cfg(target_os = "macos")]
@@ -94,8 +93,7 @@ impl GitHubRepo {
 /// Messages
 /// ──────────────────
 /// Settings
-///   ├─ Agent Settings…
-///   └─ Webhook Settings…
+///   └─ Agent Settings…
 /// GitHub Shortcuts      (optional)
 ///   └─ [owner/repo]
 ///      ├─ Pull Requests
@@ -150,15 +148,7 @@ pub fn build_tray_menu(app: &AppHandle, repos: &[GitHubRepo]) -> tauri::Result<M
         true,
         None::<&str>,
     )?;
-    let webhook_settings = MenuItem::with_id(
-        app,
-        TRAY_SETTINGS_WEBHOOKS_ID,
-        "Webhook Settings…",
-        true,
-        None::<&str>,
-    )?;
-    let settings_submenu =
-        Submenu::with_items(app, "Settings", true, &[&agent_settings, &webhook_settings])?;
+    let settings_submenu = Submenu::with_items(app, "Settings", true, &[&agent_settings])?;
     menu.append(&settings_submenu)?;
 
     // ── GitHub repo sub-menus (only when configured) ──
@@ -215,7 +205,7 @@ pub fn build_tray_menu(app: &AppHandle, repos: &[GitHubRepo]) -> tauri::Result<M
 
 /// Initialise the system tray icon.
 ///
-/// Call once during `app.setup()`.  Pass an empty slice when no webhook repos
+/// Call once during `app.setup()`.  Pass an empty slice when no repos
 /// are configured yet; call [`update_tray_repos`] later to populate the menu.
 pub fn setup_tray(app: &AppHandle, repos: &[GitHubRepo]) -> tauri::Result<()> {
     let menu = build_tray_menu(app, repos)?;
@@ -259,7 +249,7 @@ pub fn setup_tray(app: &AppHandle, repos: &[GitHubRepo]) -> tauri::Result<()> {
 /// Update the tray menu with a fresh list of GitHub repos.
 ///
 /// Rebuilds and replaces the menu on the existing tray icon so that changes
-/// to webhook configurations are reflected without restarting the app.
+/// to the configured repositories are reflected without restarting the app.
 ///
 /// # Errors
 /// Returns an error if the tray icon with `TRAY_ID` is not found.
@@ -316,7 +306,6 @@ fn absolute_route_for_menu_id(id: &str) -> Option<&'static str> {
     match id {
         TRAY_MESSAGES_ID => Some("/messages"),
         TRAY_SETTINGS_AGENTS_ID => Some("/settings/agents"),
-        TRAY_SETTINGS_WEBHOOKS_ID => Some("/settings/webhooks"),
         _ => None,
     }
 }
@@ -401,7 +390,7 @@ fn toggle_main_window(app: &AppHandle) {
 /// Navigate the in-app webview to `path` and bring the window to the front.
 ///
 /// # Safety
-/// `path` must be a trusted, internal application path (e.g. `/settings/webhooks`).
+/// `path` must be a trusted, internal application path (e.g. `/settings/agents`).
 /// It is interpolated directly into JavaScript and must never contain user-controlled data.
 fn navigate_to_absolute_route(app: &AppHandle, path: &str) {
     if let Some(window) = app.get_webview_window("main") {
@@ -539,10 +528,6 @@ mod tests {
         assert_eq!(
             absolute_route_for_menu_id(TRAY_SETTINGS_AGENTS_ID),
             Some("/settings/agents")
-        );
-        assert_eq!(
-            absolute_route_for_menu_id(TRAY_SETTINGS_WEBHOOKS_ID),
-            Some("/settings/webhooks")
         );
         assert_eq!(absolute_route_for_menu_id(TRAY_WORKSPACE_SESSIONS_ID), None);
     }

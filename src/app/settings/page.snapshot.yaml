@@ -13,9 +13,7 @@
 - button "Agents"
 - button "Providers"
 - button "Specialists"
-- button "Models"
 - button "MCP Servers"
-- button "Webhooks"
 - button "Schedules"
 - button "Workflows"
 - button "Memory"
@@ -80,9 +78,7 @@
   - option "Qoder"
 - combobox "e.g. claude-3-5-haiku"
 - paragraph:
-  - text: Leave model blank to use the provider default. Type a model alias from the
-  - button "Models tab"
-  - text: to use custom connection details.
+  - text: Leave model blank to use the provider default. Type a saved model alias to use its custom connection details.
 - paragraph: Provider Credentials
 - img
 - text: Docker OpenCode auth.json

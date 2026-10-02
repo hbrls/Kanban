@@ -164,9 +164,7 @@ export type SettingsTab =
   | "registry"
   | "roles"
   | "specialists"
-  | "models"
   | "mcp"
-  | "webhooks"
   | "schedules"
   | "workflows";
 
@@ -175,20 +173,6 @@ export const inputCls =
 export const labelCls = "text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider";
 export const sectionHeadCls = "text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider";
 export const settingsCardCls = "rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-[#1e2130]";
-
-export const BASE_URL_SUGGESTIONS = [
-  "https://api.atlascloud.ai/v1",
-  "https://open.bigmodel.cn/api/anthropic",
-  "https://api.minimax.io/anthropic",
-  "https://api.minimaxi.com/anthropic",
-  "https://api.deepseek.com/anthropic",
-  "https://api.moonshot.ai/anthropic",
-  "https://api.openai.com/v1",
-  "https://api.anthropic.com/v1",
-  "https://generativelanguage.googleapis.com/v1beta/openai",
-];
-
-export const EMPTY_MODEL_FORM: ModelDefinition = { alias: "", modelName: "", baseUrl: "", apiKey: "" };
 
 export const TIER_LABELS: Record<ModelTier, string> = { FAST: "Fast", BALANCED: "Balanced", SMART: "Smart" };
 export const ROLE_CHIP: Record<AgentRole, string> = {
