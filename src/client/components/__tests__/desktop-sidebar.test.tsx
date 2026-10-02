@@ -12,13 +12,13 @@ vi.mock("next/navigation", () => ({
 import { DesktopSidebar } from "../desktop-sidebar";
 
 describe("DesktopSidebar", () => {
-  it("keeps Home, Sessions, and Kanban in the primary navigation without Team", () => {
+  it("keeps Home and Kanban in the primary navigation without Sessions or Team", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
-    const links = screen.getAllByRole("link").slice(0, 3);
-    expect(links.map((link) => link.textContent)).toEqual(["Home", "Sessions", "Kanban"]);
+    const links = screen.getAllByRole("link").slice(0, 2);
+    expect(links.map((link) => link.textContent)).toEqual(["Home", "Kanban"]);
 
-    expect(screen.getByRole("link", { name: "Sessions" }).getAttribute("href")).toBe("/workspace/default/sessions");
+    expect(screen.queryByRole("link", { name: "Sessions" })).toBeNull();
     expect(screen.getByRole("link", { name: "Kanban" }).getAttribute("href")).toBe("/workspace/default/kanban");
     expect(screen.queryByRole("link", { name: "Team" })).toBeNull();
   });
