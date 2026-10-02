@@ -219,7 +219,6 @@
     "eslint-config-next": "16.2.1",
     "jsdom": "^28.1.0",
     "patch-package": "^8.0.1",
-    "path-data-parser": "^0.1.0",
     "postcss": "^8.5.24",
     "storybook": "^10.3.4",
     "tailwindcss": "^4.2.1",
