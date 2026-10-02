@@ -8,10 +8,10 @@ import type {
 export const ONBOARDING_COMPLETED_KEY = "routa.onboarding.completed";
 export const ONBOARDING_MODE_KEY = "routa.onboarding.mode";
 
-export type OnboardingMode = "SESSION" | "KANBAN" | "TEAM";
+export type OnboardingMode = "SESSION" | "KANBAN";
 
 export function parseOnboardingMode(value: string | null): OnboardingMode | null {
-  if (value === "SESSION" || value === "KANBAN" || value === "TEAM") {
+  if (value === "SESSION" || value === "KANBAN") {
     return value;
   }
 
