@@ -12,15 +12,15 @@ vi.mock("next/navigation", () => ({
 import { DesktopSidebar } from "../desktop-sidebar";
 
 describe("DesktopSidebar", () => {
-  it("keeps Home, Sessions, Kanban, and Team in the primary navigation", () => {
+  it("keeps Home, Sessions, and Kanban in the primary navigation without Team", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
-    const links = screen.getAllByRole("link").slice(0, 4);
-    expect(links.map((link) => link.textContent)).toEqual(["Home", "Sessions", "Kanban", "Team"]);
+    const links = screen.getAllByRole("link").slice(0, 3);
+    expect(links.map((link) => link.textContent)).toEqual(["Home", "Sessions", "Kanban"]);
 
     expect(screen.getByRole("link", { name: "Sessions" }).getAttribute("href")).toBe("/workspace/default/sessions");
     expect(screen.getByRole("link", { name: "Kanban" }).getAttribute("href")).toBe("/workspace/default/kanban");
-    expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe("/workspace/default/team");
+    expect(screen.queryByRole("link", { name: "Team" })).toBeNull();
   });
 
   it("keeps the lower menu limited to a direct settings link", () => {

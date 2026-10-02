@@ -56,7 +56,7 @@ describe("onboarding helpers", () => {
   it("parses only supported onboarding modes", () => {
     expect(parseOnboardingMode("SESSION")).toBe("SESSION");
     expect(parseOnboardingMode("KANBAN")).toBe("KANBAN");
-    expect(parseOnboardingMode("TEAM")).toBe("TEAM");
+    expect(parseOnboardingMode("TEAM")).toBeNull();
     expect(parseOnboardingMode("ROUTA")).toBe("KANBAN");
     expect(parseOnboardingMode("CRAFTER")).toBe("SESSION");
     expect(parseOnboardingMode("DEVELOPER")).toBeNull();

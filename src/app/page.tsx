@@ -2,7 +2,7 @@
 
 /**
  * Home - /
- * Workspace-first landing page for selecting a workspace, connecting providers, and entering recent sessions or team runs.
+ * Workspace-first landing page for selecting a workspace, connecting providers, and entering recent sessions or the Kanban board.
  */
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -61,21 +61,6 @@ function getSessionLabel(session: SessionInfo) {
   if (session.provider && session.role) return `${session.provider} · ${session.role.toLowerCase()}`;
   if (session.provider) return session.provider;
   return `会话 ${session.sessionId.slice(0, 8)}`;
-}
-
-function isTopLevelTeamRun(session: SessionInfo) {
-  if (session.parentSessionId) return false;
-  if (session.specialistId === "team-agent-lead") return true;
-  if (session.role?.toUpperCase() !== "ROUTA") return false;
-
-  const normalizedName = (session.name ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-  if (!normalizedName) return false;
-
-  return (
-    normalizedName.startsWith("team -")
-    || normalizedName.startsWith("team run")
-    || normalizedName.includes("team lead")
-  );
 }
 
 function HomePageContent() {
@@ -257,7 +242,6 @@ function HomePageContent() {
   const activeData = activeWorkspaceId ? (workspaceHomeData[activeWorkspaceId] ?? EMPTY_HOME_DATA) : EMPTY_HOME_DATA;
   const recentSessions = useMemo(() => (
     [...activeData.sessions]
-      .filter((session) => !isTopLevelTeamRun(session))
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
       .slice(0, 3)
   ), [activeData.sessions]);
@@ -290,11 +274,6 @@ function HomePageContent() {
 
     if (requestedSurfaceId === "session") {
       router.replace(`/workspace/${activeWorkspaceId}/sessions`);
-      return;
-    }
-
-    if (requestedSurfaceId === "team") {
-      router.replace(`/workspace/${activeWorkspaceId}/team`);
       return;
     }
 
@@ -421,28 +400,6 @@ function HomePageContent() {
                               </div>
                               <div className="mt-1 text-xs leading-5 text-slate-400 dark:text-slate-500">
                                 {t.home.modeKanbanTechnical}
-                              </div>
-                            </div>
-                          </Link>
-                          <Link
-                            href={`/workspace/${activeWorkspaceId}/team`}
-                            className="flex h-full flex-col rounded-3xl border border-black/6 bg-white/80 p-5 text-left transition-colors hover:bg-white dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/10"
-                          >
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">
-                              {t.home.surfaceLabel}
-                            </div>
-                            <div className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                              {t.home.teamSurfaceTitle}
-                            </div>
-                            <div className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                              {t.home.modeTeamDescription}
-                            </div>
-                            <div className="mt-4 border-t border-black/6 pt-3 dark:border-white/8">
-                              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
-                                {t.home.modeTechnicalLabel}
-                              </div>
-                              <div className="mt-1 text-xs leading-5 text-slate-400 dark:text-slate-500">
-                                {t.home.modeTeamTechnical}
                               </div>
                             </div>
                           </Link>
