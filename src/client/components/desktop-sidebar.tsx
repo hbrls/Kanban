@@ -5,7 +5,7 @@
  *
  * Provides a compact icon-based navigation with:
  * - Primary navigation icons (Home, Sessions, Kanban, Team)
- * - Secondary tools (Harness, Settings)
+ * - Secondary tools (Settings)
  * - Workspace indicator
  */
 
@@ -14,8 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { ChevronLeft, ClipboardList, Columns2, House, MonitorUp, ScrollText, Settings, Share2 } from "lucide-react";
-import { HarnessMark } from "./harness-mark";
+import { ChevronLeft, Columns2, House, ScrollText, Settings, Share2 } from "lucide-react";
 
 
 interface NavItem {
@@ -53,9 +52,6 @@ export function DesktopSidebar({
   const normalizedWorkspaceId = workspaceId?.trim() || null;
   const fallbackWorkspaceId = normalizedWorkspaceId || "default";
   const workspaceBaseHref = `/workspace/${fallbackWorkspaceId}`;
-  const settingsHarnessHref = normalizedWorkspaceId
-    ? `/settings/harness?workspaceId=${encodeURIComponent(normalizedWorkspaceId)}`
-    : "/settings/harness";
 
   const primaryItems: NavItem[] = [
     {
@@ -92,20 +88,6 @@ export function DesktopSidebar({
     },
   ];
   const secondaryItems: NavItem[] = [
-    {
-      id: "spec",
-      label: t.nav.spec,
-      href: workspaceBaseHref ? `${workspaceBaseHref}/spec` : "/",
-      icon: (
-        <ClipboardList className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
-      ),
-    },
-    {
-      id: "harness",
-      label: t.nav.harness,
-      href: settingsHarnessHref,
-      icon: <HarnessMark className="h-4 w-4" title="" />,
-    },
     {
       id: "settings",
       label: t.settings.title,

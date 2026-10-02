@@ -36,8 +36,6 @@
     - /url: /workspace/default/spec
   - link "Feature Explorer":
     - /url: /workspace/default/feature-explorer
-  - link "Harness":
-    - /url: /settings/harness?workspaceId=default
   - link "Fluency":
     - /url: /settings/fluency?workspaceId=default
   - link "Settings":

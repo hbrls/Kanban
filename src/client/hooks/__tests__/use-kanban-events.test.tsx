@@ -56,8 +56,7 @@ describe("useKanbanEvents", () => {
     expect(onInvalidate).toHaveBeenCalledTimes(1);
   });
 
-  it("throttles rapid fitness change events", () => {
-    vi.useFakeTimers();
+  it("ignores fitness change events", () => {
     const onInvalidate = vi.fn();
     vi.stubGlobal("EventSource", MockEventSource as unknown as typeof EventSource);
 
@@ -68,13 +67,10 @@ describe("useKanbanEvents", () => {
     source.emit({ type: "fitness:changed" });
     source.emit({ type: "fitness:changed" });
 
-    expect(onInvalidate).toHaveBeenCalledTimes(1);
+    expect(onInvalidate).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(749);
+    source.emit({ type: "kanban:changed" });
     expect(onInvalidate).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(1);
-    expect(onInvalidate).toHaveBeenCalledTimes(2);
   });
 
   it("invalidates when the SSE connection reconnects after the first connect", () => {

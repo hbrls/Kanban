@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "@/i18n";
-import { HarnessMark } from "./harness-mark";
 
 interface AdvancedNavMenuProps {
   workspaceId?: string | null;
@@ -35,7 +34,6 @@ interface AdvancedNavSection {
 }
 
 export function AdvancedNavMenu({
-  workspaceId,
   collapsed = false,
   buttonClassName,
   className,
@@ -43,24 +41,7 @@ export function AdvancedNavMenu({
   const pathname = usePathname();
   const { t } = useTranslation();
 
-  const normalizedWorkspaceId = workspaceId?.trim() || null;
-  const settingsHarnessHref = normalizedWorkspaceId
-    ? `/settings/harness?workspaceId=${encodeURIComponent(normalizedWorkspaceId)}`
-    : "/settings/harness";
-
   const sections: AdvancedNavSection[] = [
-    {
-      id: "metrics",
-      label: t.nav.advancedGroupMetrics,
-      items: [
-        {
-          id: "harness",
-          label: t.nav.harness,
-          href: settingsHarnessHref,
-          icon: <HarnessMark className="h-4 w-4" title="" />,
-        },
-      ],
-    },
     {
       id: "customize",
       label: t.nav.advancedGroupCustomize,

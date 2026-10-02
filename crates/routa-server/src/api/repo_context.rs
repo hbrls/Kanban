@@ -218,6 +218,7 @@ pub async fn resolve_repo_root(
     }))
 }
 
+#[allow(dead_code)]
 pub fn extract_frontmatter(raw: &str) -> Option<(String, String)> {
     let mut lines = raw.lines();
     if lines.next()? != "---" {
@@ -255,6 +256,7 @@ pub fn json_error(error: &str, details: impl Into<String>) -> serde_json::Value 
     })
 }
 
+#[allow(dead_code)]
 pub fn read_to_string(path: &Path) -> Result<String, ServerError> {
     fs::read_to_string(path).map_err(|error| {
         ServerError::Internal(format!("Failed to read {}: {}", path.display(), error))

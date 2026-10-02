@@ -8,10 +8,6 @@ import { resolveApiPath } from "@/client/config/backend";
 import { CanvasHost, compileCanvasTsx } from "@/client/canvas-runtime";
 import { useHostTheme } from "@/client/canvas-sdk/theme-context";
 import { darkTheme, lightTheme } from "@/client/canvas-sdk/tokens";
-import {
-  FitnessOverviewCanvas,
-  type FitnessOverviewData,
-} from "@/client/canvas-sdk/prebuilt/fitness-overview";
 import { useTranslation } from "@/i18n/use-translation";
 import type { CanvasType, CanvasRenderMode } from "@/core/models/canvas-artifact";
 
@@ -207,9 +203,7 @@ export function CanvasViewer({ canvasId }: CanvasViewerProps): JSX.Element {
         >
           <CanvasContent
             renderMode={artifact.renderMode}
-            canvasType={artifact.canvasType}
             source={artifact.source}
-            data={artifact.data}
             cannotRenderMessage={t.canvas.viewerCannotRender}
             compilationErrorLabel={t.canvas.viewerCompilationError}
           />
@@ -225,16 +219,12 @@ export function CanvasViewer({ canvasId }: CanvasViewerProps): JSX.Element {
 
 function CanvasContent({
   renderMode,
-  canvasType,
   source,
-  data,
   cannotRenderMessage,
   compilationErrorLabel,
 }: {
   renderMode: CanvasRenderMode;
-  canvasType?: CanvasType;
   source?: string;
-  data?: unknown;
   cannotRenderMessage: string;
   compilationErrorLabel: string;
 }): JSX.Element {
@@ -245,14 +235,6 @@ function CanvasContent({
         compilationErrorLabel={compilationErrorLabel}
       />
     );
-  }
-
-  // Prebuilt fallback
-  if (canvasType) {
-    switch (canvasType) {
-      case "fitness_overview":
-        return <FitnessOverviewCanvas data={data as FitnessOverviewData} />;
-    }
   }
 
   return (

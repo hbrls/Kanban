@@ -1,5 +1,3 @@
-import type { RuntimeFitnessEventStatus } from "@/core/fitness/runtime-status-types";
-
 export type KanbanWorkspaceChangedEvent = {
   type: "kanban:changed";
   workspaceId: string;
@@ -10,17 +8,7 @@ export type KanbanWorkspaceChangedEvent = {
   timestamp: string;
 };
 
-export type KanbanFitnessChangedEvent = {
-  type: "fitness:changed";
-  workspaceId: string;
-  source: "agent" | "user" | "system";
-  timestamp: string;
-  codebaseId?: string;
-  repoPath?: string;
-  status?: RuntimeFitnessEventStatus;
-};
-
-export type KanbanWorkspaceEvent = KanbanWorkspaceChangedEvent | KanbanFitnessChangedEvent;
+export type KanbanWorkspaceEvent = KanbanWorkspaceChangedEvent;
 
 type SSEController = ReadableStreamDefaultController<Uint8Array>;
 
@@ -61,14 +49,6 @@ export class KanbanEventBroadcaster {
     this.broadcast({
       ...event,
       type: "kanban:changed",
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  notifyFitness(event: Omit<KanbanFitnessChangedEvent, "type" | "timestamp">): void {
-    this.broadcast({
-      ...event,
-      type: "fitness:changed",
       timestamp: new Date().toISOString(),
     });
   }

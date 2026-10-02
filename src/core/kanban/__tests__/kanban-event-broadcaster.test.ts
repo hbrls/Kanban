@@ -29,6 +29,7 @@ describe("KanbanEventBroadcaster", () => {
       source: "agent",
     });
 
+    expect(workspaceA.chunks.some((chunk) => chunk.includes("\"type\":\"kanban:changed\""))).toBe(true);
     expect(workspaceA.chunks.some((chunk) => chunk.includes("\"workspaceId\":\"workspace-a\""))).toBe(true);
     expect(workspaceA.chunks.some((chunk) => chunk.includes("\"action\":\"moved\""))).toBe(true);
     expect(workspaceB.chunks.some((chunk) => chunk.includes("\"action\":\"moved\""))).toBe(false);

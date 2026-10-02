@@ -38,9 +38,11 @@ pub fn router() -> Router<AppState> {
 #[serde(rename_all = "camelCase")]
 struct CreateCanvasBody {
     render_mode: Option<String>,
+    #[allow(dead_code)]
     canvas_type: Option<String>,
     title: Option<String>,
     source: Option<String>,
+    #[allow(dead_code)]
     data: Option<Value>,
     workspace_id: Option<String>,
     task_id: Option<String>,
@@ -179,20 +181,10 @@ async fn create_canvas(
             (None, Some(source), None)
         }
         CanvasRenderMode::Prebuilt => {
-            let canvas_type = body
-                .canvas_type
-                .as_deref()
-                .and_then(CanvasType::from_str)
-                .ok_or_else(|| {
-                    ServerError::BadRequest(
-                        "canvasType is required for prebuilt mode. Expected one of: fitness_overview"
-                            .to_string(),
-                    )
-                })?;
-            let data = body.data.ok_or_else(|| {
-                ServerError::BadRequest("data is required for prebuilt renderMode".to_string())
-            })?;
-            (Some(canvas_type), None, Some(data))
+            return Err(ServerError::BadRequest(
+                "Creation of prebuilt canvases is no longer supported; use dynamic renderMode with a TSX source."
+                    .to_string(),
+            ));
         }
     };
 

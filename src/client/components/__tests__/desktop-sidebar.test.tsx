@@ -23,7 +23,7 @@ describe("DesktopSidebar", () => {
     expect(screen.getByRole("link", { name: "Team" }).getAttribute("href")).toBe("/workspace/default/team");
   });
 
-  it("keeps Harness in the lower menu and uses a direct settings link", () => {
+  it("keeps the lower menu limited to a direct settings link", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
     expect(screen.queryByRole("link", { name: "MCP Servers" })).toBeNull();
@@ -35,11 +35,11 @@ describe("DesktopSidebar", () => {
   });
 
   it("does not mark Settings as active when a settings tool page is active", () => {
-    pathnameState.pathname = "/settings/harness";
+    pathnameState.pathname = "/settings/mcp";
 
     render(<DesktopSidebar workspaceId="default" />);
 
-    expect(screen.getByRole("link", { name: "Harness" }).className).toContain("text-desktop-accent");
+    expect(screen.queryByRole("link", { name: "Harness" })).toBeNull();
     expect(screen.getByRole("link", { name: "Settings" }).className).not.toContain("text-desktop-accent");
   });
 

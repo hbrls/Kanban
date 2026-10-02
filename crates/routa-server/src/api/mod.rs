@@ -14,7 +14,6 @@ pub mod clone_progress;
 pub mod codebases;
 pub mod debug;
 pub mod files;
-pub mod fitness;
 pub mod git;
 pub mod github;
 pub mod graph;
@@ -93,7 +92,6 @@ pub fn api_router(state: AppState) -> Router<AppState> {
         .nest("/api/clone/progress", clone_progress::router())
         .nest("/api/clone/branches", clone_branches::router())
         .nest("/api/files", files::router())
-        .nest("/api/fitness", fitness::router())
         .nest("/api/rpc", rpc::router())
         .nest("/api/a2a", a2a::router())
         .nest("/api/ag-ui", ag_ui::router())

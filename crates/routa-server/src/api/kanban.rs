@@ -109,15 +109,6 @@ fn translate_agent_event_to_kanban_payload(event: &AgentEvent) -> Option<serde_j
     match event.event_type {
         AgentEventType::WorkspaceUpdated => {
             match event.data.get("scope").and_then(|value| value.as_str()) {
-                Some("fitness") => Some(serde_json::json!({
-                    "type": "fitness:changed",
-                    "workspaceId": event.workspace_id,
-                    "source": event.data.get("source").and_then(|value| value.as_str()).unwrap_or("system"),
-                    "codebaseId": event.data.get("codebaseId").and_then(|value| value.as_str()),
-                    "repoPath": event.data.get("repoPath").and_then(|value| value.as_str()),
-                    "status": event.data.get("status").and_then(|value| value.as_str()),
-                    "timestamp": event.timestamp.to_rfc3339(),
-                })),
                 Some("kanban") => Some(serde_json::json!({
                     "type": "kanban:changed",
                     "workspaceId": event.workspace_id,
@@ -1136,7 +1127,7 @@ mod tests {
     }
 
     #[test]
-    fn translates_runtime_fitness_workspace_updates() {
+    fn ignores_runtime_fitness_workspace_updates() {
         let event = AgentEvent {
             event_type: AgentEventType::WorkspaceUpdated,
             agent_id: "system".to_string(),
@@ -1150,12 +1141,7 @@ mod tests {
             timestamp: Utc::now(),
         };
 
-        let payload =
-            translate_agent_event_to_kanban_payload(&event).expect("payload should exist");
-        assert_eq!(payload["type"].as_str(), Some("fitness:changed"));
-        assert_eq!(payload["workspaceId"].as_str(), Some("ws-1"));
-        assert_eq!(payload["repoPath"].as_str(), Some("/tmp/repo"));
-        assert_eq!(payload["status"].as_str(), Some("running"));
+        assert!(translate_agent_event_to_kanban_payload(&event).is_none());
     }
 
     #[test]

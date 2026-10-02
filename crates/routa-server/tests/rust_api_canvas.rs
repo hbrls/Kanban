@@ -240,6 +240,31 @@ async fn api_canvas_specialist_materialize_maps_managed_clone_to_project_root() 
 }
 
 #[tokio::test]
+async fn api_canvas_rejects_prebuilt_creation() {
+    let fixture = ApiFixture::new().await;
+
+    let response = fixture
+        .client
+        .post(fixture.endpoint("/api/canvas"))
+        .json(&json!({
+            "title": "Prebuilt Canvas",
+            "renderMode": "prebuilt",
+            "canvasType": "fitness_overview",
+            "data": {},
+            "workspaceId": "default",
+        }))
+        .send()
+        .await
+        .expect("create prebuilt canvas");
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body: Value = response.json().await.expect("decode error");
+    assert!(json_has_error(
+        &body,
+        "Creation of prebuilt canvases is no longer supported"
+    ));
+}
+
+#[tokio::test]
 async fn api_canvas_delete_removes_artifact() {
     let fixture = ApiFixture::new().await;
 
