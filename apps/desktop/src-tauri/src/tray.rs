@@ -3,7 +3,7 @@
 //! Provides a reusable system tray icon with workspace-first shortcuts.
 //!
 //! The tray is intentionally optimized for "resume and jump" desktop flows:
-//! sessions, kanban, team runs, and message review stay one click away,
+//! sessions, kanban, and message review stay one click away,
 //! while GitHub repo links remain available as a secondary submenu.
 //!
 //! # Usage
@@ -26,7 +26,6 @@ pub const TRAY_ID: &str = "routa-tray";
 const TRAY_SHOW_HIDE_ID: &str = "tray:show_hide";
 const TRAY_WORKSPACE_SESSIONS_ID: &str = "tray:workspace:sessions";
 const TRAY_WORKSPACE_KANBAN_ID: &str = "tray:workspace:kanban";
-const TRAY_WORKSPACE_TEAM_ID: &str = "tray:workspace:team";
 const TRAY_MESSAGES_ID: &str = "tray:messages";
 const TRAY_SETTINGS_AGENTS_ID: &str = "tray:settings:agents";
 const TRAY_QUIT_ID: &str = "tray:quit";
@@ -89,7 +88,6 @@ impl GitHubRepo {
 /// ──────────────────
 /// Sessions
 /// Kanban Board
-/// Team Runs
 /// Messages
 /// ──────────────────
 /// Settings
@@ -131,12 +129,9 @@ pub fn build_tray_menu(app: &AppHandle, repos: &[GitHubRepo]) -> tauri::Result<M
         true,
         None::<&str>,
     )?;
-    let team_runs =
-        MenuItem::with_id(app, TRAY_WORKSPACE_TEAM_ID, "Team Runs", true, None::<&str>)?;
     let messages = MenuItem::with_id(app, TRAY_MESSAGES_ID, "Messages", true, None::<&str>)?;
     menu.append(&sessions)?;
     menu.append(&kanban)?;
-    menu.append(&team_runs)?;
     menu.append(&messages)?;
 
     menu.append(&PredefinedMenuItem::separator(app)?)?;
@@ -297,7 +292,6 @@ fn workspace_route_for_menu_id(id: &str) -> Option<&'static str> {
     match id {
         TRAY_WORKSPACE_SESSIONS_ID => Some("/sessions"),
         TRAY_WORKSPACE_KANBAN_ID => Some("/kanban"),
-        TRAY_WORKSPACE_TEAM_ID => Some("/team"),
         _ => None,
     }
 }
@@ -511,10 +505,6 @@ mod tests {
         assert_eq!(
             workspace_route_for_menu_id(TRAY_WORKSPACE_KANBAN_ID),
             Some("/kanban")
-        );
-        assert_eq!(
-            workspace_route_for_menu_id(TRAY_WORKSPACE_TEAM_ID),
-            Some("/team")
         );
         assert_eq!(workspace_route_for_menu_id(TRAY_MESSAGES_ID), None);
     }

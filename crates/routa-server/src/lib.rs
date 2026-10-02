@@ -123,7 +123,6 @@ fn resolve_static_target(path: &str) -> (String, &'static str) {
                 format!("{}/{}.{}", base, suffix.join("/"), ext)
             }
         };
-        let is_next_metadata_segment = |segment: &str| segment.starts_with("__next.");
 
         if segments.len() >= 3 && segments[1] == "sessions" {
             let suffix = if segments.len() > 3 {
@@ -138,19 +137,6 @@ fn resolve_static_target(path: &str) -> (String, &'static str) {
                 ),
                 content,
             )
-        } else if segments.len() >= 3
-            && segments[1] == "team"
-            && !is_next_metadata_segment(segments[2])
-        {
-            let suffix = if segments.len() > 3 {
-                &segments[3..]
-            } else {
-                &[][..]
-            };
-            (
-                placeholder_with_suffix("workspace/__placeholder__/team/__placeholder__", suffix),
-                content,
-            )
         } else if segments.len() >= 2 && segments[1] == "kanban" {
             let suffix = if segments.len() > 2 {
                 &segments[2..]
@@ -159,16 +145,6 @@ fn resolve_static_target(path: &str) -> (String, &'static str) {
             };
             (
                 placeholder_with_suffix("workspace/__placeholder__/kanban", suffix),
-                content,
-            )
-        } else if segments.len() >= 2 && segments[1] == "team" {
-            let suffix = if segments.len() > 2 {
-                &segments[2..]
-            } else {
-                &[][..]
-            };
-            (
-                placeholder_with_suffix("workspace/__placeholder__/team", suffix),
                 content,
             )
         } else if segments.len() >= 4 && segments[1] == "codebases" && segments[3] == "reposlide" {
@@ -447,42 +423,6 @@ mod tests {
     }
 
     #[test]
-    fn resolves_workspace_team_placeholder() {
-        let (target, content_type) = resolve_static_target("/workspace/default/team");
-        assert_eq!(target, "workspace/__placeholder__/team.html");
-        assert_eq!(content_type, "text/html; charset=utf-8");
-    }
-
-    #[test]
-    fn resolves_workspace_team_root_tree_placeholder() {
-        let (target, content_type) =
-            resolve_static_target("/workspace/default/team/__next._tree.txt");
-        assert_eq!(target, "workspace/__placeholder__/team/__next._tree.txt");
-        assert_eq!(content_type, "text/x-component; charset=utf-8");
-    }
-
-    #[test]
-    fn resolves_workspace_team_run_placeholder() {
-        let (target, content_type) = resolve_static_target("/workspace/default/team/session-123");
-        assert_eq!(
-            target,
-            "workspace/__placeholder__/team/__placeholder__.html"
-        );
-        assert_eq!(content_type, "text/html; charset=utf-8");
-    }
-
-    #[test]
-    fn resolves_workspace_team_run_tree_placeholder() {
-        let (target, content_type) =
-            resolve_static_target("/workspace/default/team/session-123/__next._tree.txt");
-        assert_eq!(
-            target,
-            "workspace/__placeholder__/team/__placeholder__/__next._tree.txt"
-        );
-        assert_eq!(content_type, "text/x-component; charset=utf-8");
-    }
-
-    #[test]
     fn resolves_workspace_session_placeholder() {
         let (target, content_type) =
             resolve_static_target("/workspace/default/sessions/session-123");
@@ -491,14 +431,6 @@ mod tests {
             "workspace/__placeholder__/sessions/__placeholder__.html"
         );
         assert_eq!(content_type, "text/html; charset=utf-8");
-    }
-
-    #[test]
-    fn resolves_workspace_team_rsc_placeholder() {
-        let (target, content_type) =
-            resolve_static_target("/workspace/default/team/session-123.txt");
-        assert_eq!(target, "workspace/__placeholder__/team/__placeholder__.txt");
-        assert_eq!(content_type, "text/x-component; charset=utf-8");
     }
 
     #[test]
