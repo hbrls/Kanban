@@ -11,7 +11,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { Columns2, House, ScrollText, Settings } from "lucide-react";
+import { Columns2, House, Settings } from "lucide-react";
 
 
 interface DesktopNavRailProps {
@@ -31,14 +31,6 @@ export function DesktopNavRail({
       href: "/",
       icon: (
         <House className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
-      ),
-    },
-    {
-      id: "sessions",
-      label: t.nav.sessions,
-      href: `/workspace/${workspaceId}/sessions`,
-      icon: (
-        <ScrollText className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
       ),
     },
     {
