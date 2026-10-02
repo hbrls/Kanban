@@ -18,7 +18,6 @@ const PROTECTED_PATH_RULES = [
   { label: "scripts/check-git-control-plane.js", pattern: /^scripts\/check-git-control-plane\.js$/ },
   { label: "scripts/lib/agent-hook-policy.js", pattern: /^scripts\/lib\/agent-hook-policy\.js$/ },
   { label: "scripts/lib/git-control-plane-doctor.js", pattern: /^scripts\/lib\/git-control-plane-doctor\.js$/ },
-  { label: "tools/hook-runtime/src/install.ts", pattern: /^tools\/hook-runtime\/src\/install\.ts$/ },
 ];
 
 const PROTECTED_GIT_KEYS = ["core.hooksPath", "core.worktree", "user.name", "user.email"];
@@ -26,7 +25,7 @@ const PROTECTED_GIT_KEYS = ["core.hooksPath", "core.worktree", "user.name", "use
 const SHELL_MUTATION_PATTERNS = [
   {
     reason:
-      "Direct git config mutations for core.hooksPath, core.worktree, or commit identity are blocked. Use `npm run hooks:sync` for hook repair, or set ROUTA_ALLOW_CONTROL_PLANE_MUTATION=1 for an intentional override.",
+      "Direct git config mutations for core.hooksPath, core.worktree, or commit identity are blocked. Set ROUTA_ALLOW_CONTROL_PLANE_MUTATION=1 for an intentional override.",
     test(command) {
       return detectGitConfigMutation(command);
     },
@@ -140,10 +139,6 @@ function detectGitConfigMutation(command) {
     return false;
   }
 
-  if (/\bnpm\s+run\s+hooks:sync\b/i.test(command) || /tools\/hook-runtime\/src\/install\.ts/.test(command)) {
-    return false;
-  }
-
   if (!PROTECTED_GIT_KEYS.some((key) => command.includes(key))) {
     return false;
   }
@@ -175,12 +170,8 @@ function detectGitConfigMutation(command) {
 }
 
 function detectProtectedPathShellMutation(command) {
-  if (/\bnpm\s+run\s+hooks:sync\b/i.test(command)) {
-    return false;
-  }
-
   const protectedPathPattern =
-    "(?:\\.git\\/config|\\.git\\/hooks(?:\\/|\\b)|\\.husky(?:\\/|\\b)|\\.codex\\/hooks\\.json|\\.claude\\/settings(?:\\.local)?\\.json|\\.qoder\\/settings\\.json|docs\\/fitness\\/runtime\\/agent-hooks\\.yaml|scripts\\/check-tool-permission\\.js|scripts\\/check-prompt-policy\\.js|scripts\\/check-git-control-plane\\.js|scripts\\/lib\\/agent-hook-policy\\.js|scripts\\/lib\\/git-control-plane-doctor\\.js|tools\\/hook-runtime\\/src\\/install\\.ts)";
+    "(?:\\.git\\/config|\\.git\\/hooks(?:\\/|\\b)|\\.husky(?:\\/|\\b)|\\.codex\\/hooks\\.json|\\.claude\\/settings(?:\\.local)?\\.json|\\.qoder\\/settings\\.json|docs\\/fitness\\/runtime\\/agent-hooks\\.yaml|scripts\\/check-tool-permission\\.js|scripts\\/check-prompt-policy\\.js|scripts\\/check-git-control-plane\\.js|scripts\\/lib\\/agent-hook-policy\\.js|scripts\\/lib\\/git-control-plane-doctor\\.js)";
 
   const redirectPattern = new RegExp(`(?:>|>>)\\s*['"]?${protectedPathPattern}`, "i");
   const teePattern = new RegExp(`\\btee\\b[^\\n\\r]*['"]?${protectedPathPattern}`, "i");
