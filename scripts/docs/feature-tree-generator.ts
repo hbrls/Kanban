@@ -1129,7 +1129,7 @@ export function renderMarkdown(
     "  - src/app/api/**/route.ts",
     "  - crates/routa-server/src/api/**/*.rs",
     "update_policy:",
-    "  - \"Regenerate with `routa feature-tree generate` or via the Feature Explorer UI.\"",
+    "  - \"Regenerate with `node --import tsx scripts/docs/feature-tree-generator.ts --save` or via the Feature Explorer UI.\"",
     "  - \"Hand-edit semantic `feature_metadata` fields in this frontmatter block.\"",
     "  - \"`feature_metadata.features[].source_files` is regenerated from declared pages/APIs.\"",
     "  - \"Do not hand-edit generated endpoint or route tables below.\"",

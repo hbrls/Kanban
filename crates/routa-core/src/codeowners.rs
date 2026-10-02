@@ -731,12 +731,12 @@ mod tests {
         let (rules, _) = parse_codeowners_content(content);
 
         assert_eq!(
-            count_matching_rules("packages/routa-cli/package.json", &rules),
+            count_matching_rules("packages/office-render/package.json", &rules),
             1
         );
         assert_eq!(count_matching_rules("package.json", &rules), 1);
         assert_eq!(
-            best_matching_rule("packages/routa-cli/package.json", &rules),
+            best_matching_rule("packages/office-render/package.json", &rules),
             Some(1)
         );
         assert_eq!(best_matching_rule("package.json", &rules), Some(0));

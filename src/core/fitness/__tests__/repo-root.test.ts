@@ -52,7 +52,7 @@ describe("fitness repo root resolution", () => {
 
   it("prefers the current routa repo for the default workspace when requested", async () => {
     fs.mkdirSync(path.join(tempDir, "docs", "fitness"), { recursive: true });
-    fs.mkdirSync(path.join(tempDir, "crates", "routa-cli"), { recursive: true });
+    fs.mkdirSync(path.join(tempDir, "crates", "routa-server"), { recursive: true });
     fs.writeFileSync(path.join(tempDir, "docs", "fitness", "harness-fluency.model.yaml"), "version: 1\n");
     process.chdir(tempDir);
 

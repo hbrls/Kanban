@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const CHANGE_TYPES = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"];
 const BREAKING_SECTION = "Breaking Changes";
-const DEFAULT_SPECIALIST = "resources/specialists/release/changelog-summary.yaml";
 
 const COMMIT_TYPE_MAP = {
   feat: "Added",
@@ -94,10 +92,7 @@ function normalizeTag(value) {
 
 function parseArgs(argv) {
   const args = {
-    ai: false,
-    aiProvider: process.env.ROUTA_RELEASE_AI_PROVIDER || undefined,
     changelogOut: undefined,
-    dryRunAi: false,
     from: undefined,
     help: false,
     out: undefined,
@@ -120,8 +115,6 @@ function parseArgs(argv) {
     };
 
     if (arg === "--help" || arg === "-h") args.help = true;
-    else if (arg === "--ai") args.ai = true;
-    else if (arg === "--dry-run-ai") args.dryRunAi = true;
     else if (arg === "--from") args.from = normalizeTag(readValue());
     else if (arg === "--to") args.to = normalizeTag(readValue());
     else if (arg === "--version") args.version = readValue().replace(/^v/, "");
@@ -129,7 +122,6 @@ function parseArgs(argv) {
     else if (arg === "--changelog-out") args.changelogOut = readValue();
     else if (arg === "--prompt-out") args.promptOut = readValue();
     else if (arg === "--summary-file") args.summaryFile = readValue();
-    else if (arg === "--ai-provider") args.aiProvider = readValue();
     else if (arg === "--repo") args.repo = readValue();
     else throw new Error(`Unknown argument: ${arg}`);
   }
@@ -144,7 +136,6 @@ function printUsage() {
   console.log(`Usage:
   npm run release:changelog -- --from v0.2.5 --to v0.2.6
   npm run release:changelog -- --version 0.2.6 --out dist/release-notes.md
-  npm run release:changelog -- --from v0.2.5 --to v0.2.6 --ai --ai-provider claude
 
 Options:
   --from <tag>            Start tag. Defaults to the previous reachable tag.
@@ -153,8 +144,6 @@ Options:
   --out <path>            Write release notes markdown to this path.
   --changelog-out <path>  Write only the Keep a Changelog style technical section.
   --summary-file <path>   Insert a curated or AI-generated summary markdown section.
-  --ai                    Run the release changelog summary specialist and insert its summary.
-  --ai-provider <name>    ACP provider override for the specialist.
   --prompt-out <path>     Write the specialist input package for manual AI curation.
   --repo <owner/name>     GitHub repo for commit links. Defaults to phodal/routa.
 `);
@@ -380,46 +369,6 @@ function buildSpecialistPrompt({ commits, changedFiles, range, repo, version }) 
   }, null, 2);
 }
 
-function extractJsonObject(output) {
-  const start = output.indexOf("{");
-  const end = output.lastIndexOf("}");
-  if (start < 0 || end <= start) {
-    throw new Error("specialist output did not contain a JSON object");
-  }
-  return JSON.parse(output.slice(start, end + 1));
-}
-
-function runAiSummary(prompt, { aiProvider }) {
-  const routaArgs = [
-    "run",
-    "-p",
-    "routa-cli",
-    "--",
-    "specialist",
-    "run",
-    DEFAULT_SPECIALIST,
-    "--json",
-    "--prompt",
-    prompt.slice(0, 30000),
-  ];
-  if (aiProvider) {
-    routaArgs.push("--provider", aiProvider);
-  }
-  const result = spawnSync(process.env.ROUTA_RELEASE_RUNNER ?? "cargo", routaArgs, {
-    encoding: "utf8",
-    timeout: Number(process.env.ROUTA_RELEASE_AI_TIMEOUT_MS ?? 300000),
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(result.stderr || result.stdout || `specialist exited with ${result.status}`);
-  }
-  const parsed = extractJsonObject(result.stdout);
-  if (typeof parsed.summaryMarkdown !== "string" || !parsed.summaryMarkdown.trim()) {
-    throw new Error("specialist JSON did not include summaryMarkdown");
-  }
-  return `## Summary\n\n${parsed.summaryMarkdown.trim()}`;
-}
-
 function renderReleaseNotes({ aiSummary, changedFiles, commits, range, repo, version }) {
   const titleVersion = version ? ` v${version}` : ` ${range.to}`;
   const summary = aiSummary ?? renderDeterministicSummary({ commits, changedFiles, range, version });
@@ -433,10 +382,6 @@ function renderReleaseNotes({ aiSummary, changedFiles, commits, range, repo, ver
     "## Install",
     "",
     "Download the desktop installer for your platform from the release assets.",
-    "",
-    "CLI install:",
-    "- `npm install -g routa-cli`",
-    "- `npx -p routa-cli routa --help`",
     "",
     "## Release Metadata",
     "",
@@ -469,16 +414,7 @@ function generate(argv = process.argv.slice(2)) {
     writeText(args.promptOut, `${prompt}\n`);
   }
 
-  let aiSummary = readOptionalSummary(args.summaryFile);
-  if (!aiSummary && args.ai) {
-    if (args.dryRunAi) {
-      const promptPath = path.join(os.tmpdir(), `routa-changelog-summary-${Date.now()}.json`);
-      writeText(promptPath, `${prompt}\n`);
-      console.error(`AI dry-run prompt written to ${promptPath}`);
-    } else {
-      aiSummary = runAiSummary(prompt, args);
-    }
-  }
+  const aiSummary = readOptionalSummary(args.summaryFile);
 
   const output = renderReleaseNotes({
     aiSummary,

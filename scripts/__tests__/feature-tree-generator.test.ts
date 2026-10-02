@@ -40,7 +40,7 @@ describe("feature-tree-generator", () => {
     );
 
     const markdown = renderMarkdown(tree, surfaceIndex);
-    expect(markdown).toContain("routa feature-tree generate");
+    expect(markdown).toContain("node --import tsx scripts/docs/feature-tree-generator.ts --save");
     expect(markdown).toContain("| Home | `/` | `src/app/page.tsx` |  |");
     expect(markdown).toContain("| GET | `/api/agents` | List agents | `src/app/api/agents/route.ts` | `crates/routa-server/src/api/agents.rs` |");
     expect(markdown).not.toContain("## Next.js API Routes");

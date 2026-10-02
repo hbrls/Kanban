@@ -22,7 +22,7 @@ export function normalizeFitnessContextValue(value: unknown): string | undefined
 export function isRoutaRepoRoot(repoRoot: string): boolean {
   return (
     fs.existsSync(path.join(repoRoot, "docs", "fitness", "harness-fluency.model.yaml"))
-    && fs.existsSync(path.join(repoRoot, "crates", "routa-cli"))
+    && fs.existsSync(path.join(repoRoot, "crates", "routa-server"))
   );
 }
 

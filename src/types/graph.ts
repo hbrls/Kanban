@@ -1,6 +1,6 @@
 /**
  * Type definitions for module dependency graph analysis.
- * Matches the output from routa-cli graph analyze command.
+ * Matches the output from the graph analysis DependencyGraph contract.
  */
 
 export type NodeKind = "file" | "package" | "class" | "function" | "method" | "module";

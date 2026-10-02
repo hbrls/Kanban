@@ -221,7 +221,10 @@ fn map_context_error(
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_graph_depth, normalize_graph_lang, resolve_local_routa_binary};
+    use super::{
+        build_graph_command, normalize_graph_depth, normalize_graph_lang,
+        resolve_local_routa_binary,
+    };
     use tempfile::tempdir;
 
     #[test]
@@ -251,5 +254,18 @@ mod tests {
 
         let resolved = resolve_local_routa_binary(temp.path()).expect("binary");
         assert_eq!(resolved, binary);
+    }
+
+    #[test]
+    fn falls_back_to_cargo_run_when_local_binary_missing() {
+        let temp = tempdir().expect("tempdir");
+        assert!(resolve_local_routa_binary(temp.path()).is_none());
+
+        let command = build_graph_command(temp.path(), temp.path(), "auto", "fast");
+        let rendered = format!("{command:?}");
+        assert!(rendered.contains("cargo"));
+        assert!(rendered.contains("routa-cli"));
+        assert!(rendered.contains("graph"));
+        assert!(rendered.contains("analyze"));
     }
 }

@@ -15,8 +15,6 @@ Options:
   --from <tag>           Start tag for changelog generation.
   --to <tag|ref>         End ref/tag. Defaults to HEAD commit.
   --summary-file <path>  Curated markdown summary passed to generate-changelog.
-  --ai                   Run the changelog specialist for summary generation.
-  --ai-provider <name>   ACP provider override used with --ai.
   -h, --help             Show this help.
 
 Outputs:
@@ -29,8 +27,6 @@ Outputs:
 
 function parseArgs(argv) {
   const args = {
-    ai: false,
-    aiProvider: "",
     from: "",
     summaryFile: "",
     to: "",
@@ -57,10 +53,6 @@ function parseArgs(argv) {
       args.to = readValue();
     } else if (arg === "--summary-file") {
       args.summaryFile = readValue();
-    } else if (arg === "--ai") {
-      args.ai = true;
-    } else if (arg === "--ai-provider") {
-      args.aiProvider = readValue();
     } else if (arg.startsWith("--")) {
       throw new Error(`Unknown option: ${arg}`);
     } else if (!args.version) {
@@ -131,12 +123,6 @@ async function main() {
   }
   if (args.summaryFile) {
     changelogArgs.push("--summary-file", args.summaryFile);
-  }
-  if (args.ai) {
-    changelogArgs.push("--ai");
-  }
-  if (args.aiProvider) {
-    changelogArgs.push("--ai-provider", args.aiProvider);
   }
 
   console.log("==> Generating release notes preview");

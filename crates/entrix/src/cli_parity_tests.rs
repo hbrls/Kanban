@@ -320,7 +320,7 @@ fn release_trigger_flags() {
         "--fail-on-block",
         "--fail-on-trigger",
         "--json",
-        "scripts/release/stage-routa-cli-npm.mjs",
+        "scripts/release/sync-release-version.mjs",
     ]);
     match cli.command {
         Some(Command::ReleaseTrigger(args)) => {
@@ -337,7 +337,7 @@ fn release_trigger_flags() {
             assert!(args.fail_on_trigger);
             assert!(args.fail_on_block);
             assert!(args.json);
-            assert_eq!(args.files, vec!["scripts/release/stage-routa-cli-npm.mjs"]);
+            assert_eq!(args.files, vec!["scripts/release/sync-release-version.mjs"]);
         }
         _ => panic!("expected release-trigger command"),
     }

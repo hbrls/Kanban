@@ -114,7 +114,7 @@ pub fn is_routa_repo_root(candidate: &Path) -> bool {
     candidate
         .join("docs/fitness/harness-fluency.model.yaml")
         .exists()
-        && candidate.join("crates/routa-cli").is_dir()
+        && candidate.join("crates/routa-server").is_dir()
 }
 
 fn current_routa_repo_root_from(candidate: &Path) -> Option<PathBuf> {
@@ -272,8 +272,8 @@ mod tests {
         let temp = tempfile::tempdir().expect("tempdir should exist");
         std::fs::create_dir_all(temp.path().join("docs/fitness"))
             .expect("fitness dir should exist");
-        std::fs::create_dir_all(temp.path().join("crates/routa-cli"))
-            .expect("routa-cli dir should exist");
+        std::fs::create_dir_all(temp.path().join("crates/routa-server"))
+            .expect("routa-server dir should exist");
         std::fs::write(
             temp.path().join("docs/fitness/harness-fluency.model.yaml"),
             "version: 1\n",

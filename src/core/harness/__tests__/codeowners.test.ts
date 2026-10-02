@@ -150,7 +150,7 @@ describe("resolveOwnership", () => {
   it("does not mark nested files as overlaps for root-anchored basename rules", () => {
     const content = "/package.json @root\npackages/** @packages\n";
     const { rules } = parseCodeownersContent(content);
-    const matches = resolveOwnership(["packages/routa-cli/package.json", "package.json"], rules);
+    const matches = resolveOwnership(["packages/office-render/package.json", "package.json"], rules);
 
     expect(matches[0].covered).toBe(true);
     expect(matches[0].owners[0].name).toBe("@packages");

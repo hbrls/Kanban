@@ -1,5 +1,5 @@
 /**
- * Utility to convert DependencyGraph (from routa-cli) to ReactFlow format.
+ * Utility to convert DependencyGraph (from the graph analysis API) to ReactFlow format.
  * Includes automatic layout using Dagre algorithm.
  */
 

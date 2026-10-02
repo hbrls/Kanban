@@ -369,7 +369,7 @@ release_triggers:
   "artifacts": [
     {
       "kind": "npm_tarball",
-      "path": "dist/npm/routa-cli-0.1.0.tgz",
+      "path": "dist/npm/harness-monitor-0.1.0.tgz",
       "entries": [
         {"path": "package/dist/index.js.map"}
       ]
@@ -415,10 +415,10 @@ release_triggers:
     min_growth_bytes: 100
     severity: high
     action: require_human_review
-  - name: cli_binary_size_limit
+  - name: desktop_binary_size_limit
     type: artifact_size_delta
     apply_to:
-      - cli_binary
+      - desktop_binary
     max_size_bytes: 1000
     severity: high
     action: require_human_review
@@ -436,7 +436,7 @@ release_triggers:
         let artifacts = vec![
             ReleaseArtifact {
                 kind: "npm_tarball".to_string(),
-                path: "dist/npm/routa-cli-0.2.0.tgz".to_string(),
+                path: "dist/npm/harness-monitor-0.2.0.tgz".to_string(),
                 target: Some("linux-x64".to_string()),
                 channel: Some("latest".to_string()),
                 size_bytes: 1600,
@@ -449,8 +449,8 @@ release_triggers:
                 largest_entries: Vec::new(),
             },
             ReleaseArtifact {
-                kind: "cli_binary".to_string(),
-                path: "dist/cli-artifacts/linux-x64/routa".to_string(),
+                kind: "desktop_binary".to_string(),
+                path: "dist/desktop-artifacts/linux-x64/routa-desktop".to_string(),
                 target: Some("linux-x64".to_string()),
                 channel: Some("latest".to_string()),
                 size_bytes: 1400,
@@ -465,7 +465,7 @@ release_triggers:
         ];
         let baseline_artifacts = vec![ReleaseArtifact {
             kind: "npm_tarball".to_string(),
-            path: "dist/npm/routa-cli-0.1.9.tgz".to_string(),
+            path: "dist/npm/harness-monitor-0.1.9.tgz".to_string(),
             target: Some("linux-x64".to_string()),
             channel: Some("latest".to_string()),
             size_bytes: 1000,
@@ -483,7 +483,7 @@ release_triggers:
             &artifacts,
             "current-manifest.json",
             &[
-                "scripts/release/stage-routa-cli-npm.mjs".to_string(),
+                "scripts/release/sync-release-version.mjs".to_string(),
                 "apps/desktop/src-tauri/capabilities/default.json".to_string(),
             ],
             &baseline_artifacts,
@@ -498,7 +498,7 @@ release_triggers:
             .map(|trigger| trigger.name.as_str())
             .collect::<Vec<_>>();
         assert!(names.contains(&"npm_tarball_growth_guard"));
-        assert!(names.contains(&"cli_binary_size_limit"));
+        assert!(names.contains(&"desktop_binary_size_limit"));
         assert!(names.contains(&"packaging_boundary_changed"));
         assert!(names.contains(&"capability_or_supply_chain_drift"));
     }
