@@ -566,7 +566,7 @@ fn sync_dirty_files_rebuilds_unknown_session_and_file_views() {
 #[test]
 fn file_preview_highlight_uses_extension_fallback_for_typescript() {
     let text = highlight_code_text(
-        Some("tools/hook-runtime/src/review.test.ts"),
+        Some("src/example.ts"),
         "const value = 1;\nfunction demo() { return value; }\n",
         ThemeMode::Dark,
     );
