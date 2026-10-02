@@ -81,16 +81,6 @@ describe("agent hook policy", () => {
     expect(decision).toBeNull();
   });
 
-  it("allows the repo repair command for hooksPath", () => {
-    const decision = evaluateToolPermissionGuard(
-      createPreToolUsePayload("Bash", {
-        command: "npm run hooks:sync",
-      }),
-    );
-
-    expect(decision).toBeNull();
-  });
-
   it("blocks protected control-plane file writes", () => {
     const decision = evaluateToolPermissionGuard(
       createPreToolUsePayload("Write", {

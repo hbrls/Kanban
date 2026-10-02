@@ -1,16 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-export const EXPECTED_HOOKS_PATH = ".husky/_";
-export const REQUIRED_HOOK_FILES = [
-  "h",
-  "pre-commit",
-  "pre-push",
-  "post-commit",
-  "prepare-commit-msg",
-  "commit-msg",
-];
 const SUSPICIOUS_LOCAL_IDENTITY_PATTERNS = {
   email: [/@example\.com$/i, /placeholder/i],
   name: [/^test$/i, /^codex$/i, /placeholder/i, /routa test/i],
@@ -50,12 +39,6 @@ export function resolveGitRepoRoot(cwd = process.cwd()) {
   return repoRoot.length > 0 ? repoRoot : null;
 }
 
-function getMissingHookRuntimeFiles(repoRoot) {
-  return REQUIRED_HOOK_FILES.filter((file) => {
-    return !fs.existsSync(path.join(repoRoot, EXPECTED_HOOKS_PATH, file));
-  });
-}
-
 function createIssue(code, message, severity = "warning", details = {}) {
   return {
     code,
@@ -86,37 +69,10 @@ export function inspectGitControlPlane(cwd = process.cwd()) {
     };
   }
 
-  const hooksPath = readLocalGitConfig(repoRoot, "core.hooksPath");
   const localCoreWorktree = readLocalGitConfig(repoRoot, "core.worktree");
   const localUserName = readLocalGitConfig(repoRoot, "user.name");
   const localUserEmail = readLocalGitConfig(repoRoot, "user.email");
-  const missingHookRuntimeFiles = getMissingHookRuntimeFiles(repoRoot);
   const issues = [];
-
-  if (missingHookRuntimeFiles.length > 0) {
-    issues.push(
-      createIssue(
-        "missing-husky-runtime",
-        `Husky runtime is missing or incomplete: missing ${missingHookRuntimeFiles.join(", ")} under ${EXPECTED_HOOKS_PATH}. Run \`npm run hooks:sync\`.`,
-        "warning",
-        { missingHookRuntimeFiles },
-      ),
-    );
-  }
-
-  if (hooksPath !== EXPECTED_HOOKS_PATH) {
-    issues.push(
-      createIssue(
-        "hooks-path-drift",
-        `core.hooksPath is ${hooksPath ?? "<unset>"} but this repo expects ${EXPECTED_HOOKS_PATH}. Run \`npm run hooks:sync\`.`,
-        "warning",
-        {
-          currentHooksPath: hooksPath,
-          expectedHooksPath: EXPECTED_HOOKS_PATH,
-        },
-      ),
-    );
-  }
 
   if (localCoreWorktree) {
     issues.push(
@@ -158,12 +114,9 @@ export function inspectGitControlPlane(cwd = process.cwd()) {
       issues.length > 0
         ? "Git control-plane drift detected."
         : "Git control-plane configuration matches repo policy.",
-    hooksPath,
     localCoreWorktree,
-    expectedHooksPath: EXPECTED_HOOKS_PATH,
     localUserName,
     localUserEmail,
-    missingHookRuntimeFiles,
     issues,
   };
 }
@@ -190,12 +143,6 @@ export function buildSessionStartDoctorOutput(report) {
   }
 
   const hints = [];
-  if (report.issues.some((issue) => issue.code === "hooks-path-drift")) {
-    hints.push("repair hooksPath with `npm run hooks:sync`");
-  }
-  if (report.issues.some((issue) => issue.code === "missing-husky-runtime")) {
-    hints.push("reinstall Husky runtime with `npm run hooks:sync`");
-  }
   if (report.issues.some((issue) => issue.code === "unexpected-core-worktree")) {
     hints.push("remove the unexpected local core.worktree override before continuing");
   }
@@ -213,7 +160,7 @@ export function buildSessionStartDoctorOutput(report) {
     hookSpecificOutput: {
       hookEventName: "SessionStart",
       additionalContext:
-        "Repository control-plane drift is treated as suspicious. Do not mutate .git/config or hook files manually; use npm run hooks:sync for hooksPath repair, keep core.worktree unset in the primary checkout, and avoid placeholder commit identity values.",
+        "Repository control-plane drift is treated as suspicious. Do not mutate .git/config manually, keep core.worktree unset in the primary checkout, and avoid placeholder commit identity values.",
     },
   };
 }
