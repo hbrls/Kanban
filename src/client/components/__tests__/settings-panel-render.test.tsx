@@ -9,10 +9,6 @@ vi.mock("../../utils/diagnostics", () => ({
   desktopAwareFetch,
 }));
 
-vi.mock("../github-webhook-panel", () => ({
-  GitHubWebhookPanel: () => <div>GitHub Webhook Panel</div>,
-}));
-
 vi.mock("../schedule-panel", () => ({
   SchedulePanel: () => <div>Schedule Panel</div>,
 }));

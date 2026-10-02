@@ -22,7 +22,6 @@ export function SettingsCenterNav({ activeItem }: SettingsCenterNavProps) {
     { key: "providers", label: t.settings.providers, href: "/settings?tab=providers" },
     { key: "registry", label: t.settings.registry, href: "/settings?tab=registry" },
     { key: "roles", label: t.settings.roleDefaults, href: "/settings?tab=roles" },
-    { key: "webhooks", label: t.settings.webhooks, href: "/settings?tab=webhooks" },
   ];
   const workspaceToolItems: Array<{ key: SettingsNavItem; label: string; href: string }> = [
     { key: "specialists", label: t.nav.specialists, href: "/settings/specialists" },

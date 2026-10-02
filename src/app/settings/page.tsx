@@ -6,7 +6,6 @@
  * - Specialists (custom agent configurations)
  * - Memory (memory monitoring and cleanup)
  * - MCP Servers (Model Context Protocol server management)
- * - Webhooks (GitHub webhook triggers)
  * - Schedules (cron-based scheduled triggers)
  *
  * This server route wrapper keeps the page entry static-safe on Next.js 16

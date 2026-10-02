@@ -14,7 +14,6 @@
 - button "Providers"
 - button "Specialists"
 - button "MCP Servers"
-- button "Webhooks"
 - button "Schedules"
 - button "Workflows"
 - button "Memory"

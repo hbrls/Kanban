@@ -221,7 +221,6 @@ const en: TranslationDictionary = {
     roles: "Roles",
     specialists: "Specialists",
     mcpServers: "MCP Servers",
-    webhooks: "Webhooks",
     schedules: "Schedules",
     workflows: "Workflows",
     roleDefaults: "Role Defaults",
@@ -232,7 +231,6 @@ const en: TranslationDictionary = {
     registryDesc:
       "Browse Agent Registry (ACP) entries and install or remove agents independently from provider configuration.",
     rolesDesc: "Set default provider and model behavior for each built-in Routa role.",
-    webhooksDesc: "Review GitHub webhook triggers and development-oriented automation hooks.",
     provider: "Provider",
     modelOverride: "Model Override",
     builtIn: "Built-in",
@@ -267,11 +265,6 @@ const en: TranslationDictionary = {
     focusedExecutionPersonas: "Focused execution personas",
     binding: "Binding",
     promptModelPairing: "Prompt + model pairing",
-    webhooksPageTitle: "GitHub Webhook Triggers",
-    webhooksPageDescription: "Automatically trigger agents when GitHub events occur (issues, PRs, CI)",
-    webhookUrl: "Webhook URL:",
-    howItWorks: "How it works:",
-    webhookInfoBanner: "Configure a GitHub repository webhook pointing to {code}. When events arrive, the selected agent is automatically triggered via a background task. Suggested agents: claude-code (implementation) or glm-4 (analysis/search).",
     specialistsTab: {
       catalog: "Catalog",
       totalSpecialists: "{count} total specialists",

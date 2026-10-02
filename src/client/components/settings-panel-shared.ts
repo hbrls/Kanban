@@ -165,7 +165,6 @@ export type SettingsTab =
   | "roles"
   | "specialists"
   | "mcp"
-  | "webhooks"
   | "schedules"
   | "workflows";
 
