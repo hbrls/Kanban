@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isContextError, resolveRepoRoot } from "../hooks/shared";
+import { isContextError, resolveRepoRoot } from "../shared";
 import {
   assembleTaskAdaptiveHarness,
   parseTaskAdaptiveHarnessOptions,

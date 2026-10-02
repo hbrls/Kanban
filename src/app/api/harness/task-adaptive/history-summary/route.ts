@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isContextError } from "@/app/api/harness/hooks/shared";
+import { isContextError } from "@/app/api/harness/shared";
 import { summarizeTaskHistoryContextFromToolArgs } from "@/core/harness/task-adaptive-tool";
 
 export const runtime = "nodejs";

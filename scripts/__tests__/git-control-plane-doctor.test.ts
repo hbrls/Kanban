@@ -1,20 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { spawnSyncMock, existsSyncMock } = vi.hoisted(() => ({
+const { spawnSyncMock } = vi.hoisted(() => ({
   spawnSyncMock: vi.fn(),
-  existsSyncMock: vi.fn(),
 }));
 
 vi.mock("node:child_process", () => ({
   spawnSync: spawnSyncMock,
   default: {
     spawnSync: spawnSyncMock,
-  },
-}));
-
-vi.mock("node:fs", () => ({
-  default: {
-    existsSync: existsSyncMock,
   },
 }));
 
@@ -42,7 +35,6 @@ function gitMissing(stderr = "") {
 
 function installGitMock(values: {
   repoRoot?: string | null;
-  hooksPath?: string | null;
   coreWorktree?: string | null;
   userName?: string | null;
   userEmail?: string | null;
@@ -52,10 +44,6 @@ function installGitMock(values: {
 
     if (joined === "rev-parse --show-toplevel") {
       return values.repoRoot ? gitOk(`${values.repoRoot}\n`) : gitMissing("not a git repo");
-    }
-
-    if (joined === "config --local --get core.hooksPath") {
-      return values.hooksPath ? gitOk(`${values.hooksPath}\n`) : gitMissing();
     }
 
     if (joined === "config --local --get core.worktree") {
@@ -77,13 +65,11 @@ function installGitMock(values: {
 describe("git control plane doctor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    existsSyncMock.mockReturnValue(true);
   });
 
   it("warns when local core.worktree is set", () => {
     installGitMock({
       repoRoot: "/repo",
-      hooksPath: ".husky/_",
       coreWorktree: "/repo/.git/worktrees",
       userName: "Codex",
     });
@@ -105,12 +91,36 @@ describe("git control plane doctor", () => {
     );
     expect(formatGitControlPlaneDoctorReport(report)).toContain("core.worktree is set");
     expect(hookOutput?.systemMessage).toContain("core.worktree");
+    expect(hookOutput?.systemMessage).not.toContain("hooks:sync");
   });
 
-  it("reports ok when hooks and local git config are clean", () => {
+  it("warns when local git identity placeholders are set", () => {
     installGitMock({
       repoRoot: "/repo",
-      hooksPath: ".husky/_",
+      userName: "Test",
+      userEmail: "placeholder@example.com",
+    });
+
+    const report = inspectGitControlPlane("/repo");
+    const hookOutput = buildSessionStartDoctorOutput(report);
+
+    expect(report.status).toBe("warning");
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "suspicious-local-user-name",
+        }),
+        expect.objectContaining({
+          code: "suspicious-local-user-email",
+        }),
+      ]),
+    );
+    expect(hookOutput?.hookSpecificOutput.additionalContext).toContain("placeholder");
+  });
+
+  it("reports ok when local git config is clean", () => {
+    installGitMock({
+      repoRoot: "/repo",
     });
 
     const report = inspectGitControlPlane("/repo");
@@ -119,5 +129,14 @@ describe("git control plane doctor", () => {
     expect(report.issues).toEqual([]);
     expect(report.localCoreWorktree).toBeNull();
     expect(buildSessionStartDoctorOutput(report)).toBeNull();
+  });
+
+  it("skips outside a git worktree", () => {
+    installGitMock({ repoRoot: null });
+
+    const report = inspectGitControlPlane("/not-a-repo");
+
+    expect(report.status).toBe("skipped");
+    expect(report.repoRoot).toBeNull();
   });
 });
