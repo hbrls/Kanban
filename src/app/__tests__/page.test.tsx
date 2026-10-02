@@ -90,18 +90,15 @@ vi.mock("@/i18n", () => ({
       home: {
         loadingWorkspaces: "Loading workspaces...",
         whatToAdvance: "Which execution mode do you want to enter?",
-        homePrimaryHint: "All three modes are multi-agent.",
+        homePrimaryHint: "All modes are multi-agent.",
         surfaceLabel: "Mode",
         modeTechnicalLabel: "Technical detail",
         sessionsSurfaceTitle: "Sessions Mode",
         kanbanSurfaceTitle: "Kanban Mode",
-        teamSurfaceTitle: "Team Mode",
         modeSessionDescription: "Session primary description",
         modeSessionTechnical: "Session technical detail",
         modeKanbanDescription: "Kanban primary description",
         modeKanbanTechnical: "Kanban technical detail",
-        modeTeamDescription: "Team primary description",
-        modeTeamTechnical: "Team technical detail",
         readinessTitle: "Readiness",
         readinessModel: "Connect model",
         readinessCodebase: "Select codebase",
@@ -112,7 +109,6 @@ vi.mock("@/i18n", () => ({
       nav: {
         sessions: "Sessions",
         kanban: "Kanban",
-        team: "Team",
       },
       workspace: {
         kanbanDescription: "Kanban mode description",
@@ -209,8 +205,10 @@ describe("HomePage", () => {
 
     expect(screen.getByText("Session technical detail")).toBeTruthy();
     expect(screen.getByText("Kanban technical detail")).toBeTruthy();
-    expect(screen.getByText("Team technical detail")).toBeTruthy();
-    expect(screen.getAllByText("Technical detail")).toHaveLength(3);
+    expect(screen.getAllByText("Technical detail")).toHaveLength(2);
+    expect(screen.queryByText("Team primary description")).toBeNull();
+    expect(screen.queryByRole("link", { name: /Team Mode/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Kanban Mode/i })?.getAttribute("href")).toBe("/workspace/default/kanban");
     expect(screen.queryByText("Kanban mode description")).toBeNull();
   });
 });
