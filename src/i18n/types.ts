@@ -225,7 +225,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     providers: string;
     roles: string;
     specialists: string;
-    models: string;
     mcpServers: string;
     webhooks: string;
     schedules: string;
@@ -235,7 +234,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     providersDesc: string;
     registryDesc: string;
     rolesDesc: string;
-    modelsDesc: string;
     webhooksDesc: string;
     nameRequired: string;
     commandRequired: string;

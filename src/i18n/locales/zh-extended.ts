@@ -939,24 +939,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
     workspaceIntegrations: "工作区集成",
   },
 
-  models: {
-    title: "模型",
-    addModel: "添加模型",
-    alias: "别名",
-    modelName: "模型名称",
-    baseUrl: "基础 URL",
-    apiKey: "API 密钥",
-    savedModels: "已保存模型",
-    pressEnterToAdd: "按回车添加",
-    aliasAlreadyExists: "已存在",
-    deleteConfirm: "删除模型",
-    aliasDescription: "别名出现在供应商标签页的模型选择器中，在创建会话时解析为实际的模型和连接。",
-    placeholderAlias: "deepseek-v4",
-    placeholderApiKey: "sk-…",
-    placeholderBaseUrl: "https://api.deepseek.com/anthropic",
-    placeholderModelName: "deepseek-chat",
-  },
-
   schedules: {
     title: "定时任务",
     noSchedules: "暂无定时任务。",

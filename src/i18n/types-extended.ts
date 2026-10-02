@@ -957,26 +957,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     workspaceIntegrations: string;
   };
 
-  // Models
-  models: {
-    title: string;
-    addModel: string;
-    alias: string;
-    modelName: string;
-    baseUrl: string;
-    apiKey: string;
-    savedModels: string;
-    pressEnterToAdd: string;
-    aliasAlreadyExists: string;
-    deleteConfirm: string;
-    aliasDescription: string;
-    // Additional models fields
-    placeholderAlias: string;
-    placeholderApiKey: string;
-    placeholderBaseUrl: string;
-    placeholderModelName: string;
-  };
-
   // Schedules
   schedules: {
     title: string;

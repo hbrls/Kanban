@@ -91,23 +91,6 @@ describe("SettingsPanel render", () => {
     });
   });
 
-  it("renders the models tab through the extracted component", async () => {
-    render(
-      <SettingsPanel
-        open
-        onClose={() => {}}
-        providers={[]}
-        initialTab="models"
-      />,
-    );
-
-    expect(screen.getAllByText("Add Model").length).toBeGreaterThan(0);
-    expect(screen.getByText("Models")).not.toBeNull();
-    await waitFor(() => {
-      expect(screen.getByText(/Memory 10\/20 MB/)).not.toBeNull();
-    });
-  });
-
   it("renders ACP registry in its own tab instead of the providers tab", async () => {
     render(
       <SettingsPanel

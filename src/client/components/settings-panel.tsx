@@ -12,7 +12,6 @@ import {
   saveHiddenProviders,
   type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
-import { ModelsTab } from "./settings-panel-models-tab";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeSwitcher } from "./theme-switcher";
 import {
@@ -181,7 +180,6 @@ function RolesTab({
   customProviders,
   registryProviders,
   onChange,
-  onOpenModelsTab,
 }: {
   settings: DefaultProviderSettings;
   modelDefs: ModelDefinition[];
@@ -189,7 +187,6 @@ function RolesTab({
   customProviders: ProviderOption[];
   registryProviders: ProviderOption[];
   onChange: (role: AgentRoleKey, field: "provider" | "model", value: string) => void;
-  onOpenModelsTab: () => void;
 }) {
   const { t } = useTranslation();
   const datalistId = useId();
@@ -276,9 +273,7 @@ function RolesTab({
           ))}
         </datalist>
         <p className="mt-4 text-[10px] text-slate-400 dark:text-slate-500">
-          Leave model blank to use the provider default. Type a model alias from the{" "}
-          <button onClick={onOpenModelsTab} className="text-blue-500 hover:underline">Models tab</button>
-          {" "}to use custom connection details.
+          Leave model blank to use the provider default. Type a saved model alias to use its custom connection details.
         </p>
       </div>
     </div>
@@ -826,7 +821,7 @@ export function SettingsPanel({ open, onClose, providers, initialTab, onResetOnb
 function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboarding, variant = "modal" }: Omit<SettingsPanelProps, "open">) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<DefaultProviderSettings>(() => loadDefaultProviders());
-  const [modelDefs, setModelDefs] = useState<ModelDefinition[]>(() => loadModelDefinitions());
+  const [modelDefs] = useState<ModelDefinition[]>(() => loadModelDefinitions());
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => initialTab ?? "providers");
   const isPageVariant = variant === "page";
 
@@ -847,16 +842,12 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
   const registryProviders = providers.filter((p) => p.source === "registry");
   const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
-    if (tab === "models") {
-      setModelDefs(loadModelDefinitions());
-    }
   };
 
   const TAB_DEFS: { key: SettingsTab; label: string }[] = [
     { key: "providers", label: t.settings.providers },
     { key: "registry", label: t.settings.registry },
     { key: "roles", label: t.settings.roles },
-    { key: "models", label: t.settings.models },
     { key: "webhooks", label: t.settings.webhooks },
   ];
 
@@ -906,10 +897,8 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
           customProviders={customProviders}
           registryProviders={registryProviders}
           onChange={handleChange}
-          onOpenModelsTab={() => handleTabChange("models")}
         />
       )}
-      {activeTab === "models" && <ModelsTab />}
       {activeTab === "webhooks" && <WebhooksTab />}
     </div>
   );
@@ -927,7 +916,6 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
               {activeTab === "providers" && t.settings.providersDesc}
               {activeTab === "registry" && t.settings.registryDesc}
               {activeTab === "roles" && t.settings.rolesDesc}
-              {activeTab === "models" && t.settings.modelsDesc}
               {activeTab === "webhooks" && t.settings.webhooksDesc}
             </p>
           </header>

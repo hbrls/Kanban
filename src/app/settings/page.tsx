@@ -4,7 +4,6 @@
  * Provides a full-page UI for all Routa settings:
  * - Providers (default agent providers and model configurations)
  * - Specialists (custom agent configurations)
- * - Models (custom model definitions with aliases)
  * - Memory (memory monitoring and cleanup)
  * - MCP Servers (Model Context Protocol server management)
  * - Webhooks (GitHub webhook triggers)

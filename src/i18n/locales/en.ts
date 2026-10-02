@@ -220,7 +220,6 @@ const en: TranslationDictionary = {
     providers: "Providers",
     roles: "Roles",
     specialists: "Specialists",
-    models: "Models",
     mcpServers: "MCP Servers",
     webhooks: "Webhooks",
     schedules: "Schedules",
@@ -233,7 +232,6 @@ const en: TranslationDictionary = {
     registryDesc:
       "Browse Agent Registry (ACP) entries and install or remove agents independently from provider configuration.",
     rolesDesc: "Set default provider and model behavior for each built-in Routa role.",
-    modelsDesc: "Manage custom model aliases, base URLs, and shared model definitions.",
     webhooksDesc: "Review GitHub webhook triggers and development-oriented automation hooks.",
     provider: "Provider",
     modelOverride: "Model Override",
