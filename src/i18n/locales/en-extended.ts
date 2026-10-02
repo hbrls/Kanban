@@ -939,24 +939,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
     workspaceIntegrations: "Workspace integrations",
   },
 
-  models: {
-    title: "Models",
-    addModel: "Add Model",
-    alias: "Alias",
-    modelName: "Model Name",
-    baseUrl: "Base URL",
-    apiKey: "API Key",
-    savedModels: "Saved Models",
-    pressEnterToAdd: "Press Enter to add",
-    aliasAlreadyExists: "already exists",
-    deleteConfirm: "Delete model",
-    aliasDescription: "Aliases appear in the Providers tab model selector and resolve to the actual model + connection at session creation.",
-    placeholderAlias: "deepseek-v4",
-    placeholderApiKey: "sk-…",
-    placeholderBaseUrl: "https://api.deepseek.com/anthropic",
-    placeholderModelName: "deepseek-chat",
-  },
-
   schedules: {
     title: "Schedules",
     noSchedules: "No schedules configured yet.",
