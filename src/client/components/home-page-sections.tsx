@@ -673,9 +673,7 @@ export function OnboardingCard({
       ? t.onboarding.modeSessionTitle
       : preferredMode === "KANBAN"
         ? t.onboarding.modeKanbanTitle
-        : preferredMode === "TEAM"
-          ? t.onboarding.modeTeamTitle
-          : null;
+        : null;
 
   const handleWorkspaceCreate = async () => {
     const title = workspaceName.trim();
@@ -896,14 +894,6 @@ export function OnboardingCard({
             >
               <div className="text-sm font-semibold text-slate-900 dark:text-white">{t.onboarding.modeKanbanTitle}</div>
               <p className="mt-1 text-sm leading-6 text-[#577090] dark:text-slate-400">{t.onboarding.modeKanbanDescription}</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => onSelectMode("TEAM")}
-              className={`rounded-2xl border px-4 py-3 text-left transition-colors ${preferredMode === "TEAM" ? "border-emerald-400 bg-emerald-50 dark:border-emerald-500/50 dark:bg-emerald-500/10" : "border-sky-100 hover:border-sky-300 dark:border-white/8 dark:hover:border-[#314665]"}`}
-            >
-              <div className="text-sm font-semibold text-slate-900 dark:text-white">{t.onboarding.modeTeamTitle}</div>
-              <p className="mt-1 text-sm leading-6 text-[#577090] dark:text-slate-400">{t.onboarding.modeTeamDescription}</p>
             </button>
           </div>
           {selectedModeLabel && (

@@ -4,7 +4,7 @@
  * Desktop Sidebar Navigation — VS Code-style left navigation for Tauri app.
  *
  * Provides a compact icon-based navigation with:
- * - Primary navigation icons (Home, Sessions, Kanban, Team)
+ * - Primary navigation icons (Home, Sessions, Kanban)
  * - Secondary tools (Settings)
  * - Workspace indicator
  */
@@ -14,7 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { ChevronLeft, Columns2, House, ScrollText, Settings, Share2 } from "lucide-react";
+import { ChevronLeft, Columns2, House, ScrollText, Settings } from "lucide-react";
 
 
 interface NavItem {
@@ -76,14 +76,6 @@ export function DesktopSidebar({
       href: workspaceBaseHref ? `${workspaceBaseHref}/kanban` : "/",
       icon: (
         <Columns2 className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
-      ),
-    },
-    {
-      id: "team",
-      label: t.nav.team,
-      href: workspaceBaseHref ? `${workspaceBaseHref}/team` : "/",
-      icon: (
-        <Share2 className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}/>
       ),
     },
   ];

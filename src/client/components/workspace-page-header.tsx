@@ -11,7 +11,6 @@ interface WorkspacePageHeaderProps {
   pendingTasksCount: number;
   onRefresh: () => void;
   onKanban?: () => void;
-  onTeam?: () => void;
   onTraces?: () => void;
 }
 
@@ -24,7 +23,6 @@ export function WorkspacePageHeader({
   pendingTasksCount,
   onRefresh,
   onKanban,
-  onTeam,
   onTraces,
 }: WorkspacePageHeaderProps) {
   const { t } = useTranslation();
@@ -61,15 +59,6 @@ export function WorkspacePageHeader({
         >
           {t.common.refresh}
         </button>
-        {onTeam ? (
-          <button
-            type="button"
-            onClick={onTeam}
-            className="rounded-md bg-desktop-bg-secondary px-2.5 py-1.5 text-[11px] font-medium text-desktop-text-secondary transition-colors hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
-          >
-            {t.nav.team}
-          </button>
-        ) : null}
         {onKanban ? (
           <button
             type="button"

@@ -17,7 +17,6 @@ const meta = {
     activeAgentsCount: 3,
     pendingTasksCount: 8,
     onRefresh: () => {},
-    onTeam: () => {},
     onKanban: () => {},
     onTraces: () => {},
   },
