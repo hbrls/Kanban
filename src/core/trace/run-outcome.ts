@@ -101,7 +101,7 @@ const TEST_KEYWORDS = ["test", "vitest", "jest", "pytest", "cargo test", "npm te
 const LINT_KEYWORDS = ["lint", "eslint", "stylelint", "ruff check"];
 const TYPECHECK_KEYWORDS = ["tsc", "typecheck", "type-check", "cargo check", "mypy"];
 const BUILD_KEYWORDS = ["build", "compile", "next build", "cargo build"];
-const FITNESS_KEYWORDS = ["entrix", "fitness", "contract", "api:test", "api:check"];
+const FITNESS_KEYWORDS = ["fitness", "contract", "api:test", "api:check"];
 const SECURITY_KEYWORDS = ["semgrep", "trivy", "security", "hadolint", "audit", "snyk"];
 
 type SignalBucket = { total: number; failures: number };

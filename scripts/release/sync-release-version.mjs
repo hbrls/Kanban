@@ -69,7 +69,7 @@ async function updateTomlVersion(relativePath, version, options = {}) {
 
   // Update workspace dependencies if specified
   if (options.updateWorkspaceDeps) {
-    const crateNames = ["routa-core", "routa-rpc", "routa-scanner", "routa-server", "entrix"];
+    const crateNames = ["routa-core", "routa-rpc", "routa-scanner", "routa-server"];
     for (const crateName of crateNames) {
       // Match: routa-core = { version = "0.2.9", path = "../routa-core" }
       const depPattern = new RegExp(
@@ -133,15 +133,11 @@ await updateTomlVersion("Cargo.toml", version);
 await updateJsonVersion("apps/desktop/package.json", version);
 await updateTomlVersion("apps/desktop/src-tauri/Cargo.toml", version);
 await updateJsonVersion("apps/desktop/src-tauri/tauri.conf.json", version);
-await updateJsonVersion("packages/entrix/package.json", version, {
-  updateOptionalDeps: true,
-});
 
 // Update Rust crates versions (and their workspace dependencies)
 await updateTomlVersion("crates/routa-core/Cargo.toml", version);
 await updateTomlVersion("crates/routa-rpc/Cargo.toml", version, { updateWorkspaceDeps: true });
 await updateTomlVersion("crates/routa-scanner/Cargo.toml", version);
 await updateTomlVersion("crates/routa-server/Cargo.toml", version, { updateWorkspaceDeps: true });
-await updateTomlVersion("crates/entrix/Cargo.toml", version);
 
 console.log(`Synchronized release version to ${version}`);

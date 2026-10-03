@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use axum::{routing::post, Json, Router};
 use routa_core::git::{compute_historical_related_files, HistoricalRelatedFile};
@@ -58,8 +57,6 @@ struct ReviewAnalysisPayload {
     config_snippets: Vec<ReviewConfigSnippet>,
     #[serde(skip_serializing_if = "Option::is_none")]
     review_rules: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    graph_review_context: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     historical_related_files: Option<Vec<HistoricalRelatedFile>>,
 }
@@ -330,7 +327,6 @@ fn build_review_payload(
         ),
         config_snippets: load_config_snippets(repo_root)?,
         review_rules: load_review_rules(repo_root, rules_file)?,
-        graph_review_context: load_graph_review_context(repo_root, base),
         historical_related_files,
     })
 }
@@ -431,37 +427,6 @@ fn truncate(content: &str, max_chars: usize) -> String {
         return content.to_string();
     }
     format!("{}\n\n[truncated]", &content[..max_chars])
-}
-
-fn load_graph_review_context(repo_root: &Path, base: &str) -> Option<serde_json::Value> {
-    let output = entrix_command(repo_root)
-        .args(["graph", "review-context", "--base", base, "--json"])
-        .current_dir(repo_root)
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-
-    serde_json::from_str(String::from_utf8_lossy(&output.stdout).trim()).ok()
-}
-
-fn entrix_command(repo_root: &Path) -> Command {
-    let debug_binary = repo_root
-        .join("target")
-        .join("debug")
-        .join(if cfg!(windows) {
-            "entrix.exe"
-        } else {
-            "entrix"
-        });
-    if debug_binary.exists() {
-        Command::new(debug_binary)
-    } else {
-        let mut command = Command::new("cargo");
-        command.args(["run", "-q", "-p", "entrix", "--"]);
-        command
-    }
 }
 
 fn load_dotenv() {
