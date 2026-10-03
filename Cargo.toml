@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/routa-core",
+    "crates/routa-server",
+    "crates/routa-rpc",
+    "crates/routa-scanner",
+    "apps/desktop/src-tauri",
+]
+
+[workspace.package]
+version = "0.19.0"
+edition = "2021"
+license = "MIT"
+authors = ["phodal"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

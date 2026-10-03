@@ -1,0 +1,11 @@
+last_reviewed_at: "2026-04-28"
+cadence_days: 7
+owner: "agent"
+notes: "Weekly issue hygiene heartbeat for status/implementation sync checks."
+last_cleanup_summary: |
+  2026-04-28 cleanup:
+  - Fixed docs/issues frontmatter validation errors: replaced invalid `status: closed` values with `resolved`, added frontmatter to the Kanban event persistence tracker, and normalized the legacy history-memory snapshot record
+  - Synced local/remote status drift for already-closed GitHub issues `#180`, `#314`, `#364`, `#401`, `#406`, `#445`, `#528`, and `#537`
+  - Marked resolved local trackers whose implementation evidence is now present: startup performance probe, canonical story contract gate, MCP approval rendering, task delivery snapshots, Docusaurus surface-first IA, harness-monitor Full graph opt-in, and git credential prevention
+  - Reviewed the remaining active suspects and left them open only where unresolved work is still evident: Kanban flow observability, skipped flaky tests, desktop DB/port diagnosis, harness-monitor decision summary, Feature Explorer auto-retro queue, Kanban event persistence, and ReasoningBank memory
+  - Scanner status after cleanup: `python3 .github/scripts/issue-scanner.py --check` passes; active local trackers reduced to 7 with 6 age-based suspects retained intentionally
