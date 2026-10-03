@@ -110,7 +110,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     workspaceOverview: string;
     openKanban: string;
     newWorkspace: string;
-    loadingWorkspaces: string;
     inputPlaceholder: string;
     sendHint: string;
     multiAgent: string;
@@ -133,19 +132,10 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     hideAdvancedMode: string;
     advancedModeDescription: string;
     setupGateHint: string;
-    whatToAdvance: string;
-    homePrimaryHint: string;
-    surfaceLabel: string;
-    modeTechnicalLabel: string;
-    sessionsSurfaceTitle: string;
-    kanbanSurfaceTitle: string;
     teamSurfaceTitle: string;
     modeSessionTitle: string;
     modeSessionDescription: string;
-    modeSessionTechnical: string;
     modeSessionPlaceholder: string;
-    modeKanbanDescription: string;
-    modeKanbanTechnical: string;
     modePlanningTitle: string;
     modePlanningDescription: string;
     modePlanningPlaceholder: string;
@@ -153,12 +143,50 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     modeTeamDescription: string;
     modeTeamTechnical: string;
     modeTeamPlaceholder: string;
-    readinessTitle: string;
-    readinessModel: string;
-    readinessCodebase: string;
-    readinessWorkspace: string;
-    continueWork: string;
     continueBoard: string;
+    justNow: string;
+    minutesAgo: string;
+    hoursAgo: string;
+    daysAgo: string;
+    sessionFallback: string;
+  };
+
+  homeInitialization: {
+    title: string;
+    createWorkspaceTitle: string;
+    createWorkspaceHint: string;
+    createWorkspacePlaceholder: string;
+    createWorkspaceFailed: string;
+    progressLabel: string;
+    statusPending: string;
+    statusRunning: string;
+    statusSuccess: string;
+    statusAttention: string;
+    statusError: string;
+    statusSkipped: string;
+    summaryReady: string;
+    summaryAttention: string;
+    summaryFailed: string;
+    stepWorkspaces: string;
+    stepActiveWorkspace: string;
+    stepRuntime: string;
+    stepCodebases: string;
+    stepRepoAccess: string;
+    stepRecentSessions: string;
+    workspacesCount: string;
+    noWorkspaces: string;
+    runtimeConnected: string;
+    runtimeNoProviders: string;
+    waiting: string;
+    running: string;
+    codebasesCount: string;
+    notConfigured: string;
+    repoAccessReachable: string;
+    repoAccessProblems: string;
+    sessionsCount: string;
+    noRecentSessions: string;
+    actionConfigureProvider: string;
+    actionAddCodebase: string;
   };
 
   // Navigation & Header
@@ -544,40 +572,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     skills: string;
     liveTasks: string;
     noActiveTasks: string;
-  };
-
-  // Onboarding
-  onboarding: {
-    title: string;
-    createWorkspace: string;
-    description: string;
-    getStarted: string;
-    checklistTitle: string;
-    checklistDescription: string;
-    workspaceNameLabel: string;
-    workspaceNamePlaceholder: string;
-    openProviders: string;
-    nextSteps: string;
-    providerTitle: string;
-    providerDescription: string;
-    providerAction: string;
-    providerReady: string;
-    codebaseTitle: string;
-    codebaseDescription: string;
-    codebaseAction: string;
-    codebaseReady: string;
-    modeTitle: string;
-    modeDescription: string;
-    modeReady: string;
-    modeSessionTitle: string;
-    modeSessionDescription: string;
-    modeKanbanTitle: string;
-    modeKanbanDescription: string;
-    modeTeamTitle: string;
-    modeTeamDescription: string;
-    continueLater: string;
-    completed: string;
-    pending: string;
   };
 
   // Skills
