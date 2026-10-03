@@ -28,7 +28,7 @@ describe("run-vitest-fast helpers", () => {
     expect(isVitestRelevantChange("package.json")).toBe(false);
     expect(isVitestRelevantChange("package-lock.json")).toBe(false);
     expect(isVitestRelevantChange("docs/fitness/README.md")).toBe(false);
-    expect(isVitestRelevantChange("crates/harness-monitor/src/tui.rs")).toBe(false);
+    expect(isVitestRelevantChange("crates/routa-server/src/lib.rs")).toBe(false);
   });
 
   it("normalizes vitest success summaries", () => {

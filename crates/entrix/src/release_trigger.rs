@@ -369,7 +369,7 @@ release_triggers:
   "artifacts": [
     {
       "kind": "npm_tarball",
-      "path": "dist/npm/harness-monitor-0.1.0.tgz",
+      "path": "dist/npm/entrix-0.1.0.tgz",
       "entries": [
         {"path": "package/dist/index.js.map"}
       ]
@@ -436,7 +436,7 @@ release_triggers:
         let artifacts = vec![
             ReleaseArtifact {
                 kind: "npm_tarball".to_string(),
-                path: "dist/npm/harness-monitor-0.2.0.tgz".to_string(),
+                path: "dist/npm/entrix-0.2.0.tgz".to_string(),
                 target: Some("linux-x64".to_string()),
                 channel: Some("latest".to_string()),
                 size_bytes: 1600,
@@ -465,7 +465,7 @@ release_triggers:
         ];
         let baseline_artifacts = vec![ReleaseArtifact {
             kind: "npm_tarball".to_string(),
-            path: "dist/npm/harness-monitor-0.1.9.tgz".to_string(),
+            path: "dist/npm/entrix-0.1.9.tgz".to_string(),
             target: Some("linux-x64".to_string()),
             channel: Some("latest".to_string()),
             size_bytes: 1000,
