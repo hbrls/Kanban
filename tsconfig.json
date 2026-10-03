@@ -25,9 +25,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@autodev/office-render": [
-        "./packages/office-render/src/index.ts"
       ]
     },
     "baseUrl": "."

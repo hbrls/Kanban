@@ -16,7 +16,6 @@ const additionalDevOrigins = process.env.ROUTA_ALLOWED_DEV_ORIGINS
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", ...additionalDevOrigins],
-  transpilePackages: ["@autodev/office-render"],
   typescript: {
     tsconfigPath: isDesktopServerBuild ? "tsconfig.desktop.json" : "tsconfig.json",
   },
