@@ -563,7 +563,7 @@ export async function listAgentsWithStatus(): Promise<
   }>
 > {
   const registry = await fetchRegistry();
-  const results = [];
+  const results: any[] = [];
 
   for (const agent of registry.agents) {
     const status = await getAgentStatus(agent.id);

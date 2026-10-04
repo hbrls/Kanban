@@ -164,8 +164,8 @@ Treat it as:
 ### Run Locally
 
 ```bash
-npm install --legacy-peer-deps
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Open `http://localhost:3000`.
@@ -173,7 +173,7 @@ Open `http://localhost:3000`.
 If you want the web UI to point at the local desktop/backend server:
 
 ```bash
-ROUTA_RUST_BACKEND_URL="http://127.0.0.1:3210" npm run dev
+ROUTA_RUST_BACKEND_URL="http://127.0.0.1:3210" pnpm run dev
 ```
 
 ## Recommendation
