@@ -1,0 +1,137 @@
+/* Vision canvas local theme: node states, handles, edges and controls. */
+
+.canvasRoot {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.canvasRoot :global(.react-flow) {
+  background: var(--dt-bg-primary);
+}
+
+.canvasRoot :global(.react-flow__background) {
+  color: var(--dt-border-light);
+}
+
+.canvasRoot :global(.react-flow__edge-path) {
+  stroke: var(--dt-text-muted);
+  stroke-width: 1.5;
+}
+
+.canvasRoot :global(.react-flow__arrowhead polyline),
+.canvasRoot :global(.react-flow__edge marker path) {
+  fill: var(--dt-text-muted);
+  stroke: var(--dt-text-muted);
+}
+
+.baseNode {
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.baseNode:hover {
+  box-shadow: 0 0 0 1px var(--dt-border);
+}
+
+.baseNode:focus-visible {
+  outline: 2px solid var(--dt-accent);
+  outline-offset: 2px;
+}
+
+.canvasRoot :global(.react-flow__node.selected) .baseNode {
+  border-color: var(--dt-accent);
+  box-shadow:
+    0 0 0 1px var(--dt-accent),
+    0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.taskNode {
+  display: flex;
+  flex-direction: column;
+}
+
+.taskContent {
+  min-height: 84px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--dt-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.taskFooter {
+  min-height: 48px;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dt-text-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.nodeHandle {
+  width: 8px;
+  height: 8px;
+  background: var(--dt-bg-primary);
+  border: 1.5px solid var(--dt-text-muted);
+}
+
+.canvasRoot :global(.react-flow__node.selected) .nodeHandle {
+  border-color: var(--dt-accent);
+}
+
+.pastMask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Above nodes, edges and their selection styling (React Flow elevates
+     selected nodes to z-index 1000); below controls and MiniMap. */
+  z-index: 1001;
+  background: var(--dt-brand-route);
+  opacity: 0.2;
+  pointer-events: auto;
+}
+
+.controls {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-bg-secondary);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+.controlButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--dt-text-secondary);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.controlButton:hover {
+  background: var(--dt-bg-active);
+  color: var(--dt-text-primary);
+}
+
+.miniMap {
+  z-index: 1002;
+  border: 1px solid var(--dt-border);
+  border-radius: 10px;
+  background: var(--dt-bg-secondary);
+}
+
+.controlButton:focus-visible {
+  outline: 2px solid var(--dt-accent);
+  outline-offset: 1px;
+}

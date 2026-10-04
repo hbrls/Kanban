@@ -188,6 +188,7 @@ const zh: TranslationDictionary = {
     sessions: "会话",
     overview: "概览",
     kanban: "看板",
+    vision: "Vision",
     team: "团队",
    traces: "追踪",
     settings: "设置",
@@ -209,6 +210,34 @@ const zh: TranslationDictionary = {
     advancedGroupTools: "工具",
     advancedGroupOther: "其它",
     records: "记录",
+  },
+
+  vision: {
+    pageTitle: "Vision",
+    resetLayout: "重置布局",
+    canvasLabel: "Vision 画布",
+    zoomIn: "放大",
+    zoomOut: "缩小",
+    fitView: "适应视图",
+    miniMap: "小地图",
+    tasks: {
+      defineRequirements: "需求梳理",
+      designSolution: "方案设计",
+      validateDelivery: "交付验证",
+      coordinateIntegration: "集成协调",
+    },
+    taskContent: {
+      defineRequirements: "明确目标、需求范围与验收标准。",
+      designSolution: "确定架构、组件划分与实施步骤。",
+      validateDelivery: "对照验收标准检查交付结果。",
+      coordinateIntegration: "对齐各任务产出并完成结果交接。",
+    },
+    taskFooter: {
+      defineRequirements: "需求清单",
+      designSolution: "实施方案",
+      validateDelivery: "验证报告",
+      coordinateIntegration: "交接记录",
+    },
   },
 
   canvas: {

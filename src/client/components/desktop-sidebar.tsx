@@ -14,7 +14,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { ChevronLeft, Columns2, House, Settings } from "lucide-react";
+import { ChevronLeft, Columns2, House, Settings, Workflow } from "lucide-react";
 
 
 interface NavItem {
@@ -68,6 +68,14 @@ export function DesktopSidebar({
       href: workspaceBaseHref ? `${workspaceBaseHref}/kanban` : "/",
       icon: (
         <Columns2 className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
+      ),
+    },
+    {
+      id: "vision",
+      label: t.nav.vision,
+      href: `${workspaceBaseHref}/vision`,
+      icon: (
+        <Workflow className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
       ),
     },
   ];
