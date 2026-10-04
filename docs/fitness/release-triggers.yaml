@@ -96,8 +96,9 @@ release_triggers:
     type: release_boundary_change
     paths:
       - package.json
-      - package-lock.json
+      - pnpm-lock.yaml
       - apps/desktop/package.json
+      - apps/desktop/pnpm-lock.yaml
       - apps/desktop/src-tauri/tauri.conf.json
       - apps/desktop/src-tauri/tauri.android.conf.json
       - scripts/release/**
@@ -112,7 +113,9 @@ release_triggers:
   - name: capability_or_supply_chain_drift
     type: capability_change
     paths:
-      - package-lock.json
+      - pnpm-lock.yaml
+      - apps/desktop/pnpm-lock.yaml
+      - packages/office-render/pnpm-lock.yaml
       - apps/desktop/src-tauri/capabilities/**
       - apps/desktop/src-tauri/tauri.conf.json
       - .github/workflows/**
