@@ -39,7 +39,6 @@ import {
 import { buildKanbanTaskAdaptiveHarnessOptions } from "./kanban-task-adaptive";
 import { importGitHubItems } from "./kanban-github-import";
 import { KanbanTabContent } from "./kanban-tab-content";
-import { useRuntimeFitnessStatus } from "./use-runtime-fitness-status";
 
 interface SpecialistOption {
   id: string;
@@ -270,9 +269,6 @@ export function KanbanTab({
   const sessionBackfillInFlightRef = useRef(new Set<string>());
   const emptySessionRecoveryRef = useRef<string | null>(null);
   const previousPreferredTaskSessionIdRef = useRef<string | null>(null);
-  const [isPageVisible, setIsPageVisible] = useState(() => (
-    typeof document === "undefined" || document.visibilityState === "visible"
-  ));
 
   const sessionMap = useMemo(() => {
     const map = new Map<string, SessionInfo>();
@@ -616,13 +612,6 @@ export function KanbanTab({
   const selectedProviderInfo = useMemo(() => {
     return acp?.providers?.find((p) => p.id === acp.selectedProvider) ?? null;
   }, [acp]);
-  const runtimeFitness = useRuntimeFitnessStatus({
-    workspaceId,
-    codebaseId: defaultCodebase?.id ?? null,
-    enabled: workspaceId !== "__placeholder__",
-    refreshSignal,
-    isPageVisible,
-  });
 
   // Sync task's assignedProvider to ACP state when activeTaskId changes
   useEffect(() => {
@@ -964,20 +953,6 @@ export function KanbanTab({
       taskId: nextActiveTaskId,
     }, "push");
   }, [activeTask]);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    const updatePageVisibility = () => {
-      setIsPageVisible(document.visibilityState === "visible");
-    };
-
-    updatePageVisibility();
-    document.addEventListener("visibilitychange", updatePageVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", updatePageVisibility);
-    };
-  }, []);
 
   useEffect(() => {
     if (!agentSessionId || !agentPanelOpen) return;
@@ -2179,23 +2154,7 @@ export function KanbanTab({
     onProviderClick: () => {
       // Could open provider settings or do nothing
     },
-    onFitnessClick: () => {
-      setShowFitnessWorkbench(true);
-    },
     repoSync,
-    runtimeFitness: runtimeFitness.data,
-    runtimeFitnessLoading: runtimeFitness.loading,
-    runtimeFitnessError: runtimeFitness.error,
-  };
-
-  const fitnessWorkbenchModalProps = {
-    open: showFitnessWorkbench,
-    workspaceId,
-    codebase: defaultCodebase,
-    runtimeFitness: runtimeFitness.data,
-    sessionId: fitnessWorkbenchSessionId,
-    onSessionIdChange: setFitnessWorkbenchSessionId,
-    onClose: () => setShowFitnessWorkbench(false),
   };
 
   return (
