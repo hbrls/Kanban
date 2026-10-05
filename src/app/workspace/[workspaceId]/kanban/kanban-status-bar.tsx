@@ -4,7 +4,6 @@ import { GitBranch, Zap } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import type { CodebaseData } from "@/client/hooks/use-workspaces";
 import type { AcpProviderInfo } from "@/client/acp-client";
-import type { RuntimeFitnessModeSummary, RuntimeFitnessStatusResponse } from "@/core/fitness/runtime-status-types";
 import type { KanbanBoardInfo } from "../types";
 import type { RepoSyncState } from "./kanban-repo-sync-status";
 
@@ -25,79 +24,8 @@ interface KanbanStatusBarProps {
   onRepoClick?: () => void;
   /** 点击 Provider 时的回调 */
   onProviderClick?: () => void;
-  /** 点击 Runtime Fitness 时的回调 */
-  onFitnessClick?: () => void;
   /** 仓库同步状态 */
   repoSync?: RepoSyncState;
-  /** Runtime Fitness 状态 */
-  runtimeFitness?: RuntimeFitnessStatusResponse | null;
-  /** Runtime Fitness 是否加载中 */
-  runtimeFitnessLoading?: boolean;
-  /** Runtime Fitness 加载错误 */
-  runtimeFitnessError?: string | null;
-}
-
-function formatModeLabel(summary: RuntimeFitnessModeSummary | null, fastLabel: string, fullLabel: string) {
-  if (!summary) return null;
-  return summary.mode === "fast" ? fastLabel : fullLabel;
-}
-
-function formatScore(value: number | null | undefined): string | null {
-  return typeof value === "number" ? value.toFixed(1) : null;
-}
-
-function formatObservedAt(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) return null;
-  return new Date(timestamp).toLocaleString();
-}
-
-function selectDisplayedFitness(runtimeFitness: RuntimeFitnessStatusResponse | null | undefined): RuntimeFitnessModeSummary | null {
-  if (!runtimeFitness) return null;
-  if (runtimeFitness.hasRunning) {
-    return runtimeFitness.modes.find((summary) => summary.currentStatus === "running")
-      ?? runtimeFitness.latest
-      ?? null;
-  }
-  return runtimeFitness.latest ?? null;
-}
-
-function formatStatusLabel(
-  summary: RuntimeFitnessModeSummary | null,
-  t: ReturnType<typeof useTranslation>["t"],
-  runtimeFitnessLoading: boolean,
-  runtimeFitnessError: string | null | undefined,
-): string {
-  if (summary?.currentStatus === "running") return t.kanban.runningLabel;
-  if (summary?.currentStatus === "failed") {
-    if (summary.hardGateBlocked) return t.kanban.fitnessHardGate;
-    if (summary.scoreBlocked) return t.kanban.fitnessScoreBlocked;
-    return t.kanban.fitnessBlocked;
-  }
-  if (summary?.currentStatus === "skipped") return t.kanban.fitnessSkipped;
-  if (summary?.currentStatus === "passed") return t.kanban.synced;
-  if (runtimeFitnessLoading) return t.kanban.fitnessLoading;
-  if (runtimeFitnessError) return t.kanban.fitnessIssue;
-  return t.kanban.fitnessNoData;
-}
-
-function fitnessDotClass(
-  summary: RuntimeFitnessModeSummary | null,
-  runtimeFitnessLoading: boolean,
-  runtimeFitnessError: string | null | undefined,
-): string {
-  if (summary?.currentStatus === "running") return "animate-pulse bg-sky-500";
-  if (summary?.currentStatus === "failed") {
-    if (summary.hardGateBlocked) return "bg-rose-500";
-    if (summary.scoreBlocked) return "bg-orange-500";
-    return "bg-rose-500";
-  }
-  if (summary?.currentStatus === "skipped") return "bg-amber-500";
-  if (summary?.currentStatus === "passed") return "bg-emerald-500";
-  if (runtimeFitnessLoading) return "animate-pulse bg-slate-400";
-  if (runtimeFitnessError) return "bg-rose-500";
-  return "bg-slate-400";
 }
 
 export function KanbanStatusBar({
@@ -109,55 +37,13 @@ export function KanbanStatusBar({
   selectedProvider,
   onRepoClick,
   onProviderClick,
-  onFitnessClick,
   repoSync,
-  runtimeFitness,
-  runtimeFitnessLoading = false,
-  runtimeFitnessError,
 }: KanbanStatusBarProps) {
   const { t } = useTranslation();
   const repoCount = codebases.length;
   const repoDisplayName = defaultCodebase
     ? defaultCodebase.label ?? defaultCodebase.repoPath.split("/").pop() ?? defaultCodebase.repoPath
     : null;
-  const selectedFitness = selectDisplayedFitness(runtimeFitness);
-  const latestModeLabel = formatModeLabel(selectedFitness, t.kanban.fitnessModeFast, t.kanban.fitnessModeFull);
-  const currentScore = selectedFitness?.currentStatus === "running"
-    ? formatScore(selectedFitness.lastCompleted?.finalScore)
-    : formatScore(selectedFitness?.finalScore ?? selectedFitness?.lastCompleted?.finalScore);
-  const statusLabel = formatStatusLabel(selectedFitness, t, runtimeFitnessLoading, runtimeFitnessError);
-  const fitnessStatusDotClass = fitnessDotClass(selectedFitness, runtimeFitnessLoading, runtimeFitnessError);
-  const fitnessTitleParts = [
-    `${t.kanban.fitnessLabel}: ${[
-      latestModeLabel,
-      statusLabel,
-      currentScore,
-      formatObservedAt(selectedFitness?.currentObservedAt),
-    ].filter(Boolean).join(" · ") || t.kanban.fitnessNoData}`,
-  ];
-  if (selectedFitness?.currentStatus === "running" && selectedFitness.lastCompleted) {
-    fitnessTitleParts.push(
-      `${t.kanban.fitnessLast}: ${[
-        selectedFitness.lastCompleted.status === "failed"
-          ? selectedFitness.lastCompleted.hardGateBlocked
-            ? t.kanban.fitnessHardGate
-            : selectedFitness.lastCompleted.scoreBlocked
-              ? t.kanban.fitnessScoreBlocked
-              : t.kanban.fitnessBlocked
-          : selectedFitness.lastCompleted.status === "skipped"
-            ? t.kanban.fitnessSkipped
-            : t.kanban.synced,
-        formatScore(selectedFitness.lastCompleted.finalScore),
-        formatObservedAt(selectedFitness.lastCompleted.observedAt),
-      ].filter(Boolean).join(" · ")}`,
-    );
-  }
-  if (runtimeFitnessError) {
-    fitnessTitleParts.push(runtimeFitnessError);
-  }
-  if (onFitnessClick) {
-    fitnessTitleParts.push(t.kanban.fitnessOpenDetails);
-  }
 
   return (
     <div
@@ -243,41 +129,6 @@ export function KanbanStatusBar({
                 : repoSync.status === "done"
                   ? `${repoSync.total} ${repoSync.total === 1 ? t.kanban.repoUpdated : t.kanban.reposUpdated}`
                   : t.kanban.syncIssue}
-            </span>
-          </div>
-        )}
-
-        {onFitnessClick ? (
-          <button
-            onClick={onFitnessClick}
-            className="flex items-center gap-1.5 px-2.5 h-6 text-desktop-text-secondary hover:bg-desktop-bg-active transition-colors"
-            title={fitnessTitleParts.join("\n")}
-            data-testid="kanban-runtime-fitness-status"
-          >
-            <span className={`w-1.5 h-1.5 shrink-0 rounded-full ${fitnessStatusDotClass}`} />
-            <span className="font-medium text-desktop-text-primary">{t.kanban.fitnessLabel}</span>
-            <span className="max-w-[220px] truncate">
-              {[
-                latestModeLabel,
-                statusLabel,
-                currentScore,
-              ].filter(Boolean).join(" · ") || t.kanban.fitnessNoData}
-            </span>
-          </button>
-        ) : (
-          <div
-            className="flex items-center gap-1.5 px-2.5 h-6 text-desktop-text-secondary"
-            title={fitnessTitleParts.join("\n")}
-            data-testid="kanban-runtime-fitness-status"
-          >
-            <span className={`w-1.5 h-1.5 shrink-0 rounded-full ${fitnessStatusDotClass}`} />
-            <span className="font-medium text-desktop-text-primary">{t.kanban.fitnessLabel}</span>
-            <span className="max-w-[220px] truncate">
-              {[
-                latestModeLabel,
-                statusLabel,
-                currentScore,
-              ].filter(Boolean).join(" · ") || t.kanban.fitnessNoData}
             </span>
           </div>
         )}
