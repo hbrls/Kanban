@@ -143,6 +143,14 @@ export function DesktopSidebar({
       ),
     },
     {
+      id: "vision",
+      label: t.nav.vision,
+      href: `${workspaceBaseHref}/vision`,
+      icon: (
+        <Workflow className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
+      ),
+    },
+    {
       id: "settings",
       label: t.settings.title,
       href: normalizedWorkspaceId
