@@ -4,17 +4,18 @@
  * Desktop Sidebar Navigation — VS Code-style left navigation for Tauri app.
  *
  * Provides a compact icon-based navigation with:
- * - Primary navigation icons (Home, Kanban)
- * - Secondary tools (Settings)
+ * - Primary navigation icons (Home, Kanban, Vision, Settings)
+ * - Lower group with active Workspaces for quick switching (Kanban/Vision pages only)
  * - Workspace indicator
  */
 
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "@/i18n";
-import { ChevronLeft, Columns2, House, Settings } from "lucide-react";
+import { useWorkspaces, type WorkspaceData } from "@/client/hooks/use-workspaces";
+import { ChevronLeft, Columns2, Folder, House, Settings, Workflow } from "lucide-react";
 
 
 interface NavItem {
@@ -38,8 +39,78 @@ interface DesktopSidebarProps {
   topAction?: SidebarTopAction;
 }
 
+function SidebarWorkspaceList({
+  collapsed,
+  normalizedWorkspaceId,
+}: {
+  collapsed: boolean;
+  normalizedWorkspaceId: string | null;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { t } = useTranslation();
+  const { workspaces, loading: workspacesLoading, error: workspacesError } = useWorkspaces();
+
+  const handleWorkspaceSelect = (nextWorkspaceId: string) => {
+    if (nextWorkspaceId === normalizedWorkspaceId && pathname.endsWith("/kanban")) return;
+    router.push(`/workspace/${encodeURIComponent(nextWorkspaceId)}/kanban`);
+  };
+
+  const renderWorkspaceItem = (workspace: WorkspaceData) => {
+    const selected = workspace.id === normalizedWorkspaceId;
+    return (
+      <button
+        key={workspace.id}
+        type="button"
+        onClick={() => handleWorkspaceSelect(workspace.id)}
+        title={workspace.title}
+        aria-label={workspace.title}
+        aria-pressed={selected}
+        className={`relative flex items-center rounded-xl transition-colors ${
+          selected
+            ? "bg-desktop-bg-active text-desktop-accent"
+            : "text-desktop-text-secondary hover:bg-desktop-bg-active/70 hover:text-desktop-text-primary"
+        } ${collapsed ? "h-10 w-10 justify-center" : "h-11 w-full gap-3 px-3 text-sm font-medium text-left"}`}
+      >
+        {selected && <div className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-desktop-accent" />}
+        <Folder className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
+        {!collapsed && <span className="truncate">{workspace.title}</span>}
+      </button>
+    );
+  };
+
+  const renderWorkspaceStatus = () => {
+    const label = workspacesLoading
+      ? t.common.loading
+      : workspacesError
+        ? t.workspace.listLoadFailed
+        : t.workspace.noWorkspacesYet;
+    return (
+      <div
+        title={label}
+        aria-label={label}
+        className={`flex items-center rounded-xl text-desktop-text-secondary ${
+          collapsed ? "h-10 w-10 justify-center" : "h-11 w-full gap-3 px-3 text-sm"
+        }`}
+      >
+        <Folder className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
+        {!collapsed && <span className="truncate">{label}</span>}
+      </div>
+    );
+  };
+
+  return (
+    <div className={`min-h-0 overflow-y-auto py-3 ${collapsed ? "flex flex-col items-center gap-1" : "px-2 space-y-1"}`}>
+      {workspacesLoading || workspacesError || workspaces.length === 0
+        ? renderWorkspaceStatus()
+        : workspaces.map(renderWorkspaceItem)}
+    </div>
+  );
+}
+
 const COLLAPSE_SIDEBAR_ICON_PATH = "M13.5 4.5 6 12l7.5 7.5M18 4.5 10.5 12 18 19.5";
 const EXPAND_SIDEBAR_ICON_PATH = "M10.5 4.5 18 12l-7.5 7.5M6 4.5 13.5 12 6 19.5";
+const WORKSPACE_LIST_PATH_PATTERN = /^\/workspace\/[^/]+\/(kanban|vision)(\/|$)/;
 
 export function DesktopSidebar({
   workspaceId,
@@ -52,6 +123,7 @@ export function DesktopSidebar({
   const normalizedWorkspaceId = workspaceId?.trim() || null;
   const fallbackWorkspaceId = normalizedWorkspaceId || "default";
   const workspaceBaseHref = `/workspace/${fallbackWorkspaceId}`;
+  const showWorkspaceList = WORKSPACE_LIST_PATH_PATTERN.test(pathname);
 
   const primaryItems: NavItem[] = [
     {
@@ -70,8 +142,6 @@ export function DesktopSidebar({
         <Columns2 className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}/>
       ),
     },
-  ];
-  const secondaryItems: NavItem[] = [
     {
       id: "settings",
       label: t.settings.title,
@@ -148,7 +218,7 @@ export function DesktopSidebar({
         </button>
       </div>
 
-      <nav className={`flex-1 py-3 ${collapsed ? "flex flex-col items-center gap-1" : "px-2 space-y-1"}`}>
+      <nav className={`py-3 ${collapsed ? "flex flex-col items-center gap-1" : "px-2 space-y-1"}`}>
         {topAction ? (
           <>
             <Link
@@ -167,11 +237,12 @@ export function DesktopSidebar({
         {primaryItems.map(renderNavItem)}
       </nav>
 
-      <div className={`${collapsed ? "mx-3" : "mx-2"} border-t border-desktop-border`} />
-
-      <div className={`py-3 ${collapsed ? "flex flex-col items-center gap-1" : "px-2 space-y-1"}`}>
-        {secondaryItems.map(renderNavItem)}
-      </div>
+      {showWorkspaceList ? (
+        <>
+          <div className={`${collapsed ? "mx-3" : "mx-2"} border-t border-desktop-border`} />
+          <SidebarWorkspaceList collapsed={collapsed} normalizedWorkspaceId={normalizedWorkspaceId} />
+        </>
+      ) : null}
     </aside>
   );
 }
