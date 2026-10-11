@@ -216,6 +216,7 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     sessions: string;
     overview: string;
     kanban: string;
+    vision: string;
     placeholderOne: string;
     placeholderTwo: string;
     placeholderThree: string;
@@ -241,6 +242,34 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     advancedGroupTools: string;
     advancedGroupOther: string;
     records: string;
+  };
+
+  vision: {
+    pageTitle: string;
+    resetLayout: string;
+    canvasLabel: string;
+    zoomIn: string;
+    zoomOut: string;
+    fitView: string;
+    miniMap: string;
+    tasks: {
+      defineRequirements: string;
+      designSolution: string;
+      validateDelivery: string;
+      coordinateIntegration: string;
+    };
+    taskContent: {
+      defineRequirements: string;
+      designSolution: string;
+      validateDelivery: string;
+      coordinateIntegration: string;
+    };
+    taskFooter: {
+      defineRequirements: string;
+      designSolution: string;
+      validateDelivery: string;
+      coordinateIntegration: string;
+    };
   };
 
   canvas: {
