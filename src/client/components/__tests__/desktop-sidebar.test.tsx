@@ -79,6 +79,25 @@ describe("DesktopSidebar", () => {
     expect(screen.getByRole("link", { name: "Settings" }).className).not.toContain("text-desktop-accent");
   });
 
+  it("places Vision below Kanban with an explicit workspace link", () => {
+    render(<DesktopSidebar workspaceId="default" />);
+
+    const links = screen.getAllByRole("link").slice(0, 3);
+    expect(links.map((link) => link.textContent)).toEqual(["Home", "Kanban", "Vision"]);
+    expect(screen.getByRole("link", { name: "Vision" }).getAttribute("href")).toBe("/workspace/default/vision");
+  });
+
+  it("marks Vision active only on the vision route", () => {
+    pathnameState.pathname = "/workspace/default/vision";
+
+    render(<DesktopSidebar workspaceId="default" />);
+
+    expect(screen.getByRole("link", { name: "Vision" }).className).toContain("text-desktop-accent");
+    expect(screen.getByRole("link", { name: "Kanban" }).className).not.toContain("text-desktop-accent");
+
+    pathnameState.pathname = "/workspace/default/kanban";
+  });
+
   it("shows a collapse icon when expanded and an expand icon when collapsed", () => {
     const { rerender } = render(<DesktopSidebar workspaceId="default" collapsed={false} />);
 
