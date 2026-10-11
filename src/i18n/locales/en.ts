@@ -216,6 +216,7 @@ const en: TranslationDictionary = {
     sessions: "Sessions",
     overview: "Overview",
     kanban: "Kanban",
+    vision: "Vision",
     placeholderOne: "Placeholder 1",
     placeholderTwo: "Placeholder 2",
     placeholderThree: "Placeholder 3",
@@ -241,6 +242,34 @@ const en: TranslationDictionary = {
     advancedGroupTools: "Tools",
     advancedGroupOther: "Other",
     records: "Records",
+  },
+
+  vision: {
+    pageTitle: "Vision",
+    resetLayout: "Reset layout",
+    canvasLabel: "Vision canvas",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    fitView: "Fit view",
+    miniMap: "Mini map",
+    tasks: {
+      defineRequirements: "Define requirements",
+      designSolution: "Design the solution",
+      validateDelivery: "Validate delivery",
+      coordinateIntegration: "Coordinate integration",
+    },
+    taskContent: {
+      defineRequirements: "Clarify goals, scope, and acceptance criteria.",
+      designSolution: "Define the architecture, components, and implementation steps.",
+      validateDelivery: "Review the result against the acceptance criteria.",
+      coordinateIntegration: "Align outputs across tasks and hand off the result.",
+    },
+    taskFooter: {
+      defineRequirements: "Requirements checklist",
+      designSolution: "Implementation plan",
+      validateDelivery: "Verification report",
+      coordinateIntegration: "Handoff notes",
+    },
   },
 
   canvas: {

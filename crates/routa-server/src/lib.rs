@@ -430,6 +430,17 @@ mod tests {
     }
 
     #[test]
+    fn resolves_workspace_vision_placeholder() {
+        let (target, content_type) = resolve_static_target("/workspace/default/vision");
+        assert_eq!(target, "workspace/__placeholder__/vision.html");
+        assert_eq!(content_type, "text/html; charset=utf-8");
+
+        let (target, content_type) = resolve_static_target("/workspace/default/vision.txt");
+        assert_eq!(target, "workspace/__placeholder__/vision.txt");
+        assert_eq!(content_type, "text/x-component; charset=utf-8");
+    }
+
+    #[test]
     fn resolves_workspace_session_placeholder() {
         let (target, content_type) =
             resolve_static_target("/workspace/default/sessions/session-123");
