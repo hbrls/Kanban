@@ -815,7 +815,6 @@ export function KanbanTaskDetailOverlay({
                       onSelectSession={(sessionId) => selectTaskSession(activeTask, sessionId)}
                       onCloseSession={() => setHiddenSessionPaneTaskId(activeTask.id)}
                     />
-                    />
                   ) : acp && (
                     <div className="min-h-0 flex-1">
                       <ChatPanel
