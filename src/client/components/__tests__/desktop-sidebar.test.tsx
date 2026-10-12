@@ -1,17 +1,53 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { WorkspaceData } from "@/client/hooks/use-workspaces";
 
-const pathnameState = vi.hoisted(() => ({
+const sidebarState = vi.hoisted(() => ({
   pathname: "/workspace/default/kanban",
+  push: vi.fn(),
+  workspaces: [] as WorkspaceData[],
+  loading: false,
+  error: null as Error | null,
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => pathnameState.pathname,
+  usePathname: () => sidebarState.pathname,
+  useRouter: () => ({ push: sidebarState.push }),
+}));
+
+vi.mock("@/client/hooks/use-workspaces", () => ({
+  useWorkspaces: () => ({
+    workspaces: sidebarState.workspaces,
+    loading: sidebarState.loading,
+    error: sidebarState.error,
+    fetchWorkspaces: vi.fn(),
+    createWorkspace: vi.fn(),
+    archiveWorkspace: vi.fn(),
+  }),
 }));
 
 import { DesktopSidebar } from "../desktop-sidebar";
 
+function makeWorkspace(id: string, title: string): WorkspaceData {
+  return {
+    id,
+    title,
+    status: "active",
+    metadata: {},
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  };
+}
+
 describe("DesktopSidebar", () => {
+  beforeEach(() => {
+    sidebarState.pathname = "/workspace/default/kanban";
+    sidebarState.push.mockClear();
+    sidebarState.workspaces = [];
+    sidebarState.loading = false;
+    sidebarState.error = null;
+  });
+
   it("keeps Home and Kanban in the primary navigation without Sessions or Team", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
@@ -23,7 +59,7 @@ describe("DesktopSidebar", () => {
     expect(screen.queryByRole("link", { name: "Team" })).toBeNull();
   });
 
-  it("keeps the lower menu limited to a direct settings link", () => {
+  it("keeps settings in the primary navigation group and the lower group to the workspace list", () => {
     render(<DesktopSidebar workspaceId="default" />);
 
     expect(screen.queryByRole("link", { name: "MCP Servers" })).toBeNull();
@@ -35,7 +71,7 @@ describe("DesktopSidebar", () => {
   });
 
   it("does not mark Settings as active when a settings tool page is active", () => {
-    pathnameState.pathname = "/settings/mcp";
+    sidebarState.pathname = "/settings/mcp";
 
     render(<DesktopSidebar workspaceId="default" />);
 
@@ -57,5 +93,110 @@ describe("DesktopSidebar", () => {
     expect(collapsedToggle.querySelector("path")?.getAttribute("d")).toBe(
       "M10.5 4.5 18 12l-7.5 7.5M6 4.5 13.5 12 6 19.5",
     );
+  });
+
+  it("shows the workspace list only on kanban and vision pages", () => {
+    sidebarState.workspaces = [makeWorkspace("ws-alpha", "Alpha")];
+
+    sidebarState.pathname = "/workspace/ws-alpha/kanban";
+    const { rerender } = render(<DesktopSidebar workspaceId="ws-alpha" />);
+    expect(screen.getByRole("button", { name: "Alpha" })).toBeTruthy();
+
+    sidebarState.pathname = "/workspace/ws-alpha/vision";
+    rerender(<DesktopSidebar workspaceId="ws-alpha" />);
+    expect(screen.getByRole("button", { name: "Alpha" })).toBeTruthy();
+
+    sidebarState.pathname = "/";
+    rerender(<DesktopSidebar workspaceId="ws-alpha" />);
+    expect(screen.queryByRole("button", { name: "Alpha" })).toBeNull();
+
+    sidebarState.pathname = "/settings";
+    rerender(<DesktopSidebar workspaceId="ws-alpha" />);
+    expect(screen.queryByRole("button", { name: "Alpha" })).toBeNull();
+  });
+
+  it("renders workspace buttons in the lower group instead of placeholders", () => {
+    sidebarState.workspaces = [makeWorkspace("ws-alpha", "Alpha"), makeWorkspace("ws-beta", "Beta")];
+
+    render(<DesktopSidebar workspaceId="ws-alpha" />);
+
+    expect(screen.getByRole("button", { name: "Alpha" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Beta" })).toBeTruthy();
+    expect(screen.queryByText("Placeholder 1")).toBeNull();
+    expect(screen.queryByText("Placeholder 2")).toBeNull();
+    expect(screen.queryByText("Placeholder 3")).toBeNull();
+  });
+
+  it("navigates to the workspace kanban route when clicking a non-current workspace", () => {
+    sidebarState.workspaces = [makeWorkspace("ws-alpha", "Alpha"), makeWorkspace("ws-beta", "Beta")];
+    sidebarState.pathname = "/workspace/ws-alpha/kanban";
+
+    render(<DesktopSidebar workspaceId="ws-alpha" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Beta" }));
+
+    expect(sidebarState.push).toHaveBeenCalledWith("/workspace/ws-beta/kanban");
+  });
+
+  it("does not re-navigate when clicking the current workspace on the kanban page, but enters kanban from other pages", () => {
+    sidebarState.workspaces = [makeWorkspace("ws-alpha", "Alpha"), makeWorkspace("ws-beta", "Beta")];
+    sidebarState.pathname = "/workspace/ws-alpha/kanban";
+
+    const { rerender } = render(<DesktopSidebar workspaceId="ws-alpha" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Alpha" }));
+    expect(sidebarState.push).not.toHaveBeenCalled();
+
+    sidebarState.pathname = "/workspace/ws-alpha/vision";
+    rerender(<DesktopSidebar workspaceId="ws-alpha" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Alpha" }));
+    expect(sidebarState.push).toHaveBeenCalledWith("/workspace/ws-alpha/kanban");
+  });
+
+  it("moves the pressed state and highlight to the workspace passed via workspaceId", () => {
+    sidebarState.workspaces = [makeWorkspace("ws-alpha", "Alpha"), makeWorkspace("ws-beta", "Beta")];
+
+    const { rerender } = render(<DesktopSidebar workspaceId="ws-alpha" />);
+
+    expect(screen.getByRole("button", { name: "Alpha" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Alpha" }).className).toContain("text-desktop-accent");
+    expect(screen.getByRole("button", { name: "Beta" }).getAttribute("aria-pressed")).toBe("false");
+
+    rerender(<DesktopSidebar workspaceId="ws-beta" />);
+
+    expect(screen.getByRole("button", { name: "Alpha" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: "Beta" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Beta" }).className).toContain("text-desktop-accent");
+  });
+
+  it("shows loading, error and empty hints in the lower group", () => {
+    sidebarState.loading = true;
+    const { rerender } = render(<DesktopSidebar workspaceId="default" />);
+    expect(screen.getByText("Loading…")).toBeTruthy();
+
+    sidebarState.loading = false;
+    sidebarState.error = new Error("boom");
+    rerender(<DesktopSidebar workspaceId="default" />);
+    expect(screen.getByText("Failed to load workspaces")).toBeTruthy();
+    expect(screen.queryByText("No workspaces yet")).toBeNull();
+
+    sidebarState.error = null;
+    rerender(<DesktopSidebar workspaceId="default" />);
+    expect(screen.getByText("No workspaces yet")).toBeTruthy();
+  });
+
+  it("keeps workspace buttons accessible and clickable when collapsed", () => {
+    sidebarState.workspaces = [makeWorkspace("ws-alpha", "Alpha"), makeWorkspace("ws-beta", "Beta")];
+    sidebarState.pathname = "/workspace/ws-alpha/kanban";
+
+    render(<DesktopSidebar workspaceId="ws-alpha" collapsed />);
+
+    expect(screen.queryByText("Alpha")).toBeNull();
+    expect(screen.queryByText("Beta")).toBeNull();
+
+    const betaButton = screen.getByRole("button", { name: "Beta" });
+    fireEvent.click(betaButton);
+    expect(sidebarState.push).toHaveBeenCalledWith("/workspace/ws-beta/kanban");
   });
 });
