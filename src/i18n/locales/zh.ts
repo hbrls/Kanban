@@ -231,6 +231,7 @@ const zh: TranslationDictionary = {
     fluency: "Fluency（试验性）",
     workflows: "工作流",
     specialists: "专家",
+    workspaces: "工作区",
     debug: "调试",
     advanced: "高级",
     advancedGroupCollab: "协作",

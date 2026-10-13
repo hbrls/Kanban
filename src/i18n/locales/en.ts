@@ -232,6 +232,7 @@ const en: TranslationDictionary = {
     fluency: "Fluency",
     workflows: "Workflows",
     specialists: "Specialists",
+    workspaces: "Workspaces",
     debug: "Debug",
     advanced: "Advanced",
     advancedGroupCollab: "Collaboration",

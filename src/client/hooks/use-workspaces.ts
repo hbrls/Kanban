@@ -25,6 +25,24 @@ export interface CodebaseData {
   updatedAt: string;
 }
 
+export type WorkspaceStatusFilter = "active" | "archived" | "all";
+
+export const DEFAULT_WORKSPACE_ID = "default";
+
+export class WorkspaceMutationError extends Error {
+  readonly status: number | null;
+
+  constructor(message: string, status: number | null) {
+    super(message);
+    this.name = "WorkspaceMutationError";
+    this.status = status;
+  }
+}
+
+export interface UseWorkspacesOptions {
+  status?: WorkspaceStatusFilter;
+}
+
 export interface UseWorkspacesReturn {
   workspaces: WorkspaceData[];
   loading: boolean;
@@ -32,9 +50,11 @@ export interface UseWorkspacesReturn {
   fetchWorkspaces: () => Promise<void>;
   createWorkspace: (title: string) => Promise<WorkspaceData | null>;
   archiveWorkspace: (id: string) => Promise<void>;
+  deleteWorkspace: (id: string) => Promise<void>;
 }
 
-export function useWorkspaces(): UseWorkspacesReturn {
+export function useWorkspaces(options?: UseWorkspacesOptions): UseWorkspacesReturn {
+  const status = options?.status ?? "active";
   const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
   // Start with loading=true since we fetch on mount
   const [loading, setLoading] = useState(true);
@@ -43,7 +63,9 @@ export function useWorkspaces(): UseWorkspacesReturn {
   const fetchWorkspaces = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const url = "/api/workspaces?status=active";
+    // "all" is a frontend-only filter: the Rust API returns every status when
+    // the query param is omitted, so we must not send status=all.
+    const url = status === "all" ? "/api/workspaces" : `/api/workspaces?status=${status}`;
     try {
       const res = await desktopAwareFetch(url);
       if (!res.ok) {
@@ -64,7 +86,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status]);
 
   const createWorkspace = useCallback(async (title: string): Promise<WorkspaceData | null> => {
     const res = await desktopAwareFetch("/api/workspaces", {
@@ -74,8 +96,35 @@ export function useWorkspaces(): UseWorkspacesReturn {
     });
     if (!res.ok) return null;
     const data = await res.json();
+    const workspace = data?.workspace as WorkspaceData | undefined;
+    if (!workspace || typeof workspace.id !== "string" || typeof workspace.title !== "string") {
+      return null;
+    }
     await fetchWorkspaces();
-    return data.workspace ?? null;
+    return workspace;
+  }, [fetchWorkspaces]);
+
+  const deleteWorkspace = useCallback(async (id: string): Promise<void> => {
+    if (id === DEFAULT_WORKSPACE_ID) {
+      throw new WorkspaceMutationError("Default workspace cannot be deleted", 409);
+    }
+    const res = await desktopAwareFetch(`/api/workspaces/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      throw new WorkspaceMutationError(
+        `DELETE /api/workspaces/${id} failed: HTTP ${res.status}`,
+        res.status,
+      );
+    }
+    const data = await res.json().catch(() => null);
+    if (data?.deleted !== true) {
+      throw new WorkspaceMutationError(
+        `DELETE /api/workspaces/${id} returned an unexpected payload`,
+        res.status,
+      );
+    }
+    await fetchWorkspaces();
   }, [fetchWorkspaces]);
 
   const archiveWorkspace = useCallback(async (id: string): Promise<void> => {
@@ -99,7 +148,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
     };
   }, [fetchWorkspaces]);
 
-  return { workspaces, loading, error, fetchWorkspaces, createWorkspace, archiveWorkspace };
+  return { workspaces, loading, error, fetchWorkspaces, createWorkspace, archiveWorkspace, deleteWorkspace };
 }
 
 export function useCodebases(workspaceId: string): {
