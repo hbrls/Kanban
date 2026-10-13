@@ -13,7 +13,7 @@
  * at .next/standalone/.next/server/chunks/db/ so the dynamic require finds
  * them at runtime.
  *
- * Run this script after `npm run build:docker`:
+ * Run this script after `pnpm run build:docker`:
  *   node scripts/build/build-docker.mjs
  */
 
@@ -32,7 +32,8 @@ const targetDbDir = path.join(chunksDir, "db");
 function runEsbuild(entry, outfile) {
   // nosemgrep: javascript.lang.security.detect-child-process.detect-child-process
   // Esbuild args are built from trusted internal constants.
-  const result = spawnSync("npx", [
+  const result = spawnSync("pnpm", [
+    "exec",
     "esbuild",
     entry,
     "--bundle",
@@ -51,7 +52,7 @@ function runEsbuild(entry, outfile) {
   }
   if (result.status !== 0) {
     const code = typeof result.status === "number" ? result.status : 1;
-    throw new Error(`Command failed with status ${code}: npx esbuild ${entry}`);
+    throw new Error(`Command failed with status ${code}: pnpm exec esbuild ${entry}`);
   }
 }
 
@@ -62,7 +63,7 @@ function ensureDir(dir) {
 if (!existsSync(standaloneDir)) {
   throw new Error(
     `Standalone output not found at ${standaloneDir}. ` +
-      "Run `npm run build:docker` first."
+      "Run `pnpm run build:docker` first."
   );
 }
 

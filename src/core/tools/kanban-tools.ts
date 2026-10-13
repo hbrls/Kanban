@@ -862,7 +862,7 @@ export class KanbanTools {
     );
     let position = columnTasks.length;
 
-    const createdCards = [];
+    const createdCards: any[] = [];
     const warnings = new Set<string>();
     for (const item of params.tasks) {
       const filteredContextSearchSpec = await filterBacklogContextSearchSpec({
