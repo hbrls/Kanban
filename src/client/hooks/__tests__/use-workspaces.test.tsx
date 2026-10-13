@@ -9,7 +9,7 @@ vi.mock("../../utils/diagnostics", () => ({
   desktopAwareFetch: desktopAwareFetchMock,
 }));
 
-import { useCodebases, useWorkspaces } from "../use-workspaces";
+import { useCodebases, useWorkspaces, WorkspaceMutationError } from "../use-workspaces";
 
 function okJson(data: unknown) {
   return {
@@ -40,6 +40,37 @@ describe("useWorkspaces", () => {
     });
 
     expect(desktopAwareFetchMock).toHaveBeenCalledWith("/api/workspaces?status=active");
+  });
+
+  it("omits the status param when the all filter is selected", async () => {
+    desktopAwareFetchMock.mockResolvedValueOnce(okJson({
+      workspaces: [
+        { id: "ws-1", title: "Workspace One", status: "active", metadata: {}, createdAt: "", updatedAt: "" },
+        { id: "ws-2", title: "Workspace Two", status: "archived", metadata: {}, createdAt: "", updatedAt: "" },
+      ],
+    }));
+
+    const { result } = renderHook(() => useWorkspaces({ status: "all" }));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.workspaces).toHaveLength(2);
+    });
+
+    expect(desktopAwareFetchMock).toHaveBeenCalledWith("/api/workspaces");
+    expect(desktopAwareFetchMock).not.toHaveBeenCalledWith(expect.stringContaining("status="));
+  });
+
+  it("requests archived workspaces when the archived filter is selected", async () => {
+    desktopAwareFetchMock.mockResolvedValueOnce(okJson({ workspaces: [] }));
+
+    const { result } = renderHook(() => useWorkspaces({ status: "archived" }));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(desktopAwareFetchMock).toHaveBeenCalledWith("/api/workspaces?status=archived");
   });
 
   it("creates and archives workspaces then refreshes the list", async () => {
@@ -99,6 +130,116 @@ describe("useWorkspaces", () => {
       const created = await result.current.createWorkspace("Broken");
       expect(created).toBeNull();
     });
+  });
+
+  it("returns null without refreshing when the create response has no valid workspace", async () => {
+    desktopAwareFetchMock
+      .mockResolvedValueOnce(okJson({ workspaces: [] }))
+      .mockResolvedValueOnce(okJson({ workspace: null }));
+
+    const { result } = renderHook(() => useWorkspaces());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      const created = await result.current.createWorkspace("Broken Payload");
+      expect(created).toBeNull();
+    });
+
+    // Only the initial GET and the POST ran; no refresh GET after an invalid payload.
+    expect(desktopAwareFetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("deletes a workspace then refreshes the list", async () => {
+    desktopAwareFetchMock
+      .mockResolvedValueOnce(okJson({
+        workspaces: [
+          { id: "ws-1", title: "Workspace One", status: "active", metadata: {}, createdAt: "", updatedAt: "" },
+        ],
+      }))
+      .mockResolvedValueOnce(okJson({ deleted: true }))
+      .mockResolvedValueOnce(okJson({ workspaces: [] }));
+
+    const { result } = renderHook(() => useWorkspaces({ status: "all" }));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.workspaces).toHaveLength(1);
+    });
+
+    await act(async () => {
+      await result.current.deleteWorkspace("ws-1");
+    });
+
+    expect(result.current.workspaces).toEqual([]);
+    expect(desktopAwareFetchMock).toHaveBeenCalledWith("/api/workspaces/ws-1", expect.objectContaining({
+      method: "DELETE",
+    }));
+  });
+
+  it("rejects deleting the default workspace without sending a request", async () => {
+    desktopAwareFetchMock.mockResolvedValueOnce(okJson({ workspaces: [] }));
+
+    const { result } = renderHook(() => useWorkspaces({ status: "all" }));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      await expect(result.current.deleteWorkspace("default")).rejects.toMatchObject({
+        name: "WorkspaceMutationError",
+        status: 409,
+      });
+    });
+
+    // Only the initial GET ran; no DELETE was issued.
+    expect(desktopAwareFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws a recognizable error when delete fails over HTTP", async () => {
+    desktopAwareFetchMock
+      .mockResolvedValueOnce(okJson({ workspaces: [] }))
+      .mockResolvedValueOnce({ ok: false, status: 500 });
+
+    const { result } = renderHook(() => useWorkspaces({ status: "all" }));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      try {
+        await result.current.deleteWorkspace("ws-9");
+        throw new Error("expected deleteWorkspace to throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(WorkspaceMutationError);
+        expect((err as WorkspaceMutationError).status).toBe(500);
+      }
+    });
+  });
+
+  it("throws when the delete response is missing deleted: true", async () => {
+    desktopAwareFetchMock
+      .mockResolvedValueOnce(okJson({ workspaces: [] }))
+      .mockResolvedValueOnce(okJson({ deleted: false }));
+
+    const { result } = renderHook(() => useWorkspaces({ status: "all" }));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      await expect(result.current.deleteWorkspace("ws-9")).rejects.toBeInstanceOf(
+        WorkspaceMutationError,
+      );
+    });
+
+    // No refresh GET after a malformed delete payload.
+    expect(desktopAwareFetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -122,6 +122,11 @@ impl WorkspaceStore {
     }
 
     pub async fn delete(&self, id: &str) -> Result<(), ServerError> {
+        if id == "default" {
+            return Err(ServerError::Conflict(
+                "Default workspace cannot be deleted".to_string(),
+            ));
+        }
         let id = id.to_string();
         self.db
             .with_conn_async(move |conn| {
@@ -252,6 +257,129 @@ mod tests {
         store.delete("ws-3").await.expect("delete should succeed");
 
         let loaded = store.get("ws-3").await.expect("get should succeed");
+        assert!(loaded.is_none());
+    }
+
+    #[tokio::test]
+    async fn delete_default_is_rejected_and_workspace_remains() {
+        let store = setup().await;
+        store
+            .ensure_default()
+            .await
+            .expect("ensure_default should succeed");
+
+        let result = store.delete("default").await;
+        match result {
+            Err(ServerError::Conflict(message)) => {
+                assert_eq!(message, "Default workspace cannot be deleted");
+            }
+            other => panic!("expected Conflict error, got {other:?}"),
+        }
+
+        let loaded = store
+            .get("default")
+            .await
+            .expect("get should succeed")
+            .expect("default workspace should remain");
+        assert_eq!(loaded.id, "default");
+    }
+
+    #[tokio::test]
+    async fn delete_default_with_child_records_preserves_data() {
+        let db = Database::open_in_memory().expect("in-memory db should open");
+        let store = WorkspaceStore::new(db.clone());
+        let codebase_store = crate::store::codebase_store::CodebaseStore::new(db);
+        store
+            .ensure_default()
+            .await
+            .expect("ensure_default should succeed");
+        let codebase = crate::models::codebase::Codebase::new(
+            "cb-default".to_string(),
+            "default".to_string(),
+            "/tmp/repo".to_string(),
+            Some("main".to_string()),
+            Some("default repo".to_string()),
+            true,
+            None,
+            None,
+        );
+        codebase_store
+            .save(&codebase)
+            .await
+            .expect("save codebase should succeed");
+
+        let result = store.delete("default").await;
+        assert!(
+            matches!(result, Err(ServerError::Conflict(_))),
+            "expected Conflict error, got {result:?}"
+        );
+
+        let workspace = store
+            .get("default")
+            .await
+            .expect("get should succeed")
+            .expect("default workspace should remain");
+        assert_eq!(workspace.id, "default");
+        let codebases = codebase_store
+            .list_by_workspace("default")
+            .await
+            .expect("list codebases should succeed");
+        assert_eq!(codebases.len(), 1);
+        assert_eq!(codebases[0].id, "cb-default");
+        assert_eq!(codebases[0].repo_path, "/tmp/repo");
+        assert!(codebases[0].is_default);
+    }
+
+    #[tokio::test]
+    async fn delete_default_after_rename_or_archive_still_rejected() {
+        let store = setup().await;
+        store
+            .ensure_default()
+            .await
+            .expect("ensure_default should succeed");
+        store
+            .update_title("default", "Renamed Default")
+            .await
+            .expect("rename should succeed");
+        store
+            .update_status("default", "archived")
+            .await
+            .expect("archive should succeed");
+
+        let result = store.delete("default").await;
+        assert!(
+            matches!(result, Err(ServerError::Conflict(_))),
+            "expected Conflict error, got {result:?}"
+        );
+
+        let loaded = store
+            .get("default")
+            .await
+            .expect("get should succeed")
+            .expect("default workspace should remain");
+        assert_eq!(loaded.title, "Renamed Default");
+        assert_eq!(loaded.status, WorkspaceStatus::Archived);
+    }
+
+    #[tokio::test]
+    async fn delete_normal_workspace_named_default_is_allowed() {
+        let store = setup().await;
+        let ws = Workspace::new(
+            "ws-not-default".to_string(),
+            "Default Workspace".to_string(),
+            None,
+        );
+        store.save(&ws).await.expect("save should succeed");
+
+        store
+            .delete("ws-not-default")
+            .await
+            .expect("delete should succeed");
+
+        let loaded = store
+            .get("ws-not-default")
+            .await
+            .expect("get should succeed");
         assert!(loaded.is_none());
     }
 }

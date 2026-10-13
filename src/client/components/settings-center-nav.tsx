@@ -14,7 +14,8 @@ export type SettingsNavItem =
   | "specialists"
   | "mcp"
   | "workflows"
-  | "schedules";
+  | "schedules"
+  | "workspaces";
 
 export function SettingsCenterNav({ activeItem }: SettingsCenterNavProps) {
   const { t } = useTranslation();
@@ -24,6 +25,7 @@ export function SettingsCenterNav({ activeItem }: SettingsCenterNavProps) {
     { key: "roles", label: t.settings.roleDefaults, href: "/settings?tab=roles" },
   ];
   const workspaceToolItems: Array<{ key: SettingsNavItem; label: string; href: string }> = [
+    { key: "workspaces", label: t.nav.workspaces, href: "/settings/workspaces" },
     { key: "specialists", label: t.nav.specialists, href: "/settings/specialists" },
     { key: "mcp", label: t.nav.mcpServers, href: "/settings/mcp" },
     { key: "workflows", label: t.nav.workflows, href: "/settings/workflows" },

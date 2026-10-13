@@ -299,6 +299,141 @@ async fn api_workspace_and_note_flow() {
 }
 
 #[tokio::test]
+async fn api_default_workspace_delete_protection() {
+    let fixture = ApiFixture::new().await;
+
+    // Child record proves no cascade is triggered on rejection.
+    let create_note = fixture
+        .client
+        .post(fixture.endpoint("/api/notes"))
+        .json(&json!({
+            "title": "default workspace guard note",
+            "content": "must survive rejected delete",
+            "workspaceId": "default",
+            "noteType": "general"
+        }))
+        .send()
+        .await
+        .expect("create note in default workspace");
+    assert_eq!(create_note.status(), StatusCode::CREATED);
+
+    let delete_default = fixture
+        .client
+        .delete(fixture.endpoint("/api/workspaces/default"))
+        .send()
+        .await
+        .expect("delete default workspace");
+    assert_eq!(delete_default.status(), StatusCode::CONFLICT);
+    let delete_default_json: Value = delete_default
+        .json()
+        .await
+        .expect("decode default delete response");
+    assert_eq!(
+        delete_default_json,
+        json!({ "error": "Default workspace cannot be deleted" })
+    );
+
+    let get_default = fixture
+        .client
+        .get(fixture.endpoint("/api/workspaces/default"))
+        .send()
+        .await
+        .expect("get default workspace after rejected delete");
+    assert_eq!(get_default.status(), StatusCode::OK);
+    let default_json: Value = get_default.json().await.expect("decode default workspace");
+    assert_eq!(
+        default_json["workspace"]["id"].as_str().expect("id"),
+        "default"
+    );
+
+    let list_notes = fixture
+        .client
+        .get(fixture.endpoint("/api/notes?workspaceId=default"))
+        .send()
+        .await
+        .expect("list default workspace notes");
+    assert_eq!(list_notes.status(), StatusCode::OK);
+    let notes_json: Value = list_notes.json().await.expect("decode notes list");
+    let has_guard_note = notes_json
+        .get("notes")
+        .and_then(Value::as_array)
+        .expect("notes array")
+        .iter()
+        .any(|note| {
+            note.get("title").and_then(Value::as_str) == Some("default workspace guard note")
+        });
+    assert!(has_guard_note, "child note should survive rejected delete");
+
+    // Renamed/archived default is still protected by ID.
+    let rename_default = fixture
+        .client
+        .patch(fixture.endpoint("/api/workspaces/default"))
+        .json(&json!({ "title": "Renamed Default" }))
+        .send()
+        .await
+        .expect("rename default workspace");
+    assert_eq!(rename_default.status(), StatusCode::OK);
+
+    let delete_renamed = fixture
+        .client
+        .delete(fixture.endpoint("/api/workspaces/default"))
+        .send()
+        .await
+        .expect("delete renamed default workspace");
+    assert_eq!(delete_renamed.status(), StatusCode::CONFLICT);
+
+    // A normal workspace named "Default Workspace" is not protected.
+    let create_named = fixture
+        .client
+        .post(fixture.endpoint("/api/workspaces"))
+        .json(&json!({ "title": "Default Workspace" }))
+        .send()
+        .await
+        .expect("create same-named workspace");
+    assert_eq!(create_named.status(), StatusCode::CREATED);
+    let named_json: Value = create_named
+        .json()
+        .await
+        .expect("decode same-named workspace");
+    let named_id = named_json["workspace"]["id"].as_str().expect("workspace id");
+
+    let delete_named = fixture
+        .client
+        .delete(fixture.endpoint(&format!("/api/workspaces/{named_id}")))
+        .send()
+        .await
+        .expect("delete same-named workspace");
+    assert_eq!(delete_named.status(), StatusCode::OK);
+    let delete_named_json: Value = delete_named
+        .json()
+        .await
+        .expect("decode same-named delete response");
+    assert_eq!(delete_named_json, json!({ "deleted": true }));
+
+    let get_named = fixture
+        .client
+        .get(fixture.endpoint(&format!("/api/workspaces/{named_id}")))
+        .send()
+        .await
+        .expect("get deleted same-named workspace");
+    assert_eq!(get_named.status(), StatusCode::NOT_FOUND);
+
+    // Deleting a missing non-default workspace stays idempotent.
+    let delete_missing = fixture
+        .client
+        .delete(fixture.endpoint("/api/workspaces/not-a-real-workspace"))
+        .send()
+        .await
+        .expect("delete missing workspace");
+    assert_eq!(delete_missing.status(), StatusCode::OK);
+    let delete_missing_json: Value = delete_missing
+        .json()
+        .await
+        .expect("decode missing delete response");
+    assert_eq!(delete_missing_json, json!({ "deleted": true }));
+}
+
+#[tokio::test]
 async fn api_task_flow_with_validation() {
     let fixture = ApiFixture::new().await;
 

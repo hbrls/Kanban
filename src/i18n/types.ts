@@ -238,6 +238,7 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     fluency: string;
     workflows: string;
     specialists: string;
+    workspaces: string;
     debug: string;
     advanced: string;
     advancedGroupCollab: string;
