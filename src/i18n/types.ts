@@ -225,9 +225,7 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     providers: string;
     roles: string;
     specialists: string;
-    models: string;
     mcpServers: string;
-    webhooks: string;
     schedules: string;
     workflows: string;
     roleDefaults: string;
@@ -235,8 +233,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     providersDesc: string;
     registryDesc: string;
     rolesDesc: string;
-    modelsDesc: string;
-    webhooksDesc: string;
     nameRequired: string;
     commandRequired: string;
     optionalDescription: string;
@@ -271,11 +267,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     focusedExecutionPersonas: string;
     binding: string;
     promptModelPairing: string;
-    webhooksPageTitle: string;
-    webhooksPageDescription: string;
-    webhookUrl: string;
-    howItWorks: string;
-    webhookInfoBanner: string;
     specialistsTab: {
       catalog: string;
       totalSpecialists: string;

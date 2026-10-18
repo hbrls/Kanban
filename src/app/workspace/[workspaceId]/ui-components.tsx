@@ -220,7 +220,7 @@ export function OverlayModal({
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</span>
             <a
-              href="/settings/agents"
+              href="/settings?tab=registry"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"

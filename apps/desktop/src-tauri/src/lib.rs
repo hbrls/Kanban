@@ -118,8 +118,8 @@ fn log_frontend(level: String, scope: String, message: String) {
 
 /// Update the system tray menu with the current list of GitHub repos.
 ///
-/// Called by the frontend after it loads (or saves) webhook configurations so
-/// that the tray immediately reflects the configured repositories.
+/// Called by the frontend so that the tray immediately reflects the
+/// configured repositories for GitHub quick-link shortcuts.
 #[tauri::command]
 fn update_tray_github_repos(app: tauri::AppHandle, repos: Vec<GitHubRepo>) -> Result<(), String> {
     tray::update_tray_repos(&app, &repos).map_err(|e| e.to_string())
@@ -879,7 +879,7 @@ pub fn run() {
             pty_resize,
             pty_kill,
             pty_list,
-            // Tray command so the frontend can push webhook configs
+            // Tray command so the frontend can push GitHub repo shortcuts
             update_tray_github_repos,
         ])
         .setup(|app| {
@@ -1015,7 +1015,7 @@ pub fn run() {
                     "install_agents" => {
                         // Navigate to the agent installation page
                         if let Some(window) = app_handle.get_webview_window("main") {
-                            let js = "window.location.href = `${window.location.origin}/settings/agents`;";
+                            let js = "window.location.href = `${window.location.origin}/settings?tab=registry`;";
                             let _ = window.eval(js);
                             println!("[menu] Navigating to Install Agents");
                         }
@@ -1129,7 +1129,7 @@ pub fn run() {
             });
             // ─── System Tray ────────────────────────────────────────────────
             // Initialise with an empty repo list; the frontend calls
-            // `update_tray_github_repos` after loading webhook configs.
+            // `update_tray_github_repos` after loading GitHub repo configs.
             if let Err(e) = tray::setup_tray(app.handle(), &[]) {
                 eprintln!("[tray] Failed to set up system tray: {e}");
             } else {

@@ -95,7 +95,5 @@ export function SettingsPageClient() {
 function isSettingsTab(value: string | null): value is SettingsTab {
   return value === "providers"
     || value === "registry"
-    || value === "roles"
-    || value === "models"
-    || value === "webhooks";
+    || value === "roles";
 }

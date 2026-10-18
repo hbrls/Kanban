@@ -1114,7 +1114,7 @@ export function SessionPageClient() {
                   {t.sessions.installAgents}
                 </div>
                 <a
-                  href="/settings/agents"
+                  href="/settings?tab=registry"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[11px] text-[var(--dt-text-secondary)] hover:text-[var(--dt-text-primary)] transition-colors"
