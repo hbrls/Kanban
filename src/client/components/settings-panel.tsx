@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useId } from "react";
 import { desktopAwareFetch } from "../utils/diagnostics";
-import { GitHubWebhookPanel } from "./github-webhook-panel";
 import { AgentInstallPanel } from "./agent-install-panel";
 import { SettingsCenterNav } from "./settings-center-nav";
 import {
@@ -12,7 +11,6 @@ import {
   saveHiddenProviders,
   type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
-import { ModelsTab } from "./settings-panel-models-tab";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeSwitcher } from "./theme-switcher";
 import {
@@ -42,7 +40,7 @@ import {
   type SettingsPanelProps,
   type SettingsTab,
 } from "./settings-panel-shared";
-import { ArrowLeft, RefreshCw, Settings, TriangleAlert, X, Package } from "lucide-react";
+import { RefreshCw, Settings, TriangleAlert, X, Package } from "lucide-react";
 
 export {
   getModelDefinitionByAlias,
@@ -181,7 +179,6 @@ function RolesTab({
   customProviders,
   registryProviders,
   onChange,
-  onOpenModelsTab,
 }: {
   settings: DefaultProviderSettings;
   modelDefs: ModelDefinition[];
@@ -189,7 +186,6 @@ function RolesTab({
   customProviders: ProviderOption[];
   registryProviders: ProviderOption[];
   onChange: (role: AgentRoleKey, field: "provider" | "model", value: string) => void;
-  onOpenModelsTab: () => void;
 }) {
   const { t } = useTranslation();
   const datalistId = useId();
@@ -276,9 +272,7 @@ function RolesTab({
           ))}
         </datalist>
         <p className="mt-4 text-[10px] text-slate-400 dark:text-slate-500">
-          Leave model blank to use the provider default. Type a model alias from the{" "}
-          <button onClick={onOpenModelsTab} className="text-blue-500 hover:underline">Models tab</button>
-          {" "}to use custom connection details.
+          Leave model blank to use the provider default. Type a saved model alias to use its custom connection details.
         </p>
       </div>
     </div>
@@ -573,83 +567,6 @@ function ProviderCatalogSection({ allProviders }: ProviderCatalogSectionProps) {
   );
 }
 
-function WebhooksTab() {
-  const { t } = useTranslation();
-  const [showFullPanel, setShowFullPanel] = useState(false);
-  const isTauriEnv = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-
-  // In Tauri, show the full panel directly
-  if (isTauriEnv && showFullPanel) {
-    return (
-      <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            GitHub Webhook Triggers
-          </h3>
-          <button
-            onClick={() => setShowFullPanel(false)}
-            className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-            title={t.settings.backToOverview}
-          >
-            <ArrowLeft className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
-          </button>
-        </div>
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <GitHubWebhookPanel />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-1">
-          GitHub Webhook Triggers
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-          Automatically trigger agents (Claude Code, GLM-4, etc.) when GitHub events occur
-          — issue created, PR opened, CI completed, and more.
-        </p>
-        <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 px-3 py-2.5 mb-3">
-          <p className="text-xs text-blue-700 dark:text-blue-300">
-            <span className="font-semibold">Webhook URL:</span>{" "}
-            <code className="font-mono bg-blue-100 dark:bg-blue-900/30 px-1 rounded">
-              {typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/github
-            </code>
-          </p>
-          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-            Point your GitHub repository webhook at this URL to start receiving events.
-          </p>
-        </div>
-        {isTauriEnv ? (
-          <button
-            onClick={() => setShowFullPanel(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium rounded-lg hover:bg-slate-700 dark:hover:bg-slate-300 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-            </svg>
-            Manage Webhook Triggers
-          </button>
-        ) : (
-          <a
-            href="/settings/webhooks"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium rounded-lg hover:bg-slate-700 dark:hover:bg-slate-300 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
-            </svg>
-            Manage Webhook Triggers
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Docker OpenCode auth.json storage key ────────────────────────────────────
 const DOCKER_OPENCODE_AUTH_JSON_KEY = "docker-opencode-auth-json";
 
@@ -826,7 +743,7 @@ export function SettingsPanel({ open, onClose, providers, initialTab, onResetOnb
 function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboarding, variant = "modal" }: Omit<SettingsPanelProps, "open">) {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<DefaultProviderSettings>(() => loadDefaultProviders());
-  const [modelDefs, setModelDefs] = useState<ModelDefinition[]>(() => loadModelDefinitions());
+  const [modelDefs] = useState<ModelDefinition[]>(() => loadModelDefinitions());
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => initialTab ?? "providers");
   const isPageVariant = variant === "page";
 
@@ -847,17 +764,12 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
   const registryProviders = providers.filter((p) => p.source === "registry");
   const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
-    if (tab === "models") {
-      setModelDefs(loadModelDefinitions());
-    }
   };
 
   const TAB_DEFS: { key: SettingsTab; label: string }[] = [
     { key: "providers", label: t.settings.providers },
     { key: "registry", label: t.settings.registry },
     { key: "roles", label: t.settings.roles },
-    { key: "models", label: t.settings.models },
-    { key: "webhooks", label: t.settings.webhooks },
   ];
 
   const activeTabMeta = TAB_DEFS.find((tab) => tab.key === activeTab) ?? TAB_DEFS[0];
@@ -906,11 +818,8 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
           customProviders={customProviders}
           registryProviders={registryProviders}
           onChange={handleChange}
-          onOpenModelsTab={() => handleTabChange("models")}
         />
       )}
-      {activeTab === "models" && <ModelsTab />}
-      {activeTab === "webhooks" && <WebhooksTab />}
     </div>
   );
 
@@ -927,8 +836,6 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
               {activeTab === "providers" && t.settings.providersDesc}
               {activeTab === "registry" && t.settings.registryDesc}
               {activeTab === "roles" && t.settings.rolesDesc}
-              {activeTab === "models" && t.settings.modelsDesc}
-              {activeTab === "webhooks" && t.settings.webhooksDesc}
             </p>
           </header>
 

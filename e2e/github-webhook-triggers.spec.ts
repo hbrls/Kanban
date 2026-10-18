@@ -1,106 +1,28 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * GitHub Webhook Trigger Configuration E2E Tests (Issue #43)
+ * GitHub Webhook Trigger API E2E Tests (Issue #43)
  *
- * Tests the GitHub Event-Driven Trigger System:
- * 1. Navigate to /settings/webhooks
- * 2. Configure a GitHub token
- * 3. Configure repo, events (issues), and trigger agent
- * 4. Save the configuration
- * 5. Verify config appears in the list
- * 6. Test the webhook receiver endpoint directly (simulate GitHub event)
- * 7. Create a test GitHub issue on phodal-archive/data-mesh-spike
- * 8. Verify trigger log entry appears after event
- * 9. Edit and delete the configuration
+ * Tests the GitHub Event-Driven Trigger System backend surface:
+ * 1. Test the webhook receiver endpoint directly (simulate GitHub event)
+ * 2. Create a test GitHub issue on phodal-archive/data-mesh-spike
+ * 3. Verify trigger log entries after events
+ * 4. Webhook configs API CRUD operations
+ * 5. PR / CI / Tag event handling (Issue #44)
+ * 6. Polling adapter API endpoints (Issue #45)
+ *
+ * The /settings/webhooks Settings page was removed; these tests cover the
+ * retained /api/webhooks/* and /api/polling/* backend endpoints only.
  */
 
 const BASE_URL = "http://localhost:3001";
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN ?? "";
 const TEST_REPO = "phodal-archive/data-mesh-spike";
-const WEBHOOK_SECRET = "routa-webhook-secret-2026";
 
 test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
   test.setTimeout(120_000);
 
-  test("1. Navigate to /settings/webhooks page", async ({ page }) => {
-    await page.goto(`${BASE_URL}/settings/webhooks`);
-    await page.waitForLoadState("networkidle");
-
-    await page.screenshot({
-      path: "test-results/webhook-01-settings-page.png",
-      fullPage: true,
-    });
-
-    // Verify page header
-    await expect(page.locator("h1").filter({ hasText: /GitHub Webhook Triggers/i })).toBeVisible();
-    // Use getByText with exact match to avoid strict mode violation
-    await expect(page.getByText("/api/webhooks/github", { exact: true })).toBeVisible();
-
-    console.log("✓ /settings/webhooks page loaded successfully");
-  });
-
-  test("2. Create a GitHub webhook trigger configuration", async ({ page }) => {
-    await page.goto(`${BASE_URL}/settings/webhooks`);
-    await page.waitForLoadState("networkidle");
-
-    // Click "Add Trigger" button
-    const addBtn = page.locator("button").filter({ hasText: /Add Trigger|Add Your First Trigger/i }).first();
-    await addBtn.click();
-    await page.waitForTimeout(500);
-
-    await page.screenshot({
-      path: "test-results/webhook-02-form-opened.png",
-      fullPage: true,
-    });
-
-    // Fill in the form
-    await page.fill('[data-testid="webhook-name"]', "Issue Handler — data-mesh-spike (e2e test)");
-    await page.fill('[data-testid="webhook-repo"]', TEST_REPO);
-    await page.fill('[data-testid="webhook-token"]', GITHUB_TOKEN);
-    await page.fill('[data-testid="webhook-secret"]', WEBHOOK_SECRET);
-
-    // Select events: make sure "issues" is checked
-    const issuesCheckbox = page.locator('[data-testid="event-issues"]');
-    if (!await issuesCheckbox.isChecked()) {
-      await issuesCheckbox.check();
-    }
-
-    // Also check pull_request
-    const prCheckbox = page.locator('[data-testid="event-pull_request"]');
-    if (!await prCheckbox.isChecked()) {
-      await prCheckbox.check();
-    }
-
-    // Set agent to claude-code
-    const agentInput = page.locator('[data-testid="webhook-agent"]');
-    await agentInput.fill("claude-code");
-
-    await page.screenshot({
-      path: "test-results/webhook-03-form-filled.png",
-      fullPage: true,
-    });
-
-    // Submit
-    const submitBtn = page.locator('[data-testid="webhook-submit"]');
-    await submitBtn.click();
-
-    // Wait for success
-    await page.waitForTimeout(2000);
-
-    await page.screenshot({
-      path: "test-results/webhook-04-config-created.png",
-      fullPage: true,
-    });
-
-    // Verify the config card appears
-    const configCard = page.locator("text=Issue Handler — data-mesh-spike (e2e test)").first();
-    await expect(configCard).toBeVisible({ timeout: 10_000 });
-
-    console.log("✓ Webhook trigger configuration created successfully");
-  });
-
-  test("3. Test webhook receiver API endpoint directly (simulate GitHub event)", async ({ request }) => {
+  test("1. Test webhook receiver API endpoint directly (simulate GitHub event)", async ({ request }) => {
     // First create a config via API
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -169,65 +91,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log(`✓ Cleaned up test config ${configId}`);
   });
 
-  test("4. Verify trigger logs tab shows received events", async ({ page }) => {
-    await page.goto(`${BASE_URL}/settings/webhooks`);
-    await page.waitForLoadState("networkidle");
-
-    // Switch to Logs tab
-    const logsTab = page.locator("button").filter({ hasText: /Trigger Logs/i }).first();
-    await logsTab.click();
-    await page.waitForTimeout(500);
-
-    await page.screenshot({
-      path: "test-results/webhook-05-logs-tab.png",
-      fullPage: true,
-    });
-
-    console.log("✓ Trigger logs tab accessible");
-  });
-
-  test("5. Edit existing webhook configuration", async ({ page }) => {
-    await page.goto(`${BASE_URL}/settings/webhooks`);
-    await page.waitForLoadState("networkidle");
-
-    // Check if there's an existing config to edit
-    const editBtn = page.locator("button").filter({ hasText: /Edit/i }).first();
-    const editBtnVisible = await editBtn.isVisible({ timeout: 3000 }).catch(() => false);
-
-    if (!editBtnVisible) {
-      console.log("ℹ No config to edit (may have been deleted in a previous run). Skipping edit test.");
-      return;
-    }
-
-    await editBtn.click();
-    await page.waitForTimeout(500);
-
-    await page.screenshot({
-      path: "test-results/webhook-06-edit-form.png",
-      fullPage: true,
-    });
-
-    // Change the name
-    const nameInput = page.locator('[data-testid="webhook-name"]');
-    await nameInput.fill("Issue Handler — data-mesh-spike (e2e updated)");
-
-    // Save
-    const submitBtn = page.locator('[data-testid="webhook-submit"]');
-    await submitBtn.click();
-    await page.waitForTimeout(2000);
-
-    await page.screenshot({
-      path: "test-results/webhook-07-after-edit.png",
-      fullPage: true,
-    });
-
-    const updatedCard = page.locator("text=Issue Handler — data-mesh-spike (e2e updated)").first();
-    await expect(updatedCard).toBeVisible({ timeout: 10_000 });
-
-    console.log("✓ Webhook config updated successfully");
-  });
-
-  test("6. Create actual GitHub issue on test repo and verify webhook flow", async ({ request }) => {
+  test("2. Create actual GitHub issue on test repo and verify webhook flow", async ({ request }) => {
     // Step 1: Create a trigger config
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -294,7 +158,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log("✓ Cleaned up live test config");
   });
 
-  test("7. Create a real GitHub issue via API for live testing", async ({ request }) => {
+  test("3. Create a real GitHub issue via API for live testing", async ({ request }) => {
     // Create an actual issue on the test repository
     const issueRes = await request.post(
       `https://api.github.com/repos/${TEST_REPO}/issues`,
@@ -339,34 +203,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log(`✓ Closed GitHub issue #${issue.number}`);
   });
 
-  test("8. Delete webhook configuration via UI", async ({ page }) => {
-    await page.goto(`${BASE_URL}/settings/webhooks`);
-    await page.waitForLoadState("networkidle");
-
-    // Look for a config card with delete button
-    const deleteBtn = page.locator("button").filter({ hasText: /Delete/i }).first();
-    const deleteBtnVisible = await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false);
-
-    if (!deleteBtnVisible) {
-      console.log("ℹ No config to delete. Skipping delete test.");
-      return;
-    }
-
-    // Set up dialog handler to accept confirmation
-    page.on("dialog", (dialog) => dialog.accept());
-
-    await deleteBtn.click();
-    await page.waitForTimeout(2000);
-
-    await page.screenshot({
-      path: "test-results/webhook-08-after-delete.png",
-      fullPage: true,
-    });
-
-    console.log("✓ Config deleted via UI");
-  });
-
-  test("9. Webhook receiver GET endpoint returns health info", async ({ request }) => {
+  test("4. Webhook receiver GET endpoint returns health info", async ({ request }) => {
     const res = await request.get(`${BASE_URL}/api/webhooks/github`);
     expect(res.ok()).toBeTruthy();
     const data = await res.json();
@@ -375,7 +212,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log("✓ Webhook receiver health check passed");
   });
 
-  test("10. Webhook configs API CRUD operations", async ({ request }) => {
+  test("5. Webhook configs API CRUD operations", async ({ request }) => {
     // CREATE
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -435,7 +272,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
 
   // ─── Phase 2: PR / CI / Tag Event Tests (Issue #44) ───────────────────────────
 
-  test("11. Test PR review event handling (Issue #44)", async ({ request }) => {
+  test("6. Test PR review event handling (Issue #44)", async ({ request }) => {
     // Create a config for PR review events
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -504,7 +341,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log("✓ Cleaned up PR review test config");
   });
 
-  test("12. Test workflow_run event handling (Issue #44)", async ({ request }) => {
+  test("7. Test workflow_run event handling (Issue #44)", async ({ request }) => {
     // Create a config for workflow_run events
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -566,7 +403,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log("✓ Cleaned up workflow_run test config");
   });
 
-  test("13. Test create event (tag/branch) handling (Issue #44)", async ({ request }) => {
+  test("8. Test create event (tag/branch) handling (Issue #44)", async ({ request }) => {
     // Create a config for create events
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -618,7 +455,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log("✓ Cleaned up create event test config");
   });
 
-  test("14. Test delete event (tag/branch) handling (Issue #44)", async ({ request }) => {
+  test("9. Test delete event (tag/branch) handling (Issue #44)", async ({ request }) => {
     // Create a config for delete events
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -669,7 +506,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log("✓ Cleaned up delete event test config");
   });
 
-  test("15. Test check_suite event handling (Issue #44)", async ({ request }) => {
+  test("10. Test check_suite event handling (Issue #44)", async ({ request }) => {
     // Create a config for check_suite events
     const createRes = await request.post(`${BASE_URL}/api/webhooks/configs`, {
       data: {
@@ -729,7 +566,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
 
   // ─── Polling Adapter Tests (Issue #45) ────────────────────────────────────
 
-  test("16. Test polling config API endpoints (Issue #45)", async ({ request }) => {
+  test("11. Test polling config API endpoints (Issue #45)", async ({ request }) => {
     // GET initial config
     const getRes = await request.get(`${BASE_URL}/api/polling/config`);
     expect(getRes.ok()).toBeTruthy();
@@ -762,7 +599,7 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     console.log("✓ Polling disabled successfully");
   });
 
-  test("17. Test polling check API endpoint (Issue #45)", async ({ request }) => {
+  test("12. Test polling check API endpoint (Issue #45)", async ({ request }) => {
     // GET status
     const statusRes = await request.get(`${BASE_URL}/api/polling/check`);
     expect(statusRes.ok()).toBeTruthy();
@@ -779,36 +616,5 @@ test.describe("GitHub Webhook Trigger System (Issue #43)", () => {
     expect(checkResult.checkedAt).toBeDefined();
     expect(checkResult.summary).toBeDefined();
     console.log(`✓ POST /api/polling/check - manual check completed, ${checkResult.summary.reposChecked} repos checked`);
-  });
-
-  test("18. Test polling UI controls visible on settings page (Issue #45)", async ({ page }) => {
-    await page.goto(`${BASE_URL}/settings/webhooks`);
-    await page.waitForLoadState("networkidle");
-
-    // Verify Polling Control Panel is visible
-    await expect(page.locator("text=Local Polling")).toBeVisible();
-    console.log("✓ 'Local Polling' label visible");
-
-    // Verify toggle button exists
-    const toggleBtn = page.locator("button").filter({ has: page.locator("span.rounded-full") }).first();
-    await expect(toggleBtn).toBeVisible();
-    console.log("✓ Polling toggle button visible");
-
-    // Verify Check Now button exists
-    await expect(page.locator("button").filter({ hasText: /Check Now/i })).toBeVisible();
-    console.log("✓ 'Check Now' button visible");
-
-    // Verify interval selector exists
-    await expect(page.locator("select")).toBeVisible();
-    console.log("✓ Interval selector visible");
-
-    // Verify helper text
-    await expect(page.locator("text=Alternative to webhooks for local development")).toBeVisible();
-    console.log("✓ Polling helper text visible");
-
-    await page.screenshot({
-      path: "test-results/webhook-16-polling-panel.png",
-      fullPage: true,
-    });
   });
 });

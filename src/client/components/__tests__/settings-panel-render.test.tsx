@@ -9,10 +9,6 @@ vi.mock("../../utils/diagnostics", () => ({
   desktopAwareFetch,
 }));
 
-vi.mock("../github-webhook-panel", () => ({
-  GitHubWebhookPanel: () => <div>GitHub Webhook Panel</div>,
-}));
-
 vi.mock("../schedule-panel", () => ({
   SchedulePanel: () => <div>Schedule Panel</div>,
 }));
@@ -88,23 +84,6 @@ describe("SettingsPanel render", () => {
         };
       }
       return { ok: true, json: async () => ({ specialists: [] }) };
-    });
-  });
-
-  it("renders the models tab through the extracted component", async () => {
-    render(
-      <SettingsPanel
-        open
-        onClose={() => {}}
-        providers={[]}
-        initialTab="models"
-      />,
-    );
-
-    expect(screen.getAllByText("Add Model").length).toBeGreaterThan(0);
-    expect(screen.getByText("Models")).not.toBeNull();
-    await waitFor(() => {
-      expect(screen.getByText(/Memory 10\/20 MB/)).not.toBeNull();
     });
   });
 
