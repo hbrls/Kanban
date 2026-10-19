@@ -15,7 +15,6 @@ const I18N = {
   runtimeConnectionReady: "Connected & initialized",
   providerSourceLocal: "Local",
   providerSourceRegistry: "Registry",
-  providerSourceCustom: "Custom",
   providerSourceUnknown: "Unspecified",
   providerInformation: "Provider information",
   providerEnvironment: "Runtime environment check",
@@ -23,7 +22,6 @@ const I18N = {
   providerHandshake: "Protocol handshake",
   providerInformationLoaded: "Information loaded",
   providerInformationWaiting: "Waiting for information",
-  providerConfigurationLoaded: "Configuration loaded",
   providerEnvironmentPassed: "Passed",
   providerEnvironmentUnavailable: "Unavailable",
   providerWaitingInitialization: "Waiting for initialization",
@@ -31,7 +29,6 @@ const I18N = {
   providerCheckPassed: "Check passed",
   providerAvailable: "Available",
   providerUnavailable: "Unavailable",
-  providerConfigured: "Configured",
   providerDash: "—",
   providerNotExecuted: "Not executed",
   providerNotChecked: "Not checked",
@@ -75,21 +72,9 @@ function claudeProvider(): AcpProviderInfo {
   };
 }
 
-function customProvider(): AcpProviderInfo {
-  return {
-    id: "my-agent",
-    name: "My Agent",
-    description: "Custom agent",
-    command: "my-agent",
-    status: "available",
-    source: "static",
-  };
-}
-
 function buildProjection(options: {
   stepStatus: HomeInitializationStep["status"];
   providers: AcpProviderInfo[];
-  customProviderIds?: string[];
   acpConnected?: boolean;
   runtimeSettled?: boolean;
 }) {
@@ -97,7 +82,6 @@ function buildProjection(options: {
   return buildHomeRuntimeDetails({
     runtimeStep: step,
     providers: options.providers,
-    customProviderIds: options.customProviderIds ?? [],
     acpConnected: options.acpConnected ?? true,
     runtimeSettled: options.runtimeSettled ?? true,
     runtimeSkipped: options.stepStatus === "skipped",
@@ -179,29 +163,34 @@ describe("HomeRuntimeDetails", () => {
     expect(kimiEnvironment.textContent).toContain(I18N.providerWaitingInitialization);
   });
 
-  it("treats custom providers as configured-only, with dash for environment/startup/handshake", () => {
+  it("classifies providers by server-reported source even for IDs that used to be custom", () => {
     const projection = buildProjection({
       stepStatus: "success",
-      providers: [customProvider()],
-      customProviderIds: ["my-agent"],
+      providers: [
+        {
+          id: "my-agent",
+          name: "My Agent",
+          description: "Legacy custom agent",
+          command: "my-agent",
+          status: "available",
+          source: "static",
+        },
+      ],
     });
 
     render(<HomeRuntimeDetails projection={projection} />);
 
-    expect(screen.getByTestId("home-runtime-provider-my-agent-information").textContent).toContain(
-      I18N.providerConfigurationLoaded,
-    );
-    expect(screen.getByTestId("home-runtime-provider-my-agent-environment").textContent).toContain(
-      I18N.providerDash,
-    );
-    expect(screen.getByTestId("home-runtime-provider-my-agent-startup").textContent).toContain(
-      I18N.providerNotExecuted,
-    );
-    expect(screen.getByTestId("home-runtime-provider-my-agent-handshake").textContent).toContain(
-      I18N.providerNotExecuted,
+    expect(screen.getByTestId("home-runtime-provider-my-agent").textContent).toContain(
+      I18N.providerSourceLocal,
     );
     expect(screen.getByTestId("home-runtime-provider-my-agent").textContent).toContain(
-      I18N.providerConfigured,
+      I18N.providerAvailable,
+    );
+    expect(screen.getByTestId("home-runtime-provider-my-agent-environment").textContent).toContain(
+      I18N.providerEnvironmentPassed,
+    );
+    expect(screen.getByTestId("home-runtime-provider-my-agent").textContent).not.toContain(
+      I18N.providerSourceUnknown,
     );
   });
 

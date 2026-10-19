@@ -16,19 +16,16 @@
 //! **Agent Trace**: All sessions record trace events to JSONL files for
 //! attribution tracking (which model/session/tool affected which files and when).
 
-pub mod binary_manager;
 pub mod claude_code_process;
-pub mod installation_state;
 pub mod mcp_setup;
 pub mod presets;
 pub mod process;
 pub mod provider_adapter;
 pub mod terminal_manager;
 
-pub use binary_manager::AcpBinaryManager;
 pub use claude_code_process::{ClaudeCodeConfig, ClaudeCodeProcess};
-pub use registry_fetch::{fetch_registry, fetch_registry_json};
-pub use registry_types::*;
+use self::presets::{require_preset, AcpPreset};
+pub use self::presets::{get_presets, get_resume_capability};
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -429,7 +426,7 @@ impl AcpManager {
         }
 
         let (ntx, _) = broadcast::channel::<serde_json::Value>(256);
-        let preset = get_preset_by_id_with_registry(provider_name).await?;
+        let preset = require_preset(provider_name)?;
 
         let mcp_setup = mcp_setup::ensure_mcp_for_provider(
             provider_name,
@@ -855,7 +852,7 @@ impl AcpManager {
             )
         } else {
             // Use standard ACP protocol
-            let preset = get_preset_by_id_with_registry(provider_name).await?;
+            let preset = require_preset(provider_name)?;
 
             let mcp_setup = mcp_setup::ensure_mcp_for_provider(
                 provider_name,
@@ -1159,239 +1156,12 @@ impl AcpManager {
 }
 
 // ─── ACP Presets ────────────────────────────────────────────────────────
-
-/// Resume/continuation capability metadata for a provider.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ResumeCapability {
-    pub supported: bool,
-    /// "native" | "replay" | "both"
-    pub mode: String,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_fork: Option<bool>,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub supports_list: Option<bool>,
-}
-
-/// ACP provider presets for known coding agents.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AcpPreset {
-    /// Unique identifier (lowercase, e.g., "claude", "opencode")
-    pub id: String,
-    /// Human-readable display name (e.g., "Claude Code", "OpenCode")
-    pub name: String,
-    pub command: String,
-    pub args: Vec<String>,
-    pub description: String,
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub env_bin_override: Option<String>,
-    /// Resume/continuation capabilities for this provider.
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub resume: Option<ResumeCapability>,
-}
-
-/// Get the list of known ACP agent presets (static/builtin only).
-pub fn get_presets() -> Vec<AcpPreset> {
-    vec![
-        AcpPreset {
-            id: "opencode".to_string(),
-            name: "OpenCode".to_string(),
-            command: "opencode".to_string(),
-            args: vec!["acp".to_string()],
-            description: "OpenCode AI coding agent".to_string(),
-            env_bin_override: Some("OPENCODE_BIN".to_string()),
-            resume: Some(ResumeCapability {
-                supported: true,
-                mode: "replay".to_string(),
-                supports_fork: None,
-                supports_list: None,
-            }),
-        },
-        AcpPreset {
-            id: "gemini".to_string(),
-            name: "Gemini".to_string(),
-            command: "gemini".to_string(),
-            args: vec!["--experimental-acp".to_string()],
-            description: "Google Gemini CLI".to_string(),
-            env_bin_override: None,
-            resume: None,
-        },
-        AcpPreset {
-            id: "codex-acp".to_string(),
-            name: "Codex".to_string(),
-            command: "codex-acp".to_string(),
-            args: vec![],
-            description: "OpenAI Codex CLI (codex-acp wrapper)".to_string(),
-            env_bin_override: Some("CODEX_ACP_BIN".to_string()),
-            resume: Some(ResumeCapability {
-                supported: true,
-                mode: "both".to_string(),
-                supports_fork: None,
-                supports_list: Some(true),
-            }),
-        },
-        AcpPreset {
-            id: "copilot".to_string(),
-            name: "GitHub Copilot".to_string(),
-            command: "copilot".to_string(),
-            args: vec![
-                "--acp".to_string(),
-                "--allow-all-tools".to_string(),
-                "--no-ask-user".to_string(),
-            ],
-            description: "GitHub Copilot CLI".to_string(),
-            env_bin_override: Some("COPILOT_BIN".to_string()),
-            resume: None,
-        },
-        AcpPreset {
-            id: "auggie".to_string(),
-            name: "Auggie".to_string(),
-            command: "auggie".to_string(),
-            args: vec!["--acp".to_string()],
-            description: "Augment Code's AI agent".to_string(),
-            env_bin_override: None,
-            resume: None,
-        },
-        AcpPreset {
-            id: "kimi".to_string(),
-            name: "Kimi".to_string(),
-            command: "kimi".to_string(),
-            // Kimi Code CLI exposes ACP as a subcommand; `kimi --acp` was removed.
-            args: vec!["acp".to_string()],
-            description: "Moonshot AI's Kimi CLI".to_string(),
-            env_bin_override: None,
-            resume: None,
-        },
-        AcpPreset {
-            id: "kiro".to_string(),
-            name: "Kiro".to_string(),
-            command: "kiro-cli".to_string(),
-            args: vec!["acp".to_string()],
-            description: "Amazon Kiro AI coding agent".to_string(),
-            env_bin_override: Some("KIRO_BIN".to_string()),
-            resume: None,
-        },
-        AcpPreset {
-            id: "qoder".to_string(),
-            name: "Qoder".to_string(),
-            command: "qodercli".to_string(),
-            args: vec!["--acp".to_string(), "--experimental-mcp-load".to_string()],
-            description: "Qoder AI coding agent".to_string(),
-            env_bin_override: Some("QODER_BIN".to_string()),
-            resume: None,
-        },
-        AcpPreset {
-            id: "claude".to_string(),
-            name: "Claude Code".to_string(),
-            command: "claude".to_string(),
-            // Claude Code uses stream-json protocol, not ACP flags
-            // Args are unused since we use ClaudeCodeProcess directly
-            args: vec![],
-            description: "Anthropic Claude Code (stream-json protocol)".to_string(),
-            env_bin_override: Some("CLAUDE_BIN".to_string()),
-            resume: Some(ResumeCapability {
-                supported: true,
-                mode: "replay".to_string(),
-                supports_fork: Some(true),
-                supports_list: None,
-            }),
-        },
-    ]
-}
-
-/// Get a static preset by ID (synchronous, no registry lookup).
-pub fn get_preset_by_id(id: &str) -> Option<AcpPreset> {
-    let normalized_id = match id {
-        "codex" => "codex-acp",
-        "qodercli" => "qoder",
-        other => other,
-    };
-    get_presets().into_iter().find(|p| p.id == normalized_id)
-}
-
-/// Get the resume capability for a provider ID (synchronous).
-pub fn get_resume_capability(provider: &str) -> Option<ResumeCapability> {
-    get_preset_by_id(provider).and_then(|p| p.resume)
-}
-
-/// Get a preset by ID, checking both static presets and registry.
-/// Static presets take precedence.
-///
-/// Supports suffixed IDs like "auggie-registry" to explicitly request
-/// the registry version when both built-in and registry versions exist.
-pub async fn get_preset_by_id_with_registry(id: &str) -> Result<AcpPreset, String> {
-    let normalized_id = match id {
-        "codex" => "codex-acp",
-        "qodercli" => "qoder",
-        other => other,
-    };
-
-    // Handle suffixed IDs (e.g., "auggie-registry")
-    // This allows explicit selection of registry version when both exist
-    const REGISTRY_SUFFIX: &str = "-registry";
-    if let Some(base_id) = normalized_id.strip_suffix(REGISTRY_SUFFIX) {
-        let mut preset = get_registry_preset(base_id).await?;
-        // Keep the suffixed ID in the returned preset for consistency
-        preset.id = id.to_string();
-        return Ok(preset);
-    }
-
-    // Check static presets first (match by id, not name)
-    if let Some(mut preset) = get_presets().into_iter().find(|p| p.id == normalized_id) {
-        if preset.id != id {
-            preset.id = id.to_string();
-        }
-        return Ok(preset);
-    }
-
-    // Fall back to registry
-    let mut preset = get_registry_preset(normalized_id).await?;
-    if preset.id != id {
-        preset.id = id.to_string();
-    }
-    Ok(preset)
-}
-
-/// Get a preset from the ACP registry by ID.
-async fn get_registry_preset(id: &str) -> Result<AcpPreset, String> {
-    let registry: AcpRegistry = fetch_registry().await?;
-
-    // Find the agent
-    let agent = registry
-        .agents
-        .into_iter()
-        .find(|a| a.id == id)
-        .ok_or_else(|| format!("Agent '{id}' not found in registry"))?;
-
-    // Build command from distribution
-    let (command, args) = if let Some(ref npx) = agent.distribution.npx {
-        let mut args = vec!["-y".to_string(), npx.package.clone()];
-        args.extend(npx.args.clone());
-        ("npx".to_string(), args)
-    } else if let Some(ref uvx) = agent.distribution.uvx {
-        let mut args = vec![uvx.package.clone()];
-        args.extend(uvx.args.clone());
-        ("uvx".to_string(), args)
-    } else {
-        return Err(format!(
-            "Agent '{id}' has no supported distribution (npx/uvx)"
-        ));
-    };
-
-    Ok(AcpPreset {
-        id: agent.id.clone(),
-        name: agent.name,
-        command,
-        args,
-        description: agent.description,
-        env_bin_override: None,
-        resume: None,
-    })
-}
+//
+// The full preset catalog lives in `presets` — a single source of truth that
+// merges the pre-existing built-in providers with the entries downloaded
+// from the ACP registry snapshot. This module re-exports the public surface
+// and historically kept the inline list, which has been retired in favour of
+// the catalog above.
 
 fn resolve_preset_command(preset: &AcpPreset) -> String {
     if let Some(env_var) = &preset.env_bin_override {
@@ -1423,7 +1193,7 @@ fn truncate_content(text: &str, max_len: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        get_preset_by_id_with_registry, get_presets, truncate_content, validate_session_cwd,
+        get_preset_by_id, get_presets, require_preset, truncate_content, validate_session_cwd,
         AcpManager, AcpSessionRecord,
     };
     use std::collections::HashMap;
@@ -1461,17 +1231,26 @@ mod tests {
         assert_eq!(kimi.args, vec!["acp".to_string()]);
     }
 
-    #[tokio::test]
-    async fn qodercli_alias_resolves_to_qoder_preset() {
-        let preset = get_preset_by_id_with_registry("qodercli")
-            .await
-            .expect("qodercli alias should resolve");
-        assert_eq!(preset.id, "qodercli");
+    #[test]
+    fn qodercli_alias_resolves_to_qoder_preset() {
+        let preset = get_preset_by_id("qodercli").expect("qodercli alias should resolve");
+        // `get_preset_by_id` returns the canonical catalog entry id, not the
+        // alias the caller passed in; both `qodercli` and `qoder` therefore
+        // resolve to the same `qoder` preset.
+        assert_eq!(preset.id, "qoder");
         assert_eq!(preset.command, "qodercli");
         assert_eq!(
             preset.args,
             vec!["--acp".to_string(), "--experimental-mcp-load".to_string()]
         );
+    }
+
+    #[test]
+    fn unknown_provider_errors_without_remote_lookup() {
+        assert!(get_preset_by_id("nope-provider").is_none());
+        let err = require_preset("nope-provider").unwrap_err();
+        assert!(err.contains("nope-provider"));
+        assert!(err.contains("fixed to the presets"));
     }
 
     #[test]

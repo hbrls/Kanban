@@ -41,12 +41,6 @@ describe("onboarding helpers", () => {
     ).toBe(true);
   });
 
-  it("treats custom providers as explicit provider setup", () => {
-    expect(
-      hasSavedProviderConfiguration({}, {}, { customProviderCount: 1 }),
-    ).toBe(true);
-  });
-
   it("treats runtime-detected providers as explicit provider setup", () => {
     expect(
       hasSavedProviderConfiguration({}, {}, { runtimeProviderCount: 2 }),

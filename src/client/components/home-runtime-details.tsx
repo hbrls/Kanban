@@ -68,11 +68,6 @@ function resolveCheckDetail(
       };
     case "providerInformationWaiting":
       return { prefix: lookup.providerInformationWaiting ?? lookup.providerWaitingResult };
-    case "providerConfigurationLoaded":
-      return {
-        prefix: lookup.providerConfigurationLoaded,
-        ...(check.command ? { command: ` · ${check.command}` } : {}),
-      };
     case "providerEnvironmentPassed":
       return {
         prefix: lookup.providerEnvironmentPassed,
@@ -95,10 +90,6 @@ function resolveCheckDetail(
       return { prefix: lookup.providerAvailable };
     case "providerUnavailable":
       return { prefix: lookup.providerUnavailable };
-    case "providerConfigured":
-      return { prefix: lookup.providerConfigured };
-    case "providerDash":
-      return { prefix: lookup.providerDash };
     case "providerNotExecuted":
       return { prefix: lookup.providerNotExecuted };
     case "providerNotChecked":
@@ -121,8 +112,6 @@ function resolveSummary(provider: HomeProviderDetails, t: TranslationDictionary)
       return lookup.providerUnavailable;
     case "providerWaitingResult":
       return lookup.providerWaitingResult;
-    case "providerConfigured":
-      return lookup.providerConfigured;
     default:
       return lookup.providerNotChecked;
   }
@@ -133,10 +122,6 @@ function resolveSourceLabel(provider: HomeProviderDetails, t: TranslationDiction
   switch (provider.sourceKey) {
     case "providerSourceLocal":
       return lookup.providerSourceLocal;
-    case "providerSourceRegistry":
-      return lookup.providerSourceRegistry;
-    case "providerSourceCustom":
-      return lookup.providerSourceCustom;
     default:
       return lookup.providerSourceUnknown;
   }

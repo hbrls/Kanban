@@ -18,7 +18,6 @@ import {useRouter, useSearchParams} from "next/navigation";
 import {ChatPanel} from "@/client/components/chat-panel";
 import {SpecialistManager} from "@/client/components/specialist-manager";
 import {CraftersView} from "@/client/components/task-panel";
-import {AgentInstallPanel} from "@/client/components/agent-install-panel";
 import {SessionCanvasPanel} from "@/client/components/session-canvas-panel";
 import {LeftSidebar} from "./left-sidebar";
 import {DesktopAppShell} from "@/client/components/desktop-app-shell";
@@ -35,7 +34,7 @@ import { useSessionCrafters } from "./use-session-crafters";
 import { useSessionCanvasArtifacts } from "./use-session-canvas-artifacts";
 import { Select } from "@/client/components/select";
 import { useTranslation } from "@/i18n";
-import { ChevronDown, Columns2, ScrollText, X } from "lucide-react";
+import { ChevronDown, Columns2, ScrollText } from "lucide-react";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 import { buildLiveCanvasAgentPrompt } from "@/core/canvas/session-canvas-prompt";
 
@@ -223,7 +222,6 @@ export function SessionPageClient() {
 
   // ── Mobile sidebar toggle ──────────────────────────────────────────
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
-  const [showAgentInstallPopup, setShowAgentInstallPopup] = useState(false);
   const [showSpecialistManager, setShowSpecialistManager] = useState(false);
   // Docker error popup state
   const [dockerErrorMessage, setDockerErrorMessage] = useState<string | null>(null);
@@ -263,39 +261,8 @@ export function SessionPageClient() {
       window.removeEventListener('open-specialist-manager', handleOpenSpecialistManager);
     };
   }, []);
-  const agentInstallCloseRef = useRef<HTMLButtonElement>(null);
-  const installAgentsButtonRef = useRef<HTMLButtonElement>(null);
   const lastSessionRenameUpdateIndexRef = useRef(0);
 
-
-  // Agent Install popup: body scroll lock + Escape to close
-  useEffect(() => {
-    if (!showAgentInstallPopup) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowAgentInstallPopup(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [showAgentInstallPopup]);
-
-  // Agent Install popup: focus close button when open, restore focus when close
-  const prevAgentPopupRef = useRef(false);
-  useEffect(() => {
-    if (showAgentInstallPopup) {
-      prevAgentPopupRef.current = true;
-      const t = requestAnimationFrame(() => agentInstallCloseRef.current?.focus());
-      return () => cancelAnimationFrame(t);
-    }
-    if (prevAgentPopupRef.current) {
-      prevAgentPopupRef.current = false;
-      installAgentsButtonRef.current?.focus({ preventScroll: true });
-    }
-  }, [showAgentInstallPopup]);
 
   // ── Resize handlers (right sidebar) ──────────────────────────────────
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -1089,55 +1056,6 @@ export function SessionPageClient() {
       {/* ─── Resize overlay (prevents iframe/content interference) ─── */}
       {(isLeftResizing || isResizing) && (
         <div className="fixed inset-0 z-50 cursor-col-resize" />
-      )}
-
-      {/* ─── Agent Install Popup ─────────────────────────────────────── */}
-      {showAgentInstallPopup && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="agent-install-title"
-        >
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowAgentInstallPopup(false)}
-            aria-hidden="true"
-          />
-          <div
-            className="relative w-full max-w-5xl h-[80vh] bg-[var(--dt-bg-primary)] border border-[var(--dt-border)] rounded-xl shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="h-11 px-4 border-b border-[var(--dt-border)] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div id="agent-install-title" className="text-sm font-semibold text-[var(--dt-text-primary)]">
-                  {t.sessions.installAgents}
-                </div>
-                <a
-                  href="/settings?tab=registry"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-[var(--dt-text-secondary)] hover:text-[var(--dt-text-primary)] transition-colors"
-                >
-                  {t.sessions.openInNewTab}
-                </a>
-              </div>
-              <button
-                ref={agentInstallCloseRef}
-                type="button"
-                onClick={() => setShowAgentInstallPopup(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--dt-bg-active)] text-[var(--dt-text-secondary)] hover:text-[var(--dt-text-primary)] transition-colors"
-                title={t.common.closeEsc}
-                aria-label={t.common.close}
-              >
-                <X className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}/>
-              </button>
-            </div>
-            <div className="h-[calc(80vh-44px)]">
-              <AgentInstallPanel />
-            </div>
-          </div>
-        </div>
       )}
 
       {/* ─── Agent Toast ──────────────────────────────────────────── */}

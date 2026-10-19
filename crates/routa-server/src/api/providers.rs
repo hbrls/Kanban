@@ -1,7 +1,10 @@
 //! Providers API - Fast provider listing with lazy status checking
 //!
-//! GET /api/providers - List all providers (instant, status may be "checking")
-//! GET /api/providers?check=true&id=<provider> - Check selected provider statuses
+//! GET /api/providers                       - List providers from the fixed preset catalog
+//! GET /api/providers?check=true&id=…       - Check availability of specific provider IDs
+//!
+//! The catalog is the single source of truth (see `routa_core::acp::presets`).
+//! There is no CDN-backed registry fetch and no `-registry` alias suffix.
 
 use axum::{routing::get, Json, Router};
 use axum_extra::extract::Query;
@@ -19,8 +22,10 @@ struct ProviderInfo {
     name: String,
     description: String,
     command: String,
-    status: String, // "available" | "unavailable" | "checking"
-    source: String, // "static" | "registry"
+    status: String,    // "available" | "unavailable" | "checking"
+    source: String,    // always "static" in the fixed-preset model
+    #[serde(skip_serializing_if = "Option::is_none")]
+    note: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,21 +65,20 @@ async fn list_providers(
 ) -> Result<Json<serde_json::Value>, ServerError> {
     // Fast path: return cached or unchecked providers
     if !query.check {
-        // Check cache first
         let _should_return_cached = {
             let cache = get_cache().lock().unwrap();
             if let Some(ref providers) = cache.providers {
                 if cache.timestamp.elapsed().unwrap_or(CACHE_TTL) < CACHE_TTL {
-                    // Clone the providers to return after releasing lock
                     return Ok(Json(serde_json::json!({ "providers": providers })));
                 }
             }
             false
         };
 
-        // Return unchecked providers immediately
         let providers = get_providers_without_checking().await;
-
+        let mut guard = get_cache().lock().unwrap();
+        guard.providers = Some(providers.clone());
+        guard.timestamp = SystemTime::now();
         return Ok(Json(serde_json::json!({ "providers": providers })));
     }
 
@@ -86,9 +90,7 @@ async fn list_providers(
         ));
     }
 
-    // Targeted checks are deliberately never written to the fast-query cache.
     let providers = get_providers_with_checking(&check_ids).await;
-
     Ok(Json(serde_json::json!({ "providers": providers })))
 }
 
@@ -106,188 +108,68 @@ fn should_check_provider(provider_id: &str, check_ids: &HashSet<String>) -> bool
     check_ids.contains(provider_id)
 }
 
-/// Helper to get command from agent distribution
-fn get_agent_command(agent: &super::acp_registry::RegistryAgent, platform: &str) -> String {
-    // Try npx first
-    if let Some(npx_val) = agent.distribution.get("npx") {
-        if let Some(package) = npx_val.get("package").and_then(|v| v.as_str()) {
-            return format!("npx {package}");
-        }
-    }
-
-    // Try uvx
-    if let Some(uvx_val) = agent.distribution.get("uvx") {
-        if let Some(package) = uvx_val.get("package").and_then(|v| v.as_str()) {
-            return format!("uvx {package}");
-        }
-    }
-
-    // Try binary
-    if let Some(binary_val) = agent.distribution.get("binary") {
-        if let Some(platform_bin) = binary_val.get(platform) {
-            if let Some(cmd) = platform_bin.get("cmd").and_then(|v| v.as_str()) {
-                return cmd.to_string();
-            }
-        }
-    }
-
-    // Fallback to agent id
-    agent.id.clone()
-}
-
-/// Fast: Return all providers without checking command availability
+/// Fast: Return all providers without checking command availability.
 async fn get_providers_without_checking() -> Vec<ProviderInfo> {
-    use crate::acp;
+    use crate::acp::get_presets;
 
-    let presets = acp::get_presets();
-    let mut providers: Vec<ProviderInfo> = presets
-        .iter()
-        .map(|p| ProviderInfo {
-            id: p.id.clone(),
-            name: p.name.clone(),
-            description: p.description.clone(),
-            command: p.command.clone(),
-            status: "checking".to_string(),
-            source: "static".to_string(),
-        })
-        .collect();
-
-    // Add registry agents (without checking)
-    if let Ok(registry) = super::acp_registry::fetch_registry().await {
-        let static_ids: HashSet<_> = providers.iter().map(|p| p.id.clone()).collect();
-        let platform =
-            super::acp_registry::detect_platform().unwrap_or_else(|| "unknown".to_string());
-
-        for agent in registry.agents {
-            let command = get_agent_command(&agent, &platform);
-
-            let provider_id = if static_ids.contains(&agent.id) {
-                format!("{}-registry", agent.id)
-            } else {
-                agent.id.clone()
-            };
-
-            let provider_name = if static_ids.contains(&agent.id) {
-                format!("{} (Registry)", agent.name)
-            } else {
-                agent.name.clone()
-            };
-
-            providers.push(ProviderInfo {
-                id: provider_id,
-                name: provider_name,
-                description: agent.description,
-                command,
-                status: "checking".to_string(),
-                source: "registry".to_string(),
-            });
-        }
-    }
-
-    providers
-}
-
-/// Slow: Check all provider command availability
-async fn get_providers_with_checking(check_ids: &HashSet<String>) -> Vec<ProviderInfo> {
-    use crate::{acp, shell_env};
-
-    let presets = acp::get_presets();
-    let mut providers: Vec<ProviderInfo> = Vec::new();
-
-    // Check static presets
-    for preset in &presets {
-        let selected = should_check_provider(&preset.id, check_ids);
-        let installed = selected && shell_env::which(&preset.command).is_some();
-        providers.push(ProviderInfo {
+    get_presets()
+        .into_iter()
+        .map(|preset| ProviderInfo {
             id: preset.id.clone(),
             name: preset.name.clone(),
             description: preset.description.clone(),
             command: preset.command.clone(),
-            status: if !selected {
+            status: if preset.command.is_empty() {
+                "unavailable".to_string()
+            } else {
+                "checking".to_string()
+            },
+            source: "static".to_string(),
+            note: preset.note.clone(),
+        })
+        .collect()
+}
+
+/// Slow: Check `check_ids` provider command availability. Static providers
+/// are checked with `which` after honoring any `env_bin_override`. Binary
+/// presets with no command are reported as "unavailable" without an extra
+/// process spawn.
+async fn get_providers_with_checking(check_ids: &HashSet<String>) -> Vec<ProviderInfo> {
+    use crate::{acp::get_presets, shell_env};
+
+    get_presets()
+        .into_iter()
+        .map(|preset| {
+            let selected = should_check_provider(&preset.id, check_ids);
+            let resolved_command = preset
+                .env_bin_override
+                .as_ref()
+                .and_then(|var| std::env::var(var).ok())
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| preset.command.clone());
+
+            let status = if !selected {
                 String::new()
-            } else if installed {
+            } else if resolved_command.is_empty() {
+                "unavailable".to_string()
+            } else if shell_env::which(&resolved_command).is_some() {
                 "available".to_string()
             } else {
                 "unavailable".to_string()
-            },
-            source: "static".to_string(),
-        });
-    }
-
-    // Add registry agents with checking
-    let static_ids: HashSet<_> = providers.iter().map(|p| p.id.clone()).collect();
-
-    if let Ok(registry) = super::acp_registry::fetch_registry().await {
-        let mut npx_available: Option<bool> = None;
-        let mut uvx_available: Option<bool> = None;
-        let platform =
-            super::acp_registry::detect_platform().unwrap_or_else(|| "unknown".to_string());
-
-        for agent in registry.agents {
-            let provider_id = if static_ids.contains(&agent.id) {
-                format!("{}-registry", agent.id)
-            } else {
-                agent.id.clone()
             };
 
-            let (command, status) = if !should_check_provider(&provider_id, check_ids) {
-                (get_agent_command(&agent, &platform), String::new())
-            } else if agent.distribution.get("npx").is_some() {
-                let cmd = get_agent_command(&agent, &platform);
-                let available =
-                    *npx_available.get_or_insert_with(|| shell_env::which("npx").is_some());
-                let status_str = if available {
-                    "available"
-                } else {
-                    "unavailable"
-                };
-                (cmd, status_str.to_string())
-            } else if agent.distribution.get("uvx").is_some() {
-                let cmd = get_agent_command(&agent, &platform);
-                let available =
-                    *uvx_available.get_or_insert_with(|| shell_env::which("uv").is_some());
-                let status_str = if available {
-                    "available"
-                } else {
-                    "unavailable"
-                };
-                (cmd, status_str.to_string())
-            } else if agent.distribution.get("binary").is_some() {
-                let cmd = get_agent_command(&agent, &platform);
-                (cmd, "unavailable".to_string())
-            } else {
-                (agent.id.clone(), "unavailable".to_string())
-            };
-
-            let provider_name = if static_ids.contains(&agent.id) {
-                format!("{} (Registry)", agent.name)
-            } else {
-                agent.name.clone()
-            };
-
-            providers.push(ProviderInfo {
-                id: provider_id,
-                name: provider_name,
-                description: agent.description,
-                command,
+            ProviderInfo {
+                id: preset.id.clone(),
+                name: preset.name.clone(),
+                description: preset.description.clone(),
+                command: preset.command.clone(),
                 status,
-                source: "registry".to_string(),
-            });
-        }
-    }
-
-    // Sort: available first, then alphabetical
-    providers.sort_by(|a, b| {
-        if a.status == b.status {
-            a.name.cmp(&b.name)
-        } else if a.status == "available" {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Greater
-        }
-    });
-
-    providers
+                source: "static".to_string(),
+                note: preset.note.clone(),
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -332,5 +214,27 @@ mod tests {
         .await;
 
         assert!(matches!(result, Err(ServerError::BadRequest(_))));
+    }
+
+    #[tokio::test]
+    async fn fast_path_returns_all_presets() {
+        let result = list_providers(Query(ProvidersQuery {
+            check: false,
+            id: Vec::new(),
+        }))
+        .await
+        .expect("fast path should succeed");
+
+        let providers = result
+            .0
+            .get("providers")
+            .and_then(|value| value.as_array())
+            .expect("providers array");
+        // The merged catalog keeps the 9 pre-existing built-ins at a minimum.
+        assert!(providers.len() >= 9, "catalog too small: {}", providers.len());
+        // Sources are uniform in the fixed-preset model.
+        for entry in providers {
+            assert_eq!(entry.get("source").and_then(|v| v.as_str()), Some("static"));
+        }
     }
 }

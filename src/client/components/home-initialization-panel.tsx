@@ -31,8 +31,6 @@ export interface HomeInitializationPanelProps {
   onAddCodebase: () => void;
   /** Read-only ACP snapshot used by the runtime details panel. */
   runtime?: HomeRuntimeSnapshot;
-  /** Custom provider IDs read from localStorage for source classification. */
-  customProviderIds?: string[];
 }
 
 const CARD_CLS =
@@ -69,7 +67,6 @@ export function HomeInitializationPanel({
   onConfigureProviders,
   onAddCodebase,
   runtime,
-  customProviderIds,
 }: HomeInitializationPanelProps) {
   const { t } = useTranslation();
   const attentionCount = steps.filter((step) => step.status === "attention").length;
@@ -181,13 +178,12 @@ export function HomeInitializationPanel({
     return buildHomeRuntimeDetails({
       runtimeStep,
       providers: runtime.providers,
-      customProviderIds: customProviderIds ?? [],
       acpConnected: runtime.connected,
       runtimeSettled: settled,
       runtimeSkipped: runtimeStep.status === "skipped",
       runtimeErrored: runtimeStep.status === "error",
     });
-  }, [runtime, customProviderIds, steps, settled]);
+  }, [runtime, steps, settled]);
 
   const needsWorkspace = steps.some(
     (step) => step.id === "workspaces" && step.status === "success" && (step.count ?? 0) === 0,

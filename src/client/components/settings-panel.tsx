@@ -2,14 +2,10 @@
 
 import { useState, useEffect, useCallback, useId } from "react";
 import { desktopAwareFetch } from "../utils/diagnostics";
-import { AgentInstallPanel } from "./agent-install-panel";
 import { SettingsCenterNav } from "./settings-center-nav";
 import {
-  loadCustomAcpProviders,
-  saveCustomAcpProviders,
   loadHiddenProviders,
   saveHiddenProviders,
-  type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
 import { LanguageSwitcher } from "./language-switcher";
 import { ThemeSwitcher } from "./theme-switcher";
@@ -177,14 +173,12 @@ function RolesTab({
   modelDefs,
   builtinProviders,
   customProviders,
-  registryProviders,
   onChange,
 }: {
   settings: DefaultProviderSettings;
   modelDefs: ModelDefinition[];
   builtinProviders: ProviderOption[];
   customProviders: ProviderOption[];
-  registryProviders: ProviderOption[];
   onChange: (role: AgentRoleKey, field: "provider" | "model", value: string) => void;
 }) {
   const { t } = useTranslation();
@@ -241,19 +235,6 @@ function RolesTab({
                     ))}
                   </optgroup>
                 )}
-                {registryProviders.length > 0 && (
-                  <optgroup label="Agent 注册中心（ACP）">
-                    {registryProviders.map((provider) => (
-                      <option
-                        key={provider.id}
-                        value={provider.id}
-                        disabled={provider.status !== "available"}
-                      >
-                        {provider.name}{provider.status === "available" ? "" : ` (${provider.status ?? "unavailable"})`}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
               </Select>
               <input
                 type="text"
@@ -275,192 +256,6 @@ function RolesTab({
           Leave model blank to use the provider default. Type a saved model alias to use its custom connection details.
         </p>
       </div>
-    </div>
-  );
-}
-
-// ─── Custom ACP Providers Section ────────────────────────────────────────────
-
-interface CustomProviderForm {
-  id: string;
-  name: string;
-  command: string;
-  args: string;
-  description: string;
-}
-
-const EMPTY_CUSTOM_PROVIDER_FORM: CustomProviderForm = {
-  id: "", name: "", command: "", args: "", description: "",
-};
-
-function CustomAcpProvidersSection() {
-  const { t } = useTranslation();
-  const [providers, setProviders] = useState<CustomAcpProvider[]>(() => loadCustomAcpProviders());
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<CustomProviderForm>(EMPTY_CUSTOM_PROVIDER_FORM);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSave = () => {
-    setError(null);
-    const name = form.name.trim();
-    const command = form.command.trim();
-    if (!name) { setError(t.settings.nameRequired); return; }
-    if (!command) { setError(t.settings.commandRequired); return; }
-
-    const args = form.args
-      .split(/\s+/)
-      .map((a) => a.trim())
-      .filter(Boolean);
-
-    const id = editingId ?? `custom-${crypto.randomUUID()}`;
-    const entry: CustomAcpProvider = {
-      id,
-      name,
-      command,
-      args,
-      description: form.description.trim() || undefined,
-    };
-
-    const next = editingId
-      ? providers.map((p) => (p.id === editingId ? entry : p))
-      : [...providers, entry];
-
-    saveCustomAcpProviders(next);
-    setProviders(next);
-    setShowForm(false);
-    setEditingId(null);
-    setForm(EMPTY_CUSTOM_PROVIDER_FORM);
-  };
-
-  const handleEdit = (p: CustomAcpProvider) => {
-    setEditingId(p.id);
-    setForm({
-      id: p.id,
-      name: p.name,
-      command: p.command,
-      args: p.args.join(" "),
-      description: p.description ?? "",
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = (id: string) => {
-    const next = providers.filter((p) => p.id !== id);
-    saveCustomAcpProviders(next);
-    setProviders(next);
-  };
-
-  return (
-    <div className={settingsCardCls}>
-      <div className="flex items-center justify-between mb-2">
-        <p className={sectionHeadCls}>Custom Providers</p>
-        {!showForm && (
-          <button
-            onClick={() => { setShowForm(true); setEditingId(null); setForm(EMPTY_CUSTOM_PROVIDER_FORM); }}
-            className="text-xs text-blue-500 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            + {t.common.add}
-          </button>
-        )}
-      </div>
-      <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-3">
-        Define your own ACP-compliant agent with a custom command and args.
-      </p>
-
-      {error && (
-        <p className="text-xs text-red-500 mb-2">{error}</p>
-      )}
-
-      {showForm && (
-        <div className="mb-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 space-y-2">
-          <p className={sectionHeadCls}>{editingId ? "Edit Provider" : "New Provider"}</p>
-          <div>
-            <label className={labelCls}>Name *</label>
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="My Agent"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Command *</label>
-            <input
-              value={form.command}
-              onChange={(e) => setForm({ ...form, command: e.target.value })}
-              placeholder="my-agent-cli"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Args (space-separated, no quoted spaces)</label>
-            <input
-              value={form.args}
-              onChange={(e) => setForm({ ...form, args: e.target.value })}
-              placeholder="--acp"
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Description</label>
-            <input
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder={t.settings.optionalDescription}
-              className={inputCls}
-            />
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button
-              onClick={handleSave}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
-            >
-              {editingId ? t.common.save : t.common.add}
-            </button>
-            <button
-              onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_CUSTOM_PROVIDER_FORM); setError(null); }}
-              className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {providers.length === 0 && !showForm ? (
-        <p className="text-xs text-slate-400 dark:text-slate-500 italic">No custom providers yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {providers.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e2130]"
-            >
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">{p.name}</p>
-                <p className="text-[10px] text-slate-400 font-mono truncate">
-                  {p.command} {p.args.join(" ")}
-                </p>
-              </div>
-              <div className="flex gap-1 ml-2 shrink-0">
-                <button
-                  onClick={() => handleEdit(p)}
-                  className="px-2 py-1 text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-600 rounded"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(p.id)}
-                  className="px-2 py-1 text-[10px] text-red-500 hover:text-red-700 border border-red-200 dark:border-red-800 rounded"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -493,7 +288,7 @@ function ProviderCatalogSection({ allProviders }: ProviderCatalogSectionProps) {
       <div>
         <p className={sectionHeadCls}>Provider Catalog</p>
         <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-3">
-          Built-in, Agent 注册中心（ACP）, and custom providers are listed together here. Hide a provider to remove it from app pickers without deleting its configuration.
+          Built-in and custom providers are listed together here. The catalog is fixed and bundled with the application — providers are not pulled from a remote registry at runtime. Hide a provider to remove it from app pickers without deleting its configuration.
         </p>
       </div>
 
@@ -521,7 +316,7 @@ function ProviderCatalogSection({ allProviders }: ProviderCatalogSectionProps) {
                         {provider.name}
                       </p>
                       <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        {provider.source === "registry" ? t.settings.registry : isCustomProvider(provider) ? t.settings.customProvider : t.settings.builtIn}
+                        {isCustomProvider(provider) ? t.settings.customProvider : t.settings.builtIn}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 font-mono truncate">
@@ -759,16 +554,14 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
     [settings],
   );
 
-  const builtinProviders = providers.filter((provider) => provider.source !== "registry" && !isCustomProvider(provider));
+  const builtinProviders = providers.filter((provider) => !isCustomProvider(provider));
   const customProviders = providers.filter((provider) => isCustomProvider(provider));
-  const registryProviders = providers.filter((p) => p.source === "registry");
   const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
   };
 
   const TAB_DEFS: { key: SettingsTab; label: string }[] = [
     { key: "providers", label: t.settings.providers },
-    { key: "registry", label: t.settings.registry },
     { key: "roles", label: t.settings.roles },
   ];
 
@@ -781,7 +574,7 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
           <div className={settingsCardCls}>
             <p className={sectionHeadCls}>Providers</p>
             <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
-              Manage detected ACP providers, install additional agents, hide noisy entries, and configure provider-specific credentials.
+              Inspect detected ACP providers from the bundled catalog, hide noisy entries, and configure provider-specific credentials. The catalog is fixed at build time and never reaches out to a remote registry.
             </p>
           </div>
 
@@ -793,21 +586,6 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
             <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Provider Credentials</p>
             <DockerOpenCodeSection embedded={true} />
           </div>
-
-          <CustomAcpProvidersSection />
-        </div>
-      )}
-      {activeTab === "registry" && (
-        <div className="px-4 py-4 overflow-y-auto h-full">
-          <div className={settingsCardCls}>
-            <div className="mb-3">
-              <p className={sectionHeadCls}>{t.settings.registry}</p>
-              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
-                {t.settings.registryDesc}
-              </p>
-            </div>
-            <AgentInstallPanel embedded={true} />
-          </div>
         </div>
       )}
       {activeTab === "roles" && (
@@ -816,7 +594,6 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
           modelDefs={modelDefs}
           builtinProviders={builtinProviders}
           customProviders={customProviders}
-          registryProviders={registryProviders}
           onChange={handleChange}
         />
       )}
@@ -834,7 +611,6 @@ function SettingsPanelContent({ onClose, providers, initialTab, onResetOnboardin
             <h1 className="mt-2 text-3xl font-semibold text-desktop-text-primary">{activeTabMeta.label}</h1>
             <p className="mt-2 max-w-2xl text-sm text-desktop-text-secondary">
               {activeTab === "providers" && t.settings.providersDesc}
-              {activeTab === "registry" && t.settings.registryDesc}
               {activeTab === "roles" && t.settings.rolesDesc}
             </p>
           </header>

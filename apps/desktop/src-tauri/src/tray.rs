@@ -27,7 +27,7 @@ const TRAY_SHOW_HIDE_ID: &str = "tray:show_hide";
 const TRAY_WORKSPACE_SESSIONS_ID: &str = "tray:workspace:sessions";
 const TRAY_WORKSPACE_KANBAN_ID: &str = "tray:workspace:kanban";
 const TRAY_MESSAGES_ID: &str = "tray:messages";
-const TRAY_SETTINGS_AGENTS_ID: &str = "tray:settings:agents";
+const TRAY_SETTINGS_PROVIDERS_ID: &str = "tray:settings:providers";
 const TRAY_QUIT_ID: &str = "tray:quit";
 
 #[cfg(target_os = "macos")]
@@ -138,8 +138,8 @@ pub fn build_tray_menu(app: &AppHandle, repos: &[GitHubRepo]) -> tauri::Result<M
 
     let agent_settings = MenuItem::with_id(
         app,
-        TRAY_SETTINGS_AGENTS_ID,
-        "Agent Settings…",
+        TRAY_SETTINGS_PROVIDERS_ID,
+        "Providers…",
         true,
         None::<&str>,
     )?;
@@ -299,7 +299,7 @@ fn workspace_route_for_menu_id(id: &str) -> Option<&'static str> {
 fn absolute_route_for_menu_id(id: &str) -> Option<&'static str> {
     match id {
         TRAY_MESSAGES_ID => Some("/messages"),
-        TRAY_SETTINGS_AGENTS_ID => Some("/settings?tab=registry"),
+        TRAY_SETTINGS_PROVIDERS_ID => Some("/settings?tab=providers"),
         _ => None,
     }
 }
@@ -384,7 +384,7 @@ fn toggle_main_window(app: &AppHandle) {
 /// Navigate the in-app webview to `path` and bring the window to the front.
 ///
 /// # Safety
-/// `path` must be a trusted, internal application path (e.g. `/settings?tab=registry`).
+/// `path` must be a trusted, internal application path (e.g. `/settings?tab=providers`).
 /// It is interpolated directly into JavaScript and must never contain user-controlled data.
 fn navigate_to_absolute_route(app: &AppHandle, path: &str) {
     if let Some(window) = app.get_webview_window("main") {
@@ -516,8 +516,8 @@ mod tests {
             Some("/messages")
         );
         assert_eq!(
-            absolute_route_for_menu_id(TRAY_SETTINGS_AGENTS_ID),
-            Some("/settings?tab=registry")
+            absolute_route_for_menu_id(TRAY_SETTINGS_PROVIDERS_ID),
+            Some("/settings?tab=providers")
         );
         assert_eq!(absolute_route_for_menu_id(TRAY_WORKSPACE_SESSIONS_ID), None);
     }
