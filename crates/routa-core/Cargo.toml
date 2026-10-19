@@ -56,11 +56,5 @@ tracing = "0.1"
 # HTTP client (for ACP registry fetching etc.)
 reqwest = { version = "0.12", features = ["json"] }
 
-# Archive extraction (for ACP binary installation)
-zip = "2"
-flate2 = "1"
-tar = "0.4"
-bzip2 = "0.5"
-
 [dev-dependencies]
 tempfile = "3.26.0"

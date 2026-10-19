@@ -921,8 +921,6 @@ export const zhExtended: ExtendedTranslationDictionarySections = {
     tracesLabel: "追踪",
     craftersLabel: "CRAFTERs",
     concurrencyLabel: "并发数",
-    installAgents: "安装代理",
-    openInNewTab: "在新标签页中打开",
     resume: "恢复",
     resuming: "恢复中...",
     resumeHint: "恢复这个持久化会话；如果原生恢复不可用，Routa 会在新会话中重建并带上已恢复的上下文。",

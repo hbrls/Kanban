@@ -921,8 +921,6 @@ export const enExtended: ExtendedTranslationDictionarySections = {
     tracesLabel: "Traces",
     craftersLabel: "CRAFTERs",
     concurrencyLabel: "Concurrency",
-    installAgents: "Install Agents",
-    openInNewTab: "Open in new tab",
     resume: "Resume",
     resuming: "Resuming...",
     resumeHint: "Resume this persisted session. If native resume is unavailable, Routa recreates it in a new session with restored context.",

@@ -18,26 +18,17 @@
 
 pub mod binary_manager;
 pub mod claude_code_process;
-pub mod docker;
 pub mod installation_state;
 pub mod mcp_setup;
-pub mod paths;
+pub mod presets;
 pub mod process;
 pub mod provider_adapter;
-pub mod registry_fetch;
-pub mod registry_types;
-pub mod runtime_manager;
 pub mod terminal_manager;
-pub mod warmup;
 
 pub use binary_manager::AcpBinaryManager;
 pub use claude_code_process::{ClaudeCodeConfig, ClaudeCodeProcess};
-pub use installation_state::AcpInstallationState;
-pub use paths::AcpPaths;
 pub use registry_fetch::{fetch_registry, fetch_registry_json};
 pub use registry_types::*;
-pub use runtime_manager::{current_platform, AcpRuntimeManager, RuntimeInfo, RuntimeType};
-pub use warmup::{AcpWarmupService, WarmupState, WarmupStatus};
 
 use std::collections::HashMap;
 use std::path::Path;

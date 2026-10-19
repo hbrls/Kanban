@@ -65,8 +65,6 @@ export function KanbanPageClient() {
     error: null,
   });
   const refreshBurstCleanupRef = useRef<(() => void) | null>(null);
-  const warmedupProvidersRef = useRef<Set<string>>(new Set());
-  const autoSyncedWorkspaceRef = useRef<string | null>(null);
 
   // Auto-connect ACP
   useEffect(() => {
@@ -92,63 +90,6 @@ export function KanbanPageClient() {
     })();
     return () => controller.abort();
   }, [workspaceId, refreshKey]);
-
-  // Warm up registry providers configured in column automations when the board is opened.
-  useEffect(() => {
-    const resolveSpecialist = createKanbanSpecialistResolver(specialists);
-    const enabledAutomationProviderIds = new Set<string>();
-    for (const board of boards) {
-      for (const column of board.columns ?? []) {
-        if (!column.automation?.enabled) {
-          continue;
-        }
-        for (const step of column.automation.steps ?? []) {
-          const resolvedStep = resolveKanbanAutomationStep(step, resolveSpecialist, {
-            autoProviderId: board.autoProviderId,
-          });
-          if (resolvedStep?.providerId) {
-            enabledAutomationProviderIds.add(resolvedStep.providerId);
-          }
-        }
-        const fallbackStep = resolveKanbanAutomationStep({
-          id: "primary",
-          providerId: column.automation.providerId,
-          role: column.automation.role,
-          specialistId: column.automation.specialistId,
-          specialistName: column.automation.specialistName,
-          specialistLocale: column.automation.specialistLocale,
-        }, resolveSpecialist, {
-          autoProviderId: board.autoProviderId,
-        });
-        if (fallbackStep?.providerId) {
-          enabledAutomationProviderIds.add(fallbackStep.providerId);
-        }
-      }
-    }
-
-    if (enabledAutomationProviderIds.size === 0 || acp.providers.length === 0) return;
-
-    const registryProviderIds = new Set(
-      acp.providers
-        .filter((provider) => provider.source === "registry")
-        .map((provider) => provider.id),
-    );
-
-    for (const providerId of enabledAutomationProviderIds) {
-      if (!registryProviderIds.has(providerId) || warmedupProvidersRef.current.has(providerId)) {
-        continue;
-      }
-
-      warmedupProvidersRef.current.add(providerId);
-      void desktopAwareFetch("/api/acp/warmup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId: providerId }),
-      }).catch(() => {
-        warmedupProvidersRef.current.delete(providerId);
-      });
-    }
-  }, [boards, specialists, acp.providers]);
 
   const specialistLanguage: KanbanSpecialistLanguage = useMemo(
     () => mapLocaleToKanbanSpecialistLanguage(locale),
