@@ -25,7 +25,6 @@ pub use routa_core::mcp;
 pub use routa_core::models;
 pub use routa_core::orchestration;
 pub use routa_core::rpc;
-pub use routa_core::sandbox;
 pub use routa_core::shell_env;
 pub use routa_core::skills;
 pub use routa_core::state;

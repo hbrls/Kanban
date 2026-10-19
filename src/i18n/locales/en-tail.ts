@@ -153,7 +153,6 @@ export const enTail: TailTranslationDictionarySections = {
     traces: "Traces",
     crafters: "CRAFTERs",
     concurrency: "Concurrency",
-    installAgents: "Install Agents",
     agentModeToast: "ROUTA mode: Coordinator will plan, delegate to CRAFTER agents, and verify with GATE.",
     objectiveSet: "Objective set",
     user: "User",

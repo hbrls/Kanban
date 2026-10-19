@@ -152,7 +152,6 @@ export interface TailTranslationDictionarySections {
     traces: string;
     crafters: string;
     concurrency: string;
-    installAgents: string;
     agentModeToast: string;
     objectiveSet: string;
     user: string;

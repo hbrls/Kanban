@@ -27,7 +27,6 @@ pub mod mcp;
 pub mod models;
 pub mod orchestration;
 pub mod rpc;
-pub mod sandbox;
 pub mod shell_env;
 pub mod skills;
 pub mod spec_detector;
@@ -41,4 +40,4 @@ pub mod workflow;
 // Convenience re-exports
 pub use db::Database;
 pub use error::ServerError;
-pub use state::{AppState, AppStateInner, DockerState};
+pub use state::{AppState, AppStateInner};

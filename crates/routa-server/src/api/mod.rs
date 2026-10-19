@@ -1,7 +1,5 @@
 pub mod a2a;
 pub mod a2ui;
-pub mod acp_docker;
-pub mod acp_registry;
 pub mod acp_routes;
 pub mod ag_ui;
 pub mod agents;
@@ -31,7 +29,6 @@ pub mod providers;
 pub(crate) mod repo_context;
 pub mod review;
 pub mod rpc;
-pub mod sandbox;
 pub mod schedules;
 pub mod sessions;
 pub mod shared_sessions;
@@ -74,8 +71,6 @@ pub fn api_router(state: AppState) -> Router<AppState> {
         .nest("/api/providers", provider_models::router())
         .nest("/api/review", review::router())
         .nest("/api/acp", acp_routes::router())
-        .nest("/api/acp", acp_registry::router())
-        .nest("/api/acp/docker", acp_docker::router())
         .nest("/api/mcp", mcp_routes::router(state))
         .nest("/api/mcp/tools", mcp_tools::router())
         .nest("/api/mcp-server", mcp_server_mgmt::router())
@@ -98,7 +93,6 @@ pub fn api_router(state: AppState) -> Router<AppState> {
         .nest("/api/a2ui", a2ui::router())
         .nest("/api/traces", traces::router())
         .nest("/api/schedules", schedules::router())
-        .nest("/api/sandboxes", sandbox::router())
         .nest("/api/specialists", specialists::router())
         .nest("/api/system/memory", memory::router())
         .nest("/api/memory", memory::legacy_router())

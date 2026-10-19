@@ -937,8 +937,6 @@ export interface ExtendedTranslationDictionarySections extends TailTranslationDi
     tracesLabel: string;
     craftersLabel: string;
     concurrencyLabel: string;
-    installAgents: string;
-    openInNewTab: string;
     resume: string;
     resuming: string;
     resumeHint: string;

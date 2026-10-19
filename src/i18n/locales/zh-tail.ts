@@ -148,7 +148,6 @@ export const zhTail: TailTranslationDictionarySections = {
     traces: "追踪",
     crafters: "CRAFTERs",
     concurrency: "并发",
-    installAgents: "安装智能体",
     agentModeToast: "智能体模式",
     objectiveSet: "目标已设置",
     user: "用户",
