@@ -4,8 +4,8 @@
   "version": "0.19.0",
   "identifier": "com.routa.desktop",
   "build": {
-    "beforeDevCommand": "cd ../.. && npm run dev",
-    "devUrl": "http://localhost:3000/?runtime=tauri&backend=http://127.0.0.1:3210",
+    "beforeDevCommand": "cd ../.. && pnpm run dev",
+    "devUrl": "http://localhost:3110/?runtime=tauri&backend=http://127.0.0.1:3210",
     "beforeBuildCommand": "node ../../scripts/prepare-frontend.mjs",
     "frontendDist": "../../../out"
   },
@@ -29,7 +29,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["app"],
     "resources": [
       "frontend/**/*",
       "bundled/feature-tree/**/*",

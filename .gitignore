@@ -37,7 +37,6 @@ apps/vscode/resources/
 **/gen/**
 
 # Rust
-Cargo.lock
 target/
 
 # Misc
