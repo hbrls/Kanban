@@ -13,11 +13,11 @@ use std::convert::Infallible;
 use std::sync::Arc;
 use tokio_stream::StreamExt as _;
 
-use crate::acp;
+use acp_manager as acp;
 use crate::error::ServerError;
 use crate::state::AppState;
-use routa_core::acp::terminal_manager::TerminalManager;
-use routa_core::acp::SessionLaunchOptions;
+use acp_manager::terminal_manager::TerminalManager;
+use acp_manager::SessionLaunchOptions;
 use routa_core::models::agent::{Agent, AgentRole};
 use routa_core::orchestration::{OrchestratorConfig, RoutaOrchestrator, SpecialistConfig};
 use routa_core::storage::{LocalSessionProvider, SessionRecord};
@@ -250,7 +250,7 @@ fn should_attempt_native_resume(session: &AcpSessionRow, provider: &str) -> bool
         return false;
     }
     // Use preset metadata to decide if native resume should be attempted
-    match routa_core::acp::get_resume_capability(provider) {
+    match acp_manager::get_resume_capability(provider) {
         Some(cap) => cap.mode == "native" || cap.mode == "both",
         None => false,
     }
@@ -1181,7 +1181,7 @@ async fn acp_rpc(
                                         Some(params) => serde_json::json!({
                                             "jsonrpc": "2.0",
                                             "method": "session/update",
-                                            "params": routa_core::acp::AcpManager::rewrite_notification_session_id(&session_id_clone, params),
+                                            "params": acp_manager::AcpManager::rewrite_notification_session_id(&session_id_clone, params),
                                         }),
                                         None => msg.clone(),
                                     };
@@ -1554,7 +1554,7 @@ async fn acp_rpc(
                     )
                     .await;
 
-                    let resume_capabilities = routa_core::acp::get_resume_capability(&provider)
+                    let resume_capabilities = acp_manager::get_resume_capability(&provider)
                         .map(|c| serde_json::to_value(c).unwrap_or(serde_json::json!(null)))
                         .unwrap_or(serde_json::json!({ "supported": false, "mode": "replay" }));
 
@@ -2045,7 +2045,7 @@ mod tests {
         resolve_session_cwd, should_attempt_native_resume, sse_event_id_from_rpc_message,
         AcpResponse, CustomProviderLaunch,
     };
-    use routa_core::acp::terminal_manager::TerminalManager;
+    use acp_manager::terminal_manager::TerminalManager;
 
     fn json_response_value(response: AcpResponse) -> serde_json::Value {
         match response {

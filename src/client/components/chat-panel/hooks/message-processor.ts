@@ -5,7 +5,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { AcpSessionNotification } from "../../../acp-client";
 import type { ChatMessage, PlanEntry, UsageInfo } from "../types";
-import type { TraceRecord } from "@/core/trace";
+import type { TraceRecord } from "@/core/trace/types";
 import {
   historyNotificationsToMessages,
   traceRecordsToMessages,

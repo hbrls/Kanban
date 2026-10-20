@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { resolveApiPath } from "@/client/config/backend";
 import { desktopAwareFetch } from "../utils/diagnostics";
-import type { TraceRecord } from "@/core/trace";
+import type { TraceRecord } from "@/core/trace/types";
 import type { LaneHandoffInfo, LaneSessionInfo, SessionKanbanContext } from "@/client/types/kanban-context";
 import { MarkdownViewer } from "./markdown/markdown-viewer";
 import { ToolInputTable, ToolOutputView } from "./tool-call-content";

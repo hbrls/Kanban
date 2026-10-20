@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::acp::AcpManager;
+use acp_manager::AcpManager;
 use crate::db::Database;
 use crate::events::EventBus;
 use crate::skills::SkillRegistry;

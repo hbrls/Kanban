@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { TraceRecord } from "../types";
+import type { TraceRecord } from "@/core/trace/types";
 import {
   traceToNormalizedUpdate,
   traceToACPNotification,

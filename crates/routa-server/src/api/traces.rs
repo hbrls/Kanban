@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use crate::error::ServerError;
 use crate::state::AppState;
-use routa_core::trace::{TraceQuery, TraceReader, TraceRecord};
+use acp_manager::trace::{TraceQuery, TraceReader, TraceRecord};
 
 pub fn router() -> Router<AppState> {
     Router::new()

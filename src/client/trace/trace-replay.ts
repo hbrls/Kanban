@@ -14,12 +14,12 @@
  * re-uses the single-source-of-truth converters.
  */
 
-import type { TraceRecord } from "./types";
-import type { NormalizedSessionUpdate, NormalizedToolCall } from "../acp/provider-adapter/types";
-import { AgentEventBridge, makeStartedEvent } from "../acp/agent-event-bridge";
-import type { WorkspaceAgentEvent } from "../acp/agent-event-bridge/types";
-import { RoutaToAGUIAdapter, type AGUIBaseEvent } from "../ag-ui/event-adapter";
-import type { SessionUpdateNotification } from "../acp/http-session-store";
+import type { TraceRecord } from "@/core/trace/types";
+import type { NormalizedSessionUpdate, NormalizedToolCall } from "./normalized-types";
+import { AgentEventBridge, makeStartedEvent } from "./agent-event-bridge";
+import type { WorkspaceAgentEvent } from "./event-types";
+import { RoutaToAGUIAdapter, type AGUIBaseEvent } from "@/core/ag-ui/event-adapter";
+import type { SessionUpdateNotification } from "@/core/ag-ui/event-adapter";
 
 // ─── TraceRecord → NormalizedSessionUpdate ────────────────────────────────────
 
@@ -31,7 +31,7 @@ import type { SessionUpdateNotification } from "../acp/http-session-store";
 export function traceToNormalizedUpdate(trace: TraceRecord): NormalizedSessionUpdate | null {
   const base = {
     sessionId: trace.sessionId,
-    provider: (trace.contributor?.provider ?? "unknown") as NormalizedSessionUpdate["provider"],
+    provider: trace.contributor?.provider ?? "unknown",
     timestamp: new Date(trace.timestamp),
   };
 

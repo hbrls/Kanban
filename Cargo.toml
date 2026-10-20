@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/acp-manager",
     "crates/routa-core",
     "crates/routa-server",
     "apps/desktop/src-tauri",

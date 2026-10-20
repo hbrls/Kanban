@@ -6,7 +6,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use regex::Regex;
-use routa_core::trace::{TraceEventType, TraceQuery, TraceReader};
+use acp_manager::trace::{TraceEventType, TraceQuery, TraceReader};
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -663,7 +663,7 @@ async fn get_session_context(
 fn build_transcript_payload(
     session_id: &str,
     history: Vec<Value>,
-    traces: Vec<routa_core::trace::TraceRecord>,
+    traces: Vec<acp_manager::trace::TraceRecord>,
 ) -> SessionTranscriptPayload {
     let history_messages = history_to_transcript_messages(&history);
     let trace_messages = traces_to_transcript_messages(&traces);
@@ -1105,7 +1105,7 @@ fn trim_leading_response_breaks(text: &str) -> String {
 }
 
 fn traces_to_transcript_messages(
-    traces: &[routa_core::trace::TraceRecord],
+    traces: &[acp_manager::trace::TraceRecord],
 ) -> Vec<TranscriptMessage> {
     let mut messages = Vec::new();
     let mut traces = traces.to_vec();
@@ -1192,7 +1192,7 @@ fn traces_to_transcript_messages(
     messages
 }
 
-fn trace_conversation_text(trace: &routa_core::trace::TraceRecord) -> Option<String> {
+fn trace_conversation_text(trace: &acp_manager::trace::TraceRecord) -> Option<String> {
     trace
         .conversation
         .as_ref()
@@ -1219,7 +1219,7 @@ fn now_iso() -> String {
 #[cfg(test)]
 mod tests {
     use crate::application::sessions::consolidate_message_history;
-    use routa_core::trace::{Contributor, TraceEventType, TraceRecord};
+    use acp_manager::trace::{Contributor, TraceEventType, TraceRecord};
     use serde_json::{json, Value};
 
     use super::{
