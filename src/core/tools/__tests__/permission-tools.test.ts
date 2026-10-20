@@ -4,7 +4,7 @@
  * @vitest-environment node
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { AgentTools } from "../agent-tools";
 import { PermissionStore } from "../permission-store";
 import { EventBus, AgentEventType } from "../../events/event-bus";
@@ -12,7 +12,6 @@ import { InMemoryAgentStore } from "../../store/agent-store";
 import { InMemoryConversationStore } from "../../store/conversation-store";
 import { InMemoryTaskStore } from "../../store/task-store";
 import { AgentRole, ModelTier, createAgent } from "../../models/agent";
-import type { SandboxPermissionConstraints } from "../../sandbox";
 
 function makeAgent(id: string, parentId?: string) {
   return createAgent({
@@ -220,49 +219,7 @@ describe("Permission Delegation Protocol", () => {
       expect(emitted).toContain(AgentEventType.PERMISSION_RESPONDED);
     });
 
-    it("applies sandbox permission constraints when request targets a sandbox", async () => {
-      const coordinator = makeAgent("coord-sandbox");
-      await agentStore.save(coordinator);
-      const req = await tools.requestPermission({
-        requestingAgentId: "worker-sandbox",
-        coordinatorAgentId: "coord-sandbox",
-        workspaceId: "ws-1",
-        type: "file_edit",
-        description: "grant write access for src",
-        options: { sandboxId: "sandbox-123" },
-      });
-      const requestId = (req.data as any).requestId as string;
-      const constraints: SandboxPermissionConstraints = {
-        readWritePaths: ["src"],
-      };
-      const fetchMock = vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ id: "sandbox-123", name: "sandbox", status: "running", lang: "python", createdAt: "2026-03-18T00:00:00Z", lastActiveAt: "2026-03-18T00:00:00Z" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
-      const originalFetch = global.fetch;
-      global.fetch = fetchMock as typeof fetch;
 
-      try {
-        const result = await tools.respondToPermission({
-          requestId,
-          coordinatorAgentId: "coord-sandbox",
-          decision: "allow",
-          constraints,
-        });
-
-        expect(result.success).toBe(true);
-        expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/sandboxes/sandbox-123/permissions/apply");
-        expect((result.data as any).sandboxMutation).toMatchObject({
-          sandboxId: "sandbox-123",
-          applied: true,
-        });
-      } finally {
-        global.fetch = originalFetch;
-      }
-    });
   });
 
   // ─── listPendingPermissions ────────────────────────────────────────────────

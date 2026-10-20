@@ -1,25 +1,34 @@
-/**
- * Well-Known Agent Card endpoint
- * Route: GET /.well-known/agent-card.json
- *
- * Provides the standard A2A agent discovery endpoint as specified in the
- * A2A protocol spec Section 8.2.
- */
-
-import { NextRequest, NextResponse } from "next/server";
-import { getA2aSessionRegistry } from "@/core/a2a";
-
+/** Standard A2A discovery endpoint. */
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
-  const registry = getA2aSessionRegistry();
-  const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
-
-  const agentCard = registry.generateAgentCard(baseUrl);
-
-  return NextResponse.json(agentCard, {
+export async function GET() {
+  return Response.json({
+    name: "Routa Multi-Agent Coordinator",
+    description: "Multi-agent coordination platform with ACP and MCP support",
+    protocolVersion: "0.3.0",
+    version: "0.1.0",
+    url: "/api/a2a/rpc",
+    skills: [
+      {
+        id: "coordination",
+        name: "Agent Coordination",
+        description: "Create, delegate tasks to, and coordinate multiple AI agents",
+        tags: ["coordination", "multi-agent", "orchestration"],
+      },
+      {
+        id: "acp-proxy",
+        name: "ACP Session Proxy",
+        description: "Proxy access to backend ACP agent sessions",
+        tags: ["acp", "session", "proxy"],
+      },
+    ],
+    capabilities: { pushNotifications: true },
+    defaultInputModes: ["text"],
+    defaultOutputModes: ["text"],
+    additionalInterfaces: [{ url: "/api/a2a/rpc", transport: "JSONRPC" }],
+  }, {
     headers: {
-      "Cache-Control": "public, max-age=300", // 5 minute cache
+      "Cache-Control": "public, max-age=300",
       "Access-Control-Allow-Origin": "*",
       "Content-Type": "application/json",
     },

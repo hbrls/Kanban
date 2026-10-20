@@ -79,50 +79,8 @@ import {
   formatKanbanTransitionGateWarning,
 } from "../kanban/transition-gates";
 import { resolveTaskWorktreeTruth } from "../kanban/task-worktree-truth";
-import { filterBacklogContextSearchSpec } from "../kanban/backlog-context-confirmation";
 
 const DESCRIPTION_FROZEN_STAGES = new Set<KanbanColumnStage>(["dev", "review", "blocked", "done"]);
-
-type WorkflowOrchestratorSingletonModule =
-  typeof import("../kanban/workflow-orchestrator-singleton");
-
-function resolveWorkflowOrchestratorSingletonModule(
-  value: unknown,
-): WorkflowOrchestratorSingletonModule {
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    if (
-      typeof record.startWorkflowOrchestrator === "function"
-      && typeof record.enqueueKanbanTaskSession === "function"
-    ) {
-      return record as WorkflowOrchestratorSingletonModule;
-    }
-
-    const defaultExport = record.default;
-    if (defaultExport && typeof defaultExport === "object") {
-      const defaultRecord = defaultExport as Record<string, unknown>;
-      if (
-        typeof defaultRecord.startWorkflowOrchestrator === "function"
-        && typeof defaultRecord.enqueueKanbanTaskSession === "function"
-      ) {
-        return defaultRecord as WorkflowOrchestratorSingletonModule;
-      }
-    }
-
-    const moduleExports = record["module.exports"];
-    if (moduleExports && typeof moduleExports === "object") {
-      const moduleExportsRecord = moduleExports as Record<string, unknown>;
-      if (
-        typeof moduleExportsRecord.startWorkflowOrchestrator === "function"
-        && typeof moduleExportsRecord.enqueueKanbanTaskSession === "function"
-      ) {
-        return moduleExportsRecord as WorkflowOrchestratorSingletonModule;
-      }
-    }
-  }
-
-  throw new TypeError("workflow-orchestrator-singleton module exports are incompatible");
-}
 
 export class KanbanTools {
   private eventBus?: EventBus;
@@ -145,7 +103,7 @@ export class KanbanTools {
     this.artifactStore = artifactStore;
   }
 
-  /** Set the Routa system used for direct automation enqueue after card creation */
+  /** Set the Routa system used for task readiness and worktree checks */
   setAutomationSystem(system: RoutaSystem): void {
     this.automationSystem = system;
   }
@@ -253,11 +211,6 @@ export class KanbanTools {
       (t) => t.boardId === board.id && (t.columnId ?? "backlog") === targetColumnId,
     );
     const position = columnTasks.length;
-    const filteredContextSearchSpec = await filterBacklogContextSearchSpec({
-      contextSearchSpec: normalizeTaskContextSearchSpec(params.contextSearchSpec),
-      columnId: targetColumnId,
-      sessionId: params.sessionId,
-    });
 
     const task = createTask({
       id: uuidv4(),
@@ -271,7 +224,7 @@ export class KanbanTools {
       priority: params.priority as TaskPriority | undefined,
       labels: params.labels,
       assignedProvider: params.assignedProvider,
-      contextSearchSpec: filteredContextSearchSpec.contextSearchSpec,
+      contextSearchSpec: normalizeTaskContextSearchSpec(params.contextSearchSpec),
     });
 
     await this.taskStore.save(task);
@@ -280,7 +233,7 @@ export class KanbanTools {
 
     return successResult({
       ...this.taskToCard(task),
-      warnings: filteredContextSearchSpec.warning ? [filteredContextSearchSpec.warning] : [],
+      warnings: [],
     });
   }
 
@@ -862,17 +815,9 @@ export class KanbanTools {
     );
     let position = columnTasks.length;
 
-    const createdCards = [];
+    const createdCards: any[] = [];
     const warnings = new Set<string>();
     for (const item of params.tasks) {
-      const filteredContextSearchSpec = await filterBacklogContextSearchSpec({
-        contextSearchSpec: normalizeTaskContextSearchSpec(item.contextSearchSpec),
-        columnId: targetColumnId,
-        sessionId: params.sessionId,
-      });
-      if (filteredContextSearchSpec.warning) {
-        warnings.add(filteredContextSearchSpec.warning);
-      }
       const task = createTask({
         id: uuidv4(),
         title: item.title,
@@ -885,7 +830,7 @@ export class KanbanTools {
         priority: item.priority as TaskPriority | undefined,
         labels: item.labels,
         assignedProvider: item.assignedProvider,
-        contextSearchSpec: filteredContextSearchSpec.contextSearchSpec,
+        contextSearchSpec: normalizeTaskContextSearchSpec(item.contextSearchSpec),
       });
       await this.taskStore.save(task);
       await this.triggerCreatedCardAutomation(board, column, task);
@@ -896,7 +841,7 @@ export class KanbanTools {
     return successResult({
       count: createdCards.length,
       cards: createdCards,
-      warnings: [...warnings],
+      warnings: [],
     });
   }
 
@@ -1062,20 +1007,6 @@ export class KanbanTools {
   ): Promise<void> {
     if (!column.automation?.enabled) {
       return;
-    }
-
-    if (this.automationSystem && this.isAutomationSystemCompatible()) {
-      const orchestratorModule = resolveWorkflowOrchestratorSingletonModule(
-        await import("../kanban/workflow-orchestrator-singleton"),
-      );
-      orchestratorModule.startWorkflowOrchestrator(this.automationSystem);
-      const result = await orchestratorModule.enqueueKanbanTaskSession(this.automationSystem, {
-        task,
-        expectedColumnId: column.id,
-      });
-      if (result.error) {
-        console.warn(`[KanbanTools] Failed to enqueue automation for card ${task.id}: ${result.error}`);
-      }
     }
 
     if (!this.eventBus) {

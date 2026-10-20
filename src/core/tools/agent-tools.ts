@@ -51,7 +51,6 @@ import { EventBus, AgentEventType } from "../events/event-bus";
 import { getKanbanEventBroadcaster } from "../kanban/kanban-event-broadcaster";
 import type { TaskCreationSource } from "../kanban/task-creation-policy";
 import { ToolResult, successResult, errorResult } from './tool-result';
-import { applySandboxPermissionConstraints, SandboxPermissionConstraints } from "../sandbox";
 import { resolveTaskStatusForBoardColumn } from "../models/kanban";
 import { resolveReviewLaneConvergenceTarget } from "../kanban/review-lane-convergence";
 import {
@@ -61,8 +60,6 @@ import {
   PermissionUrgency,
 } from './permission-store';
 import { getTaskLaneSession } from "../kanban/task-lane-history";
-import { filterBacklogContextSearchSpec } from "../kanban/backlog-context-confirmation";
-import { hasConfirmedKanbanTaskAdaptiveContext } from "../kanban/task-adaptive";
 
 function extractSandboxId(options?: PermissionRequestOptions): string | undefined {
   const sandboxId = options?.sandboxId;
@@ -867,7 +864,7 @@ export class AgentTools {
     agentId: string;
     sessionId?: string;
   }): Promise<ToolResult> {
-    const { taskId, expectedVersion, updates, agentId, sessionId } = params;
+    const { taskId, expectedVersion, updates, agentId } = params;
 
     const task = await this.taskStore.get(taskId);
     if (!task) {
@@ -886,7 +883,6 @@ export class AgentTools {
 
     const oldStatus = task.status;
     const originalColumnId = task.columnId;
-    const warnings = new Set<string>();
     if (updates.title) task.title = updates.title;
     if (updates.objective) task.objective = updates.objective;
     if (updates.scope !== undefined) task.scope = updates.scope;
@@ -904,16 +900,7 @@ export class AgentTools {
     if (updates.verificationCommands !== undefined) task.verificationCommands = updates.verificationCommands;
     if (updates.testCases !== undefined) task.testCases = updates.testCases;
     if (updates.contextSearchSpec !== undefined) {
-      const filteredContextSearchSpec = await filterBacklogContextSearchSpec({
-        contextSearchSpec: normalizeTaskContextSearchSpec(updates.contextSearchSpec),
-        columnId: task.columnId,
-        sessionId,
-        hasExistingConfirmedContext: hasConfirmedKanbanTaskAdaptiveContext(task),
-      });
-      task.contextSearchSpec = filteredContextSearchSpec.contextSearchSpec;
-      if (filteredContextSearchSpec.warning) {
-        warnings.add(filteredContextSearchSpec.warning);
-      }
+      task.contextSearchSpec = normalizeTaskContextSearchSpec(updates.contextSearchSpec);
     }
     if (updates.jitContextAnalysis !== undefined) {
       task.jitContextSnapshot = mergeTaskJitContextAnalysis(
@@ -985,7 +972,7 @@ export class AgentTools {
         (k) => updates[k as keyof typeof updates] !== undefined
       ),
       updatedAt: task.updatedAt.toISOString(),
-      warnings: [...warnings],
+      warnings: [],
     });
   }
 
@@ -1482,7 +1469,6 @@ export class AgentTools {
     coordinatorAgentId: string;
     decision: 'allow' | 'deny';
     feedback?: string;
-    constraints?: SandboxPermissionConstraints;
   }): Promise<ToolResult> {
     if (!this.permissionStore) {
       return errorResult('Permission store not configured');
@@ -1494,18 +1480,7 @@ export class AgentTools {
     if (request.coordinatorAgentId !== params.coordinatorAgentId) {
       return errorResult('Only the designated coordinator can respond to this request');
     }
-    let sandboxMutation: { sandboxId: string; applied: boolean; info?: unknown } | undefined;
-    const sandboxId = extractSandboxId(request.options);
-    if (params.decision === "allow" && sandboxId && params.constraints) {
-      try {
-        const info = await applySandboxPermissionConstraints(sandboxId, params.constraints);
-        sandboxMutation = { sandboxId, applied: true, info };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return errorResult(`Permission granted but sandbox policy mutation failed: ${message}`);
-      }
-    }
-    const ok = this.permissionStore.respond(params.requestId, params.decision, params.feedback, params.constraints);
+    const ok = this.permissionStore.respond(params.requestId, params.decision, params.feedback);
     if (!ok) {
       return errorResult('Permission request already resolved or not found');
     }
@@ -1516,9 +1491,7 @@ export class AgentTools {
         role: MessageRole.USER,
         content:
           '[Permission Response] Request ' + params.requestId + ' has been ' + params.decision + '.' +
-          (params.feedback ? '\nFeedback: ' + params.feedback : '') +
-          (params.constraints ? '\nConstraints: ' + JSON.stringify(params.constraints) : '') +
-          (sandboxMutation?.applied ? '\nSandbox policy updated for: ' + sandboxMutation.sandboxId : ''),
+          (params.feedback ? '\nFeedback: ' + params.feedback : ''),
       })
     );
     this.eventBus.emit({
@@ -1532,7 +1505,6 @@ export class AgentTools {
       requestId: params.requestId,
       decision: params.decision,
       notified: request.requestingAgentId,
-      sandboxMutation,
     });
   }
 
