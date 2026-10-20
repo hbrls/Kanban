@@ -16,7 +16,6 @@
 // This allows API handlers and external consumers to use `crate::models::*`,
 // `crate::error::ServerError`, etc. without knowing about the crate split.
 
-pub use routa_core::acp;
 pub use routa_core::db;
 pub use routa_core::error;
 pub use routa_core::events;

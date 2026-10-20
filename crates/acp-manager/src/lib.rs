@@ -16,6 +16,11 @@
 //! **Agent Trace**: All sessions record trace events to JSONL files for
 //! attribution tracking (which model/session/tool affected which files and when).
 
+mod git;
+mod shell_env;
+mod storage;
+pub mod trace;
+
 pub mod claude_code_process;
 pub mod mcp_setup;
 pub mod presets;
@@ -23,9 +28,9 @@ pub mod process;
 pub mod provider_adapter;
 pub mod terminal_manager;
 
-pub use claude_code_process::{ClaudeCodeConfig, ClaudeCodeProcess};
-use self::presets::{require_preset, AcpPreset};
 pub use self::presets::{get_presets, get_resume_capability};
+use self::presets::{require_preset, AcpPreset};
+pub use claude_code_process::{ClaudeCodeConfig, ClaudeCodeProcess};
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -408,7 +413,10 @@ impl AcpManager {
     ) -> Result<(String, String), String> {
         validate_session_cwd(&cwd)?;
         let provider_name = provider.as_deref().unwrap_or("claude");
-        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp") {
+        // Kimi's ACP server accepts MCP servers directly on session/load, just
+        // like Codex.  Keep the MCP overlay session-scoped; do not rely on a
+        // provider user's persistent config file.
+        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp" | "kimi") {
             options.acp_mcp_servers.clone().unwrap_or_else(|| {
                 mcp_setup::build_acp_http_mcp_servers(
                     &workspace_id,
@@ -800,7 +808,10 @@ impl AcpManager {
     ) -> Result<(String, String), String> {
         validate_session_cwd(&cwd)?;
         let provider_name = provider.as_deref().unwrap_or("claude");
-        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp") {
+        // Kimi's ACP server accepts MCP servers directly on session/new, just
+        // like Codex.  Keep the MCP overlay session-scoped; do not rely on a
+        // provider user's persistent config file.
+        let acp_mcp_servers = if matches!(provider_name, "codex" | "codex-acp" | "kimi") {
             options.acp_mcp_servers.clone().unwrap_or_else(|| {
                 mcp_setup::build_acp_http_mcp_servers(
                     &workspace_id,
@@ -1192,9 +1203,10 @@ fn truncate_content(text: &str, max_len: usize) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::presets::get_preset_by_id;
     use super::{
-        get_preset_by_id, get_presets, require_preset, truncate_content, validate_session_cwd,
-        AcpManager, AcpSessionRecord,
+        get_presets, require_preset, truncate_content, validate_session_cwd, AcpManager,
+        AcpSessionRecord,
     };
     use std::collections::HashMap;
     use std::fs;

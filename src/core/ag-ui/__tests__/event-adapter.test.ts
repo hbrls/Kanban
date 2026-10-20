@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { RoutaToAGUIAdapter, AGUIEventType } from "@/core/ag-ui/event-adapter";
-import type { SessionUpdateNotification } from "@/core/acp/http-session-store";
+import type { SessionUpdateNotification } from "@/core/ag-ui/event-adapter";
 
 function makeNotification(
   sessionId: string,

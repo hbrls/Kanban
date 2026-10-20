@@ -3,7 +3,7 @@
 //! GET /api/providers                       - List providers from the fixed preset catalog
 //! GET /api/providers?check=true&id=…       - Check availability of specific provider IDs
 //!
-//! The catalog is the single source of truth (see `routa_core::acp::presets`).
+//! The catalog is the single source of truth (see `acp_manager::presets`).
 //! There is no CDN-backed registry fetch and no `-registry` alias suffix.
 
 use axum::{routing::get, Json, Router};
@@ -110,7 +110,7 @@ fn should_check_provider(provider_id: &str, check_ids: &HashSet<String>) -> bool
 
 /// Fast: Return all providers without checking command availability.
 async fn get_providers_without_checking() -> Vec<ProviderInfo> {
-    use crate::acp::get_presets;
+    use acp_manager::get_presets;
 
     get_presets()
         .into_iter()
@@ -135,7 +135,8 @@ async fn get_providers_without_checking() -> Vec<ProviderInfo> {
 /// presets with no command are reported as "unavailable" without an extra
 /// process spawn.
 async fn get_providers_with_checking(check_ids: &HashSet<String>) -> Vec<ProviderInfo> {
-    use crate::{acp::get_presets, shell_env};
+    use acp_manager::get_presets;
+    use crate::shell_env;
 
     get_presets()
         .into_iter()

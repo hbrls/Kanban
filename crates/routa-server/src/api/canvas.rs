@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use std::path::{Path as FsPath, PathBuf};
 
 use crate::error::ServerError;
-use routa_core::acp::SessionLaunchOptions;
+use acp_manager::SessionLaunchOptions;
 use routa_core::git::get_clone_base_dir;
 use routa_core::models::{
     get_canvas_generation_contract, get_canvas_sdk_definition_resource_uris,

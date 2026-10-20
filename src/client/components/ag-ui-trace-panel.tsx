@@ -9,10 +9,10 @@
  */
 
 import { useMemo, useState } from "react";
-import type { TraceRecord } from "@/core/trace";
+import type { TraceRecord } from "@/core/trace/types";
 import type { AGUIBaseEvent } from "@/core/ag-ui/event-adapter";
 import { AGUIEventType } from "@/core/ag-ui/event-adapter";
-import { replayTracesAsAGUI } from "@/core/trace/trace-replay";
+import { replayTracesAsAGUI } from "@/client/trace/trace-replay";
 import { MarkdownViewer } from "./markdown/markdown-viewer";
 import { useTranslation } from "@/i18n";
 import { ChevronRight } from "lucide-react";

@@ -18,7 +18,13 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import type { SessionUpdateNotification } from "@/core/acp/http-session-store";
+/** Transport shape shared by live notifications and persisted trace replay. */
+export interface SessionUpdateNotification {
+  sessionId: string;
+  eventId?: string;
+  update?: Record<string, unknown>;
+  [key: string]: unknown;
+}
 
 /** AG-UI event types (subset used in the adapter) */
 export enum AGUIEventType {

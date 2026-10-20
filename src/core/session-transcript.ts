@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { ChatMessage, PlanEntry } from "@/core/chat-message";
 import { getToolEventLabel, getToolEventName, normalizeToolKind } from "@/core/tool-call-name";
-import type { TraceRecord } from "@/core/trace";
+import type { TraceRecord } from "@/core/trace/types";
 import type { AcpSessionNotification } from "@/core/store/acp-session-store";
 
 export type TranscriptSource = "history" | "traces" | "empty";

@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 
 use crate::error::ServerError;
 use crate::state::AppState;
-use routa_core::acp::{get_resume_capability, AcpSessionRecord};
+use acp_manager::{get_resume_capability, AcpSessionRecord};
 use routa_core::store::acp_session_store::AcpSessionRow;
 
 #[derive(Clone)]
@@ -811,7 +811,7 @@ mod tests {
         normalize_provider_history, ListSessionsQuery, SessionApplicationService,
     };
     use crate::create_app_state;
-    use routa_core::acp::AcpSessionRecord;
+    use acp_manager::AcpSessionRecord;
     use routa_core::store::acp_session_store::{AcpSessionRow, CreateAcpSessionParams};
     use serde_json::{json, Value};
 

@@ -16,7 +16,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::acp::AcpManager;
+use acp_manager::AcpManager;
 use crate::error::ServerError;
 use crate::events::{AgentEvent, AgentEventType, EventBus};
 use crate::models::agent::{AgentRole, AgentStatus, ModelTier};

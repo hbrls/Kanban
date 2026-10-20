@@ -10,9 +10,9 @@
  */
 
 import { useMemo, useState } from "react";
-import type { TraceRecord } from "@/core/trace";
-import type { WorkspaceAgentEvent } from "@/core/acp/agent-event-bridge/types";
-import { replayTracesAsEventBridge } from "@/core/trace/trace-replay";
+import type { TraceRecord } from "@/core/trace/types";
+import type { WorkspaceAgentEvent } from "@/client/trace/event-types";
+import { replayTracesAsEventBridge } from "@/client/trace/trace-replay";
 import { MarkdownViewer } from "./markdown/markdown-viewer";
 import { CodeBlock } from "./code-block";
 import { useTranslation } from "@/i18n";

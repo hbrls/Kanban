@@ -22,7 +22,7 @@ import { TracesPageHeader } from "@/client/components/traces-page-header";
 import { TracesViewTabs, type TraceViewTab } from "@/client/components/traces-view-tabs";
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
 import { useWorkspaces } from "@/client/hooks/use-workspaces";
-import type { TraceRecord } from "@/core/trace";
+import type { TraceRecord } from "@/core/trace/types";
 import { FileText } from "lucide-react";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
 

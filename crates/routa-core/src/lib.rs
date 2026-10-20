@@ -13,7 +13,6 @@
 //!
 //! - `axum` — Enables `IntoResponse` impl on `ServerError` for use in axum handlers.
 
-pub mod acp;
 pub mod codeowners;
 pub mod db;
 pub mod error;
@@ -34,7 +33,6 @@ pub mod state;
 pub mod storage;
 pub mod store;
 pub mod tools;
-pub mod trace;
 pub mod workflow;
 
 // Convenience re-exports

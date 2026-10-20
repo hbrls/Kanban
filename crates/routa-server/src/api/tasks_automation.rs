@@ -330,7 +330,7 @@ async fn trigger_assigned_task_acp_agent(
         .clone()
         .unwrap_or_else(|| "claude".to_string());
     if provider == "claude" {
-        routa_core::acp::require_claude_cli()?;
+        acp_manager::require_claude_cli()?;
     }
     let role = task
         .assigned_role

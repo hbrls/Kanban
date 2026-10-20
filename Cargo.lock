@@ -3,6 +3,22 @@
 version = 4
 
 [[package]]
+name = "acp-manager"
+version = "0.19.0"
+dependencies = [
+ "chrono",
+ "dirs",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.20",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4580,6 +4596,7 @@ dependencies = [
 name = "routa-core"
 version = "0.19.0"
 dependencies = [
+ "acp-manager",
  "agent-client-protocol",
  "async-stream",
  "axum",
@@ -4643,6 +4660,7 @@ dependencies = [
 name = "routa-server"
 version = "0.19.0"
 dependencies = [
+ "acp-manager",
  "async-stream",
  "axum",
  "axum-extra",
