@@ -8,7 +8,6 @@ import { getDockerDetector, DEFAULT_DOCKER_AGENT_IMAGE } from "@/core/acp/docker
 import { isClaudeCodeSdkConfigured } from "@/core/acp/claude-code-sdk-adapter";
 import type { AgentInstanceConfig } from "@/core/acp/agent-instance-factory";
 import type { WorkspaceAgentConfig, WorkspaceAgentProvider } from "@/core/acp/workspace-agent/workspace-agent-config";
-import { initRoutaOrchestrator } from "@/core/orchestration/orchestrator-singleton";
 import { getRoutaSystem } from "@/core/routa-system";
 import { AgentRole } from "@/core/models/agent";
 import { getSpecialistById, type SpecialistConfig } from "@/core/orchestration/specialist-prompts";
@@ -257,7 +256,6 @@ export async function handleSessionNew({
   createSessionUpdateForwarder,
   buildMcpConfigForClaude,
   requireWorkspaceId,
-  pushAndPersistForwardedNotification,
   serverUrlOverride,
 }: HandleSessionNewArgs): Promise<Response> {
   const p = params;
@@ -353,8 +351,6 @@ export async function handleSessionNew({
   }
 
   const sessionId = uuidv4();
-  const crafterProvider = (p.crafterProvider as string | undefined) ?? provider;
-  const gateProvider = (p.gateProvider as string | undefined) ?? provider;
 
   console.log(`[ACP Route] Creating session: provider=${provider}, cwd=${cwd}, modeId=${modeId}, role=${role ?? "CRAFTER"}, idempotencyKey=${idempotencyKey ?? "none"}`);
 
@@ -728,14 +724,6 @@ export async function handleSessionNew({
       let routaAgentId: string | undefined;
 
       if (role === "ROUTA") {
-        const serverPort = process.env.PORT ?? "3000";
-        const orchestrator = initRoutaOrchestrator({
-          defaultCrafterProvider: crafterProvider,
-          defaultGateProvider: gateProvider,
-          defaultCwd: cwd,
-          serverPort,
-        });
-
         const system = getRoutaSystem();
         if (workspaceSessionAgentId) {
           routaAgentId = workspaceSessionAgentId;
@@ -757,50 +745,7 @@ export async function handleSessionNew({
 
           if (agentResult.success && agentResult.data) {
             routaAgentId = (agentResult.data as { agentId: string }).agentId;
-            orchestrator.registerAgentSession(routaAgentId, sessionId);
           }
-        }
-
-        if (routaAgentId) {
-          orchestrator.registerAgentSession(routaAgentId, sessionId);
-
-          orchestrator.setNotificationHandler((targetSessionId, data) => {
-            pushAndPersistForwardedNotification(store, targetSessionId, data);
-          });
-
-          orchestrator.setSessionRegistrationHandler((childSession) => {
-            const childExecutionBinding = buildExecutionBinding("embedded");
-            store.upsertSession({
-              sessionId: childSession.sessionId,
-              name: childSession.name,
-              cwd: childSession.cwd,
-              workspaceId: childSession.workspaceId,
-              routaAgentId: childSession.routaAgentId,
-              provider: childSession.provider,
-              role: childSession.role,
-              specialistId: childSession.specialistId,
-              parentSessionId: childSession.parentSessionId,
-              sandboxId: childSession.sandboxId,
-              createdAt: new Date().toISOString(),
-              ...childExecutionBinding,
-            });
-            persistSessionToDb({
-              id: childSession.sessionId,
-              name: childSession.name,
-              cwd: childSession.cwd,
-              workspaceId: childSession.workspaceId,
-              routaAgentId: childSession.routaAgentId ?? "",
-              provider: childSession.provider ?? "",
-              role: childSession.role ?? "CRAFTER",
-              parentSessionId: childSession.parentSessionId,
-              specialistId: childSession.specialistId,
-              ...childExecutionBinding,
-            }).catch((err: unknown) =>
-              console.error(`[ACP Route] Failed to persist child session ${childSession.sessionId}:`, err),
-            );
-          });
-
-          console.log(`[ACP Route] ROUTA coordinator agent created: ${routaAgentId}`);
         }
       }
 

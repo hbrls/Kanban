@@ -25,6 +25,13 @@ const WORKER_STARTED_KEY = "__routa_bg_worker_started__";
 /** Maximum number of concurrent background tasks */
 const MAX_CONCURRENT_TASKS = 2;
 
+function getHttpSessionStore(): {
+  listSessions(): Array<{ sessionId: string }>;
+  isSessionStreaming(sessionId: string): boolean;
+} {
+  throw new Error("NotImplementedException: ACP session store");
+}
+
 // ─── Internal URL helper ─────────────────────────────────────────────────────
 
 function getInternalBaseUrl(): string {
@@ -327,7 +334,6 @@ export class BackgroundTaskWorker {
       },
       async (span) => {
         const system = getRoutaSystem();
-        const { getHttpSessionStore } = await import("../acp/http-session-store");
         const store = getHttpSessionStore();
         const activeSessions = new Set(store.listSessions().map((s) => s.sessionId));
         span.setAttribute("routa.background_task.active_session_count", activeSessions.size);

@@ -8,9 +8,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { RoutaMcpToolManager, ToolMode } from "./routa-mcp-tool-manager";
 import { RoutaSystem, getRoutaSystem } from "../routa-system";
-import { initRoutaOrchestrator } from "../orchestration/orchestrator-singleton";
 import { KanbanTools } from "../tools/kanban-tools";
-import { startWorkflowOrchestrator as startKanbanWorkflowOrchestrator } from "../kanban/workflow-orchestrator-singleton";
 import { getMcpProfileToolAllowlist, getMcpServerName, type McpServerProfile } from "./mcp-server-profiles";
 import { registerCanvasSdkResources } from "./canvas-sdk-resources";
 import { registerFeatureTreeSpecResources } from "./feature-tree-spec-resources";
@@ -71,11 +69,6 @@ export function createRoutaMcpServer(
     toolManager.setSessionId(opts.sessionId);
   }
 
-  // Wire in orchestrator — auto-initialize if not yet created (e.g. after server restart).
-  // initRoutaOrchestrator is idempotent: returns existing instance if already created.
-  const orchestrator = initRoutaOrchestrator();
-  toolManager.setOrchestrator(orchestrator);
-
   // Wire in note tools and workspace tools
   toolManager.setNoteTools(routaSystem.noteTools);
   toolManager.setWorkspaceTools(routaSystem.workspaceTools);
@@ -85,9 +78,6 @@ export function createRoutaMcpServer(
   kanbanTools.setEventBus(routaSystem.eventBus);
   kanbanTools.setAutomationSystem(routaSystem);
   toolManager.setKanbanTools(kanbanTools);
-
-  // Initialize the workflow orchestrator singleton (listens for column transitions)
-  startKanbanWorkflowOrchestrator(routaSystem);
 
   toolManager.registerTools(server);
   registerCanvasSdkResources(server);
