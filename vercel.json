@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install --legacy-peer-deps && npm run build",
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm run build",
   "crons": [
     {
       "path": "/api/schedules/tick",
@@ -7,4 +7,3 @@
     }
   ]
 }
-

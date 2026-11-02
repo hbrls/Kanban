@@ -58,7 +58,7 @@ function runNextBuild() {
         },
         shell: false,
       })
-    : spawnSync("npm", ["exec", "--no", "--", "next", "build"], {
+    : spawnSync("pnpm", ["exec", "next", "build"], {
         cwd: root,
         stdio: "inherit",
         env: {
@@ -75,7 +75,7 @@ function runNextBuild() {
     const code = typeof result.status === "number" ? result.status : 1;
     if (!nextCliPath) {
       throw new Error(
-        `Command failed with status ${code}: npm exec --no -- next build. Root frontend dependencies may be missing; run \`npm ci\` first.`
+        `Command failed with status ${code}: pnpm exec next build. Root frontend dependencies may be missing; run \`pnpm install\` first.`
       );
     }
     throw new Error(`Command failed with status ${code}: next build`);
@@ -101,10 +101,8 @@ function runEsbuild(entry, outfile) {
         env: process.env,
         shell: false,
       })
-    : spawnSync("npm", [
+    : spawnSync("pnpm", [
         "exec",
-        "--no",
-        "--",
         "esbuild",
         entry,
         "--bundle",
@@ -125,7 +123,7 @@ function runEsbuild(entry, outfile) {
     const code = typeof result.status === "number" ? result.status : 1;
     if (!esbuildCliPath) {
       throw new Error(
-        `Command failed with status ${code}: npm exec --no -- esbuild ${entry}. Root frontend dependencies may be missing; run \`npm ci\` first.`
+        `Command failed with status ${code}: pnpm exec esbuild ${entry}. Root frontend dependencies may be missing; run \`pnpm install\` first.`
       );
     }
     throw new Error(`Command failed with status ${code}: esbuild ${entry}`);
