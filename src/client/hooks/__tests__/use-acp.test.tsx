@@ -5,22 +5,20 @@ import type { AcpProviderInfo } from "@/client/acp-client";
 const {
   initializeMock,
   listProvidersMock,
-  loadRegistryProvidersMock,
   onUpdateMock,
   onConnectionIssueMock,
   disconnectMock,
 } = vi.hoisted(() => ({
   initializeMock: vi.fn(async () => {}),
-  listProvidersMock: vi.fn<(checkLocal?: boolean, checkRegistry?: boolean) => Promise<{
+  listProvidersMock: vi.fn<(checkLocal?: boolean, _includeRegistry?: boolean) => Promise<{
     id: string;
     name: string;
     description: string;
     command: string;
     status?: "available" | "unavailable" | "checking";
-    source?: "static" | "registry";
+    source?: "static";
     unavailableReason?: string;
   }[]>>(async () => []),
-  loadRegistryProvidersMock: vi.fn(async () => []),
   onUpdateMock: vi.fn(),
   onConnectionIssueMock: vi.fn(),
   disconnectMock: vi.fn(),
@@ -30,7 +28,6 @@ vi.mock("../../acp-client", () => ({
   BrowserAcpClient: class MockBrowserAcpClient {
     initialize = initializeMock;
     listProviders = listProvidersMock;
-    loadRegistryProviders = loadRegistryProvidersMock;
     onUpdate = onUpdateMock;
     onConnectionIssue = onConnectionIssueMock;
     disconnect = disconnectMock;
@@ -68,10 +65,8 @@ describe("useAcp selected provider persistence", () => {
       { id: "claude", name: "Claude", command: "claude", description: "Claude provider", status: "available", source: "static" },
       { id: "codex", name: "Codex", command: "codex-acp", description: "Codex provider", status: "available", source: "static" },
     ];
-    listProvidersMock.mockImplementation(async (checkLocal?: boolean, checkRegistry?: boolean) => {
-      if (!checkLocal && !checkRegistry) {
-        return providers;
-      }
+    listProvidersMock.mockImplementation(async (checkLocal?: boolean) => {
+      // The catalog is fixed and the catalog check returns the same rows.
       return providers;
     });
   });
@@ -108,7 +103,7 @@ describe("useAcp selected provider persistence", () => {
     });
   });
 
-  it("checks only the provider selected in Settings on connect", async () => {
+  it("checks availability for every shown provider on connect", async () => {
     window.localStorage.setItem("routa.acp.selectedProvider", "claude");
 
     const { result } = renderHook(() => useAcp());
@@ -121,8 +116,13 @@ describe("useAcp selected provider persistence", () => {
       expect(result.current.connected).toBe(true);
     });
 
+    // The catalog is fixed and bundled, so connect checks every shown
+    // provider (id filter) without requiring an extra registry round-trip.
     expect(listProvidersMock).toHaveBeenNthCalledWith(1, false, false);
-    expect(listProvidersMock).toHaveBeenNthCalledWith(2, true, true, ["claude"]);
+    expect(listProvidersMock).toHaveBeenNthCalledWith(2, true, false, [
+      "claude",
+      "codex",
+    ]);
   });
 
   it("falls back to the first available provider when the stored provider is unavailable", async () => {

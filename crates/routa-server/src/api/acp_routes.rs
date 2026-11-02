@@ -404,103 +404,37 @@ async fn acp_rpc(
             use crate::shell_env;
 
             let presets = acp::get_presets();
-            let mut static_ids = std::collections::HashSet::new();
 
             let mut providers: Vec<serde_json::Value> = Vec::new();
             for preset in &presets {
-                let installed = shell_env::which(&preset.command).is_some();
-                static_ids.insert(preset.name.clone());
+                let resolved_command = preset
+                    .env_bin_override
+                    .as_ref()
+                    .and_then(|var| std::env::var(var).ok())
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty())
+                    .unwrap_or_else(|| preset.command.clone());
+
+                let status = if resolved_command.is_empty() {
+                    "unavailable"
+                } else if shell_env::which(&resolved_command).is_some() {
+                    "available"
+                } else {
+                    "unavailable"
+                };
 
                 providers.push(serde_json::json!({
-                    "id": preset.name,
+                    "id": preset.id,
                     "name": preset.name,
                     "description": preset.description,
                     "command": preset.command,
-                    "status": if installed { "available" } else { "unavailable" },
+                    "status": status,
                     "source": "static",
+                    "distribution": preset.distribution,
                 }));
             }
 
-            // Merge registry agents (including those that overlap with static presets)
-            // For overlapping agents, use a different ID to allow both versions to coexist
-            let npx_available = shell_env::which("npx").is_some();
-            let uvx_available = shell_env::which("uv").is_some();
-
-            if let Ok(response) =
-                reqwest::get("https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json")
-                    .await
-            {
-                if let Ok(registry) = response.json::<serde_json::Value>().await {
-                    if let Some(agents) = registry.get("agents").and_then(|a| a.as_array()) {
-                        for agent in agents {
-                            let agent_id = agent.get("id").and_then(|v| v.as_str()).unwrap_or("");
-                            if agent_id.is_empty() {
-                                continue;
-                            }
-
-                            let name = agent
-                                .get("name")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or(agent_id);
-                            let desc = agent
-                                .get("description")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("");
-                            let dist = agent.get("distribution");
-
-                            let (command, status) = if let Some(dist) = dist {
-                                if dist.get("npx").is_some() && npx_available {
-                                    let pkg = dist
-                                        .get("npx")
-                                        .and_then(|v| v.get("package"))
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or(agent_id);
-                                    (format!("npx {pkg}"), "available")
-                                } else if dist.get("uvx").is_some() && uvx_available {
-                                    let pkg = dist
-                                        .get("uvx")
-                                        .and_then(|v| v.get("package"))
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or(agent_id);
-                                    (format!("uvx {pkg}"), "available")
-                                } else if dist.get("binary").is_some() {
-                                    (agent_id.to_string(), "unavailable")
-                                } else if dist.get("npx").is_some() {
-                                    let pkg = dist
-                                        .get("npx")
-                                        .and_then(|v| v.get("package"))
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or(agent_id);
-                                    (format!("npx {pkg}"), "unavailable")
-                                } else {
-                                    (agent_id.to_string(), "unavailable")
-                                }
-                            } else {
-                                (agent_id.to_string(), "unavailable")
-                            };
-
-                            // If this agent ID conflicts with a built-in preset, use a suffixed ID
-                            // to allow both versions to coexist in the UI
-                            let (provider_id, provider_name) = if static_ids.contains(agent_id) {
-                                (format!("{agent_id}-registry"), format!("{name} (Registry)"))
-                            } else {
-                                (agent_id.to_string(), name.to_string())
-                            };
-
-                            providers.push(serde_json::json!({
-                                "id": provider_id,
-                                "name": provider_name,
-                                "description": desc,
-                                "command": command,
-                                "status": status,
-                                "source": "registry",
-                            }));
-                        }
-                    }
-                }
-            }
-
-            // Sort: available first
+            // Sort: available first, then alphabetical.
             providers.sort_by(|a, b| {
                 let a_status = a.get("status").and_then(|v| v.as_str()).unwrap_or("");
                 let b_status = b.get("status").and_then(|v| v.as_str()).unwrap_or("");

@@ -142,6 +142,9 @@ export interface ProviderOption {
   id: string;
   name: string;
   status?: string;
+  // Always `"static"` in the fixed-preset model; retained for backward
+  // compatibility with stored localStorage metadata. New code can ignore
+  // the field — the catalog never returns `"registry"` entries.
   source?: "static" | "registry";
   command?: string;
 }
@@ -161,7 +164,6 @@ export interface SettingsPanelProps {
 
 export type SettingsTab =
   | "providers"
-  | "registry"
   | "roles"
   | "specialists"
   | "mcp"

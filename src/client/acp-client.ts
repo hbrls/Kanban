@@ -103,7 +103,17 @@ export interface AcpProviderInfo {
   description: string;
   command: string;
   status?: "available" | "unavailable" | "checking" | "";
+  /**
+   * Discriminator kept for backward compatibility. In the fixed-preset
+   * model the backend only ever reports `source: "static"`. The
+   * `"registry"` literal remains on the type so that legacy code paths
+   * (storing, filtering) and persisted state can continue to be parsed
+   * without runtime crashes; new code should treat anything that is not
+   * `"registry"` as a local preset.
+   */
   source?: "static" | "registry";
+  /** Optional context note surfaced by the backend (e.g. when a catalog entry has no launcher yet). */
+  note?: string;
   unavailableReason?: string;
 }
 
@@ -379,17 +389,19 @@ export class BrowserAcpClient {
   /**
    * List available ACP providers from the backend.
    * @param check - If true, check command availability (slower) for the requested IDs. If false, return immediately with "checking" status.
-   * @param includeRegistry - If true, include registry providers (slower). If false, only local providers.
    * @param checkIds - If provided, only check availability for these provider IDs.
+   *
+   * The optional `includeRegistry` flag is retained for API compatibility but is
+   * ignored: the catalog is fixed and the backend never returns registry-only
+   * entries. New call sites should pass `false` (the default).
    */
   async listProviders(
     check: boolean = false,
-    includeRegistry: boolean = false,
+    _includeRegistry: boolean = false,
     checkIds?: string[],
   ): Promise<AcpProviderInfo[]> {
     const params = new URLSearchParams();
     if (check) params.set("check", "true");
-    if (includeRegistry) params.set("registry", "true");
     if (checkIds) {
       if (checkIds.length === 0) {
         params.set("id", "");
@@ -403,16 +415,6 @@ export class BrowserAcpClient {
     const response = await fetch(resolveApiPath(`api/providers?${params}`, this.baseUrl));
     const data = await response.json();
 
-    return Array.isArray(data.providers) ? data.providers : [];
-  }
-
-  /**
-   * Load registry providers asynchronously after local providers are loaded.
-   * This is useful for showing local providers first, then loading registry in background.
-   */
-  async loadRegistryProviders(): Promise<AcpProviderInfo[]> {
-    const response = await fetch(resolveApiPath("api/providers?registry=true", this.baseUrl));
-    const data = await response.json();
     return Array.isArray(data.providers) ? data.providers : [];
   }
 

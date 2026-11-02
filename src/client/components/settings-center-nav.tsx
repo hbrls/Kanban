@@ -21,7 +21,6 @@ export function SettingsCenterNav({ activeItem }: SettingsCenterNavProps) {
   const { t } = useTranslation();
   const configItems: Array<{ key: SettingsNavItem; label: string; href: string }> = [
     { key: "providers", label: t.settings.providers, href: "/settings?tab=providers" },
-    { key: "registry", label: t.settings.registry, href: "/settings?tab=registry" },
     { key: "roles", label: t.settings.roleDefaults, href: "/settings?tab=roles" },
   ];
   const workspaceToolItems: Array<{ key: SettingsNavItem; label: string; href: string }> = [

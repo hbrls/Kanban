@@ -6,7 +6,7 @@
  * workspace and reports how far that chain got.
  */
 
-import { Suspense, useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import type { RepoSelection } from "@/client/components/repo-picker";
@@ -18,7 +18,6 @@ import { HomeInitializationPanel } from "@/client/components/home-initialization
 import { WorkspaceSwitcher } from "@/client/components/workspace-switcher";
 import { useHomeInitialization } from "@/client/hooks/use-home-initialization";
 import { desktopAwareFetch } from "@/client/utils/diagnostics";
-import { loadCustomAcpProviders } from "@/client/utils/custom-acp-providers";
 import { useTranslation } from "@/i18n";
 
 const CARD_CLS =
@@ -40,8 +39,6 @@ function HomePageContent() {
   const [showRepoPicker, setShowRepoPicker] = useState(false);
   const [workspaceTitleDraft, setWorkspaceTitleDraft] = useState("");
   const [workspaceCreateFailed, setWorkspaceCreateFailed] = useState(false);
-
-  const customProviderIds = useCustomAcpProviderIds();
 
   const runtimeSnapshot = useMemo(
     () => ({
@@ -128,7 +125,6 @@ function HomePageContent() {
               onConfigureProviders={handleOpenProviders}
               onAddCodebase={() => setShowRepoPicker(true)}
               runtime={runtimeSnapshot}
-              customProviderIds={customProviderIds}
             />
 
             {!hasWorkspace && (
@@ -211,70 +207,6 @@ function HomePageFallback() {
         <p className="text-sm text-desktop-text-secondary">{t.common.loading}</p>
       </div>
     </div>
-  );
-}
-
-const CUSTOM_PROVIDER_STORAGE_EVENT = "routa.customAcpProviders.changed";
-const EMPTY_CUSTOM_PROVIDER_IDS: string[] = [];
-
-let cachedCustomProviderIds: string[] | null = null;
-let cachedCustomProviderSignature = "";
-
-function computeCustomProviderSignature(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    return window.localStorage.getItem("routa.customAcpProviders") ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function readCustomAcpProviderIds(): string[] {
-  if (typeof window === "undefined") return EMPTY_CUSTOM_PROVIDER_IDS;
-  const signature = computeCustomProviderSignature();
-  if (cachedCustomProviderIds && signature === cachedCustomProviderSignature) {
-    return cachedCustomProviderIds;
-  }
-  const next = loadCustomAcpProviders().map((provider) => provider.id);
-  cachedCustomProviderIds = next;
-  cachedCustomProviderSignature = signature;
-  return next;
-}
-
-function invalidateCustomAcpProviderCache(): void {
-  cachedCustomProviderIds = null;
-  cachedCustomProviderSignature = "";
-}
-
-function subscribeToCustomAcpProviderChanges(onStoreChange: () => void): () => void {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
-  const handleStorage = () => {
-    invalidateCustomAcpProviderCache();
-    onStoreChange();
-  };
-  window.addEventListener("storage", handleStorage);
-  window.addEventListener(CUSTOM_PROVIDER_STORAGE_EVENT, handleStorage);
-  return () => {
-    window.removeEventListener("storage", handleStorage);
-    window.removeEventListener(CUSTOM_PROVIDER_STORAGE_EVENT, handleStorage);
-  };
-}
-
-function getCustomAcpProviderIdsSnapshot(): string[] {
-  return readCustomAcpProviderIds();
-}
-
-function getCustomAcpProviderIdsServerSnapshot(): string[] {
-  return EMPTY_CUSTOM_PROVIDER_IDS;
-}
-
-function useCustomAcpProviderIds(): string[] {
-  return useSyncExternalStore(
-    subscribeToCustomAcpProviderChanges,
-    getCustomAcpProviderIdsSnapshot,
-    getCustomAcpProviderIdsServerSnapshot,
   );
 }
 

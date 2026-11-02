@@ -87,8 +87,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     specPreview: string;
     taskSnapshot: string;
     session: string;
-    installAgents: string;
-    openInNewTabLabel: string;
     customSpecialists: string;
     concurrency: string;
     crafters: string;
@@ -191,8 +189,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     runtimeConnection: string;
     runtimeConnectionReady: string;
     providerSourceLocal: string;
-    providerSourceRegistry: string;
-    providerSourceCustom: string;
     providerSourceUnknown: string;
     providerInformation: string;
     providerEnvironment: string;
@@ -200,7 +196,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     providerHandshake: string;
     providerInformationLoaded: string;
     providerInformationWaiting: string;
-    providerConfigurationLoaded: string;
     providerEnvironmentPassed: string;
     providerEnvironmentUnavailable: string;
     providerWaitingInitialization: string;
@@ -208,7 +203,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     providerCheckPassed: string;
     providerAvailable: string;
     providerUnavailable: string;
-    providerConfigured: string;
     providerDash: string;
     providerNotExecuted: string;
     providerNotChecked: string;
@@ -290,7 +284,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     roleDefaults: string;
     roleDefaultsDesc: string;
     providersDesc: string;
-    registryDesc: string;
     rolesDesc: string;
     nameRequired: string;
     commandRequired: string;
@@ -303,7 +296,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     modelOverride: string;
     builtIn: string;
     custom: string;
-    registry: string;
     systemInfo: string;
     memory: string;
     sessions: string;
@@ -550,7 +542,6 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     notesDescription: string;
     workspaceNotes: string;
     taskNotes: string;
-    installAgents: string;
     // Workspace page header stats
     sessions: string;
     agents: string;
@@ -660,32 +651,15 @@ export interface TranslationDictionary extends ExtendedTranslationDictionarySect
     skillsShCatalog: string;
   };
 
-  // Agents
+  // Agents — kept only for legacy callers. The fixed preset catalog is
+  // the single source of truth; there is no install/uninstall flow.
   agents: {
     title: string;
     agentName: string;
     noAgents: string;
-    loadingFromRegistry: string;
     failedToLoad: string;
-    installFailed: string;
-    uninstallFailed: string;
-    failedToFetchRegistry: string;
-    searchAgents: string;
-    noMatchingAgents: string;
-    noAgentsAvailable: string;
     installed: string;
     available: string;
-    install: string;
-    uninstall: string;
-    installing: string;
-    uninstalling: string;
-    agentInstallation: string;
-    installAndManage: string;
-    learnAboutACP: string;
-    acpRegistryTitle: string;
-    unknownPlatform: string;
-    viewRepository: string;
-    platformRegistry: string;
   };
 
   specialists: {

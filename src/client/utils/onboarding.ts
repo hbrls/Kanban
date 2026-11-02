@@ -27,7 +27,6 @@ export function hasSavedProviderConfiguration(
   connections: ProviderConnectionsStorage,
   options?: {
     dockerOpencodeAuthJson?: string;
-    customProviderCount?: number;
     runtimeProviderCount?: number;
   },
 ): boolean {
@@ -44,10 +43,6 @@ export function hasSavedProviderConfiguration(
   }
 
   if (options?.dockerOpencodeAuthJson?.trim()) {
-    return true;
-  }
-
-  if ((options?.customProviderCount ?? 0) > 0) {
     return true;
   }
 

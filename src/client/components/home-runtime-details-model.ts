@@ -10,7 +10,7 @@
 import type { AcpProviderInfo } from "@/client/acp-client";
 import type { HomeInitializationStep } from "@/client/hooks/use-home-initialization";
 
-export type HomeProviderKind = "local" | "registry" | "custom" | "unknown";
+export type HomeProviderKind = "local" | "unknown";
 
 export type HomeProviderCheckId = "information" | "environment" | "startup" | "handshake";
 
@@ -20,7 +20,6 @@ export type HomeProviderDisplayStatus = "pending" | "waiting" | "success" | "una
 export type HomeProviderDetailKey =
   | "providerInformationLoaded"
   | "providerInformationWaiting"
-  | "providerConfigurationLoaded"
   | "providerEnvironmentPassed"
   | "providerEnvironmentUnavailable"
   | "providerEnvironmentWaiting"
@@ -29,8 +28,6 @@ export type HomeProviderDetailKey =
   | "providerCheckPassed"
   | "providerAvailable"
   | "providerUnavailable"
-  | "providerConfigured"
-  | "providerDash"
   | "providerNotExecuted"
   | "providerNotChecked"
   | "providerNoCheckInformation"
@@ -40,13 +37,10 @@ export type HomeProviderSummaryKey =
   | "providerAvailable"
   | "providerUnavailable"
   | "providerWaitingResult"
-  | "providerNotChecked"
-  | "providerConfigured";
+  | "providerNotChecked";
 
 export type HomeProviderSourceKey =
   | "providerSourceLocal"
-  | "providerSourceRegistry"
-  | "providerSourceCustom"
   | "providerSourceUnknown";
 
 export type HomeRuntimeConnectionKey =
@@ -84,7 +78,6 @@ export interface HomeRuntimeDetailsProjection {
 export interface BuildHomeRuntimeDetailsOptions {
   runtimeStep: HomeInitializationStep;
   providers: readonly AcpProviderInfo[];
-  customProviderIds: readonly string[];
   acpConnected: boolean;
   /** True when the runtime step has reached a terminal status. */
   runtimeSettled: boolean;
@@ -94,20 +87,15 @@ export interface BuildHomeRuntimeDetailsOptions {
   runtimeErrored: boolean;
 }
 
-function resolveKind(
-  provider: AcpProviderInfo,
-  customProviderIds: readonly string[],
-): HomeProviderKind {
-  if (customProviderIds.includes(provider.id)) {
-    return "custom";
-  }
-  if (provider.source === "static") {
-    return "local";
-  }
+function resolveKind(provider: AcpProviderInfo): HomeProviderKind {
+  // The provider catalog is bundled and never goes through a remote registry;
+  // every entry from the backend is a fixed local preset by definition.
   if (provider.source === "registry") {
-    return "registry";
+    // Defensive only — backend no longer emits this discriminator, but
+    // legacy/localStorage entries might still carry it.
+    return "unknown";
   }
-  return "unknown";
+  return "local";
 }
 
 function isTruthyCheck(value: string | undefined | null): value is string {
@@ -208,20 +196,6 @@ function buildEnvironmentCheck(
   };
 }
 
-function buildCustomChecks(provider: AcpProviderInfo): HomeProviderCheck[] {
-  return [
-    {
-      id: "information",
-      status: "success",
-      detailKey: "providerConfigurationLoaded",
-      command: provider.command,
-    },
-    { id: "environment", status: "skipped", detailKey: "providerDash" },
-    { id: "startup", status: "skipped", detailKey: "providerNotExecuted" },
-    { id: "handshake", status: "skipped", detailKey: "providerNotExecuted" },
-  ];
-}
-
 function buildUnknownChecks(provider: AcpProviderInfo): HomeProviderCheck[] {
   return [
     {
@@ -237,13 +211,9 @@ function buildUnknownChecks(provider: AcpProviderInfo): HomeProviderCheck[] {
 }
 
 function buildSummaryKey(
-  kind: HomeProviderKind,
   provider: AcpProviderInfo,
   context: { runtimeSkipped: boolean; acpConnected: boolean },
 ): HomeProviderSummaryKey {
-  if (kind === "custom") {
-    return "providerConfigured";
-  }
   if (context.runtimeSkipped) {
     return "providerNotChecked";
   }
@@ -259,10 +229,6 @@ function buildSourceKey(kind: HomeProviderKind): HomeProviderSourceKey {
   switch (kind) {
     case "local":
       return "providerSourceLocal";
-    case "registry":
-      return "providerSourceRegistry";
-    case "custom":
-      return "providerSourceCustom";
     default:
       return "providerSourceUnknown";
   }
@@ -291,14 +257,12 @@ export function buildHomeRuntimeDetails(
   };
 
   const providers = options.providers.map<HomeProviderDetails>((provider) => {
-    const kind = resolveKind(provider, options.customProviderIds);
+    const kind = resolveKind(provider);
     const sourceKey = buildSourceKey(kind);
-    const summaryKey = buildSummaryKey(kind, provider, context);
+    const summaryKey = buildSummaryKey(provider, context);
 
     let checks: HomeProviderCheck[];
-    if (kind === "custom") {
-      checks = buildCustomChecks(provider);
-    } else if (kind === "unknown") {
+    if (kind === "unknown") {
       checks = buildUnknownChecks(provider);
     } else {
       checks = buildLocalOrRegistryChecks(kind, provider, context);

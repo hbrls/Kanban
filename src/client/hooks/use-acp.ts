@@ -30,10 +30,8 @@ import {
   toErrorMessage,
 } from "../utils/diagnostics";
 import {
-  loadCustomAcpProviders,
   loadHiddenProviders,
   sortProviderIdsByPreference,
-  type CustomAcpProvider,
 } from "../utils/custom-acp-providers";
 import { loadDockerOpencodeAuthJson } from "../components/settings-panel";
 import type { McpServerProfile } from "@/core/mcp/mcp-server-profiles";
@@ -67,6 +65,12 @@ const BUILTIN_PROVIDER_FALLBACKS: AcpProviderInfo[] = [
   },
 ];
 
+// Source discriminator is no longer used at runtime; the catalog is fixed
+// and backend responses always report `source: "static"`.
+function isStaticProvider(provider: AcpProviderInfo): boolean {
+  return provider.source !== "registry";
+}
+
 export function formatAcpErrorForLog(err: unknown): unknown {
   if (err instanceof AcpClientError) {
     const data = err.data && typeof err.data === "object"
@@ -87,18 +91,6 @@ export function formatAcpErrorForLog(err: unknown): unknown {
   return err;
 }
 
-/** Convert a custom ACP provider to AcpProviderInfo for the provider list. */
-function toAcpProviderInfo(cp: CustomAcpProvider): AcpProviderInfo {
-  return {
-    id: cp.id,
-    name: cp.name,
-    description: cp.description ?? `Custom: ${[cp.command, ...cp.args].join(" ")}`,
-    command: cp.command,
-    status: "available",
-    source: "static",
-  };
-}
-
 function sortProvidersByPreference(providers: AcpProviderInfo[]): AcpProviderInfo[] {
   const orderedIds = sortProviderIdsByPreference(providers.map((provider) => provider.id));
   const orderMap = new Map(orderedIds.map((providerId, index) => [providerId, index]));
@@ -112,10 +104,9 @@ function sortProvidersByPreference(providers: AcpProviderInfo[]): AcpProviderInf
 
 function getInitialProviderFallbacks(): AcpProviderInfo[] {
   const disabledProviders = loadHiddenProviders();
-  const customProviders = loadCustomAcpProviders().map(toAcpProviderInfo);
 
   return sortProvidersByPreference(
-    [...BUILTIN_PROVIDER_FALLBACKS, ...customProviders].filter(
+    BUILTIN_PROVIDER_FALLBACKS.filter(
       (provider) => !disabledProviders.includes(provider.id)
     )
   );
@@ -348,22 +339,17 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
       // This ensures status indicators show correct colors on first render
       const localProviderIds = getShownProviderIds(
         discoveredProviders
-          .filter((provider) => provider.source === "static")
+          .filter(isStaticProvider)
           .map((provider) => provider.id),
       );
       const localProviders = localProviderIds.length > 0
         ? await client.listProviders(true, false, localProviderIds)
         : [];
 
-      // Merge in user-defined custom ACP providers
-      const customProviders = loadCustomAcpProviders().map(toAcpProviderInfo);
-
       // Filter out disabled providers
       const disabledProviders = loadHiddenProviders();
       const providers = sortProvidersByPreference(
-        [...localProviders, ...customProviders].filter(
-          (p) => !disabledProviders.includes(p.id)
-        )
+        localProviders.filter((p) => !disabledProviders.includes(p.id))
       );
 
       client.onUpdate((update) => {
@@ -404,64 +390,8 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
         })(),
       }));
 
-      // Background task: Load registry providers (with timeout protection)
-      // This runs in parallel and adds registry providers when ready
-      client.loadRegistryProviders().then((allProviders) => {
-        if (tearingDownRef.current) return;
-        // loadRegistryProviders returns ALL providers (local + registry)
-        // Filter to get only registry providers to avoid duplicates
-        const disabledProvs = loadHiddenProviders();
-        const registryProviders = sortProvidersByPreference(
-          allProviders
-            .filter((p) => p.source === "registry")
-            .filter((p) => !disabledProvs.includes(p.id))
-        );
-        if (registryProviders.length > 0) {
-          setState((s) => {
-            // Keep only local providers from current state, add new registry providers
-            const localProviders = s.providers.filter((p) => p.source === "static");
-            return {
-              ...s,
-              providers: sortProvidersByPreference([...localProviders, ...registryProviders]),
-            };
-          });
-
-          // Background task 3: Check registry provider availability (slower)
-          // This updates the status from "checking" to "available" or "unavailable"
-          const registryProviderIds = getShownProviderIds(allProviders.map((provider) => provider.id));
-          if (registryProviderIds.length === 0) return;
-
-          client.listProviders(true, true, registryProviderIds).then((checkedAllProviders) => {
-            if (tearingDownRef.current) return;
-            const disabledProvs = loadHiddenProviders();
-            const checkedRegistry = sortProvidersByPreference(
-              checkedAllProviders
-                .filter((p) => p.source === "registry")
-                .filter((p) => !disabledProvs.includes(p.id))
-            );
-            if (checkedRegistry.length > 0) {
-              setState((s) => {
-                const localProviders = s.providers.filter((p) => p.source === "static");
-                return {
-                  ...s,
-                  providers: sortProvidersByPreference([...localProviders, ...checkedRegistry]),
-                };
-              });
-            }
-          }).catch((err) => {
-            if (tearingDownRef.current || shouldSuppressTeardownError(err)) {
-              return;
-            }
-            logRuntime("info", "useAcp.connect", "Failed to check registry provider status", err);
-          });
-        }
-      }).catch((err) => {
-        if (tearingDownRef.current || shouldSuppressTeardownError(err)) {
-          return;
-        }
-        // Registry load failed (timeout or network error) - not critical
-        logRuntime("info", "useAcp.connect", "Registry providers unavailable (network/timeout)", err);
-      });
+      // The catalog is fixed and bundled with the application; no remote
+      // registry lookup happens here. Background task intentionally omitted.
     } catch (err) {
       if (tearingDownRef.current || shouldSuppressTeardownError(err)) {
         setState((s) => ({ ...s, loading: false }));
@@ -515,9 +445,6 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
         setState((s) => ({ ...s, loading: true, error: null, authError: null, updates: [] }));
         const activeProvider = provider ?? state.selectedProvider;
 
-        // Look up custom provider inline config if the selected provider is custom
-        const customProvider = loadCustomAcpProviders().find((cp) => cp.id === activeProvider);
-
         // For docker-opencode provider, load auth.json from localStorage
         const authJson = activeProvider === "docker-opencode" ? loadDockerOpencodeAuthJson() : undefined;
 
@@ -540,8 +467,6 @@ export function useAcp(baseUrl: string = ""): UseAcpState & UseAcpActions {
           systemPrompt,
           baseUrl,
           apiKey,
-          customCommand: customProvider?.command,
-          customArgs: customProvider?.args,
           authJson,
           autoApprovePermissions,
           taskAdaptiveHarness,
